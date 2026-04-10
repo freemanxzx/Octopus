@@ -1,5 +1,4 @@
 import axios from 'axios';
-import FormData from 'form-data';
 
 const tokenUrl = "https://api.weixin.qq.com/cgi-bin/token";
 const publishUrl = "https://api.weixin.qq.com/cgi-bin/draft/add";
@@ -19,14 +18,9 @@ export async function fetchAccessToken(appId: string, appSecret: string) {
 export async function uploadMaterial(accessToken: string, fileBuffer: Buffer, fileName: string, mimeType: string, type = 'image') {
   const url = `${uploadUrl}?access_token=${accessToken}&type=${type}`;
   const form = new FormData();
-  form.append('media', fileBuffer, {
-    filename: fileName,
-    contentType: mimeType,
-  });
+  form.append('media', new Blob([new Uint8Array(fileBuffer)], { type: mimeType }), fileName);
 
-  const response = await axios.post(url, form, {
-    headers: { ...form.getHeaders() }
-  });
+  const response = await axios.post(url, form);
 
   const data = response.data;
   if (data.media_id && data.url) {

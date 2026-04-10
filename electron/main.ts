@@ -2,8 +2,8 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { fetchAccessToken, uploadMaterial, publishArticle } from './wechatApi';
-import { publishToZhihu, publishToJuejin, publishToCSDN } from './platformPublisher';
+import { fetchAccessToken, uploadMaterial, publishArticle } from './wechatApi.js';
+import { publishToZhihu, publishToJuejin, publishToCSDN } from './platformPublisher.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

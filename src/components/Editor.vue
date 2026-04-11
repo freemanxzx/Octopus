@@ -1208,7 +1208,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <button class="icon-btn" title="配置服务器或图床" @click="isImageConfigVisible = true; activeMenu = null"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
         <button class="icon-btn" title="转微信脚注 / 外部链接转换" @click="toggleLinkFootnote"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">WX</span></button>
         <button class="icon-btn" title="MAC 风格代码块" :class="{ active: isMacCodeBlock }" @click="toggleMacCodeBlock" :style="{ color: isMacCodeBlock ? 'var(--accent-color)' : '', background: isMacCodeBlock ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><circle cx="6" cy="7" r="1.5"></circle><circle cx="12" cy="7" r="1.5"></circle></svg></button>
-        <button class="icon-btn" title="沉浸视图 / 全屏" @click="togglePreviewMode" :style="{ color: isPreviewMode ? 'var(--accent-color)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
       </div>
 
       <div class="actions" style="display: flex; gap: 12px; align-items: center;">
@@ -1299,18 +1298,37 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       <div class="preview-pane" :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isPreviewMode ? '100%' : (isEditingTheme ? '33.333%' : (100 - leftWidth + '%')) }">
         <!-- Floating Quick Actions Restored -->
         <div class="floating-toolbar" style="position: absolute; top: 16px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px;">
-          <!-- WeChat Copy Button -->
-          <button class="icon-btn floating-action" title="一键复制公众号文章" @click="copyHtml('wechat')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
-             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          <!-- WeChat Sync -->
+          <button class="icon-btn floating-action" title="一键同步微信公众号" @click="syncToPlatform('wechat')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #10b981; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
           </button>
           
-          <!-- Plain Text Copy Button -->
-          <button class="icon-btn floating-action" title="复制全平台纯文本" @click="copyText()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+          <!-- Zhihu Sync -->
+          <button class="icon-btn floating-action" title="一键同步知乎" @click="syncToPlatform('zhihu')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #3b82f6; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+             <span style="font-size: 18px; font-weight: 900; font-family: -apple-system, sans-serif;">知</span>
+          </button>
+          
+          <!-- Juejin Sync -->
+          <button class="icon-btn floating-action" title="一键同步掘金" @click="syncToPlatform('juejin')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #4f46e5; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
+          </button>
+
+          <!-- CSDN Sync -->
+          <button class="icon-btn floating-action" title="一键同步CSDN" @click="syncToPlatform('csdn')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #dc2626; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+             <span style="font-size: 18px; font-weight: bold; font-family: Courier New, monospace; letter-spacing: -1px; line-height: 1;">C</span>
+          </button>
+
+          <!-- Divider -->
+          <div style="width: 20px; height: 1px; background: var(--border-strong); margin: 2px auto;"></div>
+
+          <!-- Plain Text Copy -->
+          <button class="icon-btn floating-action" title="仅复制全平台纯文本" @click="copyText()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
-          
-          <!-- Fullscreen Toggle Button -->
-          <button class="icon-btn floating-action" title="全屏沉浸预览 (Zen Mode)" @click="togglePreviewMode" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+
+          <!-- Zen Mode Toggle -->
+          <div style="width: 20px; height: 1px; background: var(--border-strong); margin: 2px auto;"></div>
+          <button class="icon-btn floating-action" title="全屏沉浸预览 (Zen Mode)" @click="togglePreviewMode()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
           </button>
         </div>
@@ -1343,8 +1361,9 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           </div>
         </div>
       </transition>
+    </main>
 
-      <!-- Global Modal Container -->
+    <!-- Global Modal Container -->
       <transition name="fade">
         <div v-if="modalState.visible || isImageConfigVisible || isSyncModalVisible || isVisualConfigVisible" class="export-overlay" @click.self="isImageConfigVisible = false; isSyncModalVisible = false; isVisualConfigVisible = false; clsoeModal(false)">
           <!-- General Dialog -->
@@ -1462,9 +1481,9 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           </div>
 
           <!-- Visual Theme Designer Modal (Word-style Configuration) -->
-          <div v-if="isVisualConfigVisible" class="export-modal custom-modal visual-modal" style="width: 550px; max-width: 95vw;">
-            <h3 style="margin-top:0; margin-bottom: 1rem; color: var(--text-primary);">🎨 深度视觉定制 (Visual Builder)</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.5;">无需编写 CSS 代码。在此调整任意数值即可实时覆盖底层排版风格。留空将使用当前主题默认值。</p>
+          <div v-if="isVisualConfigVisible" class="export-modal custom-modal visual-modal premium-modal" style="width: 550px; max-width: 95vw; padding: 2.5rem; text-align: left;">
+            <h3 style="margin-top:0; margin-bottom: 0.5rem; color: var(--text-primary); font-size: 1.4rem;">🎨 深度视觉定制</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.5; border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px;">无需编写 CSS 代码。在此调整任意数值即可实时覆盖底层排版风格。留空将使用当前主题默认值。</p>
             
             <div class="visual-accordion">
               <!-- Globals -->
@@ -1564,8 +1583,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           {{ toastState.message }}
         </div>
       </transition>
-    </main>
-
+    <!-- Note: removed isolated </main> that trapped modals -->
     <!-- Tier 4: Bottom Status Bar -->
     <footer v-show="!isPreviewMode" class="octopus-status-bar">
       <div class="status-left">
@@ -2414,6 +2432,49 @@ html, body {
 .btn-icon-text:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
+}
+
+.export-modal {
+  background: var(--bg-panel);
+  padding: 2.5rem 3rem;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  border: 1px solid var(--border-strong);
+  max-width: 400px;
+  min-width: 320px;
+  color: var(--text-primary);
+}
+
+.premium-modal {
+  border-radius: 20px;
+  background: var(--bg-panel);
+  box-shadow: 0 40px 80px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(48px) saturate(200%);
+}
+
+.setting-item label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.setting-input {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.setting-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  outline: none;
 }
 
 .copy-group {

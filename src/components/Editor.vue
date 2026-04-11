@@ -69,12 +69,12 @@ onMounted(() => loadTheme(selectedTheme.value));
 
 // Wenyan Parity: Code Block Highlighter Themes
 const codeThemes = [
-  { id: 'github', name: '代码: Github' },
-  { id: 'vs2015', name: '代码: VS 2015' },
-  { id: 'atom-one-dark', name: '代码: Atom Dark' },
-  { id: 'atom-one-light', name: '代码: Atom Light' },
-  { id: 'monokai', name: '代码: Monokai' },
-  { id: 'dracula', name: '代码: Dracula' }
+  { id: 'github', name: 'Github' },
+  { id: 'vs2015', name: 'VS 2015' },
+  { id: 'atom-one-dark', name: 'Atom Dark' },
+  { id: 'atom-one-light', name: 'Atom Light' },
+  { id: 'monokai', name: 'Monokai' },
+  { id: 'dracula', name: 'Dracula' }
 ];
 const selectedCodeTheme = ref('github');
 const codeThemeStyleContent = ref("");
@@ -201,7 +201,7 @@ watch(content, (newVal) => {
     }
     if (inCodeBlock) continue;
     
-    const match = line.match(/^(#{1,2})\s+(.+)$/);
+    const match = line.match(/^(#{1,3})\s+(.+)$/);
     if (match) {
       items.push({
         level: match[1].length,
@@ -1620,6 +1620,7 @@ html, body {
   transition: all 0.2s;
   font-family: inherit;
   font-size: 1rem;
+  position: relative;
 }
 
 .icon-btn:hover {
@@ -2409,16 +2410,30 @@ html, body {
 }
 
 @media print {
-  .system-menu-bar, .formatting-toolbar, .editor-pane, .resizer, .css-pane, .actions {
+  .system-menu-bar, .formatting-toolbar, .editor-pane, .resizer, .css-pane, .actions, .toc-panel {
     display: none !important;
   }
-  .preview-pane {
-    width: 100% !important;
-    overflow: visible !important;
+  body, html, .octopus-layout, .workspace, .preview-pane, .preview-content {
+    background: white !important;
+    color: black !important;
     height: auto !important;
-  }
-  .workspace {
     overflow: visible !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* Content Flow Constraints */
+  .preview-content {
+    box-shadow: none !important;
+    border: none !important;
+  }
+  /* Page breaks optimization */
+  pre, blockquote, img, table {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5 {
+    page-break-after: avoid;
   }
 }
 /* Mac Code Block Styles */

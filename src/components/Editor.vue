@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, shallowRef, computed } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, watch, shallowRef, computed } from 'vue';
 import MarkdownIt from 'markdown-it';
 import footnote from 'markdown-it-footnote';
 import mathjax3 from 'markdown-it-mathjax3';
@@ -622,6 +622,67 @@ const extraCssClass = computed(() => {
 });
 
 const isSyncModalVisible = ref(false);
+const isVisualConfigVisible = ref(false);
+
+const visualTheme = reactive({
+  baseFontSize: '',
+  baseColor: '',
+  primaryColor: '',
+  h1Size: '',
+  h2Size: '',
+  h3Size: '',
+  headingAlign: '',
+  lineHeight: '',
+  paragraphMargin: '',
+  blockquoteColor: '',
+  blockquoteBg: ''
+});
+
+
+const clearVisualTheme = () => {
+  Object.keys(visualTheme).forEach(k => {
+    (visualTheme as any)[k] = '';
+  });
+};
+
+const copyText = () => {
+  const node = document.createElement('div');
+  node.innerHTML = htmlOutput.value;
+  const text = node.innerText || node.textContent || '';
+  navigator.clipboard.writeText(text).then(() => {
+    toastState.value.message = '✓ 已复制纯文本到剪贴板';
+    toastState.value.type = 'success';
+    toastState.value.visible = true;
+    setTimeout(() => { toastState.value.visible = false }, 2000);
+  });
+};
+
+const visualOverridesCss = computed(() => {
+  let css = '';
+  const tv = visualTheme;
+  if (tv.baseFontSize || tv.baseColor || tv.lineHeight) {
+    css += `\n#nice { ${tv.baseFontSize ? `font-size: ${tv.baseFontSize}px !important;` : ''} ${tv.baseColor ? `color: ${tv.baseColor} !important;` : ''} ${tv.lineHeight ? `line-height: ${tv.lineHeight} !important;` : ''} }`;
+    css += `\n#nice p { ${tv.baseColor ? `color: ${tv.baseColor} !important;` : ''} ${tv.baseFontSize ? `font-size: ${tv.baseFontSize}px !important;` : ''} ${tv.paragraphMargin ? `margin: ${tv.paragraphMargin}px 0 !important;` : ''} }`;
+  }
+  if (tv.primaryColor) {
+    css += `\n#nice h1, #nice h2, #nice h3, #nice h4 { color: ${tv.primaryColor} !important; }`;
+    css += `\n#nice h1 .code-snippet_outer, #nice h2 .code-snippet_outer, #nice h3 .code-snippet_outer { color: ${tv.primaryColor} !important; }`;
+    css += `\n#nice a { color: ${tv.primaryColor} !important; border-bottom: 1px solid ${tv.primaryColor} !important; }`;
+    css += `\n#nice strong { color: ${tv.primaryColor} !important; }`;
+  }
+  if (tv.headingAlign) {
+    css += `\n#nice h1, #nice h2, #nice h3, #nice h4 { text-align: ${tv.headingAlign} !important; }`;
+  }
+  if (tv.h1Size) css += `\n#nice h1 { font-size: ${tv.h1Size}px !important; }`;
+  if (tv.h2Size) css += `\n#nice h2 { font-size: ${tv.h2Size}px !important; }`;
+  if (tv.h3Size) css += `\n#nice h3 { font-size: ${tv.h3Size}px !important; }`;
+  if (tv.blockquoteColor || tv.blockquoteBg) {
+    css += `\n#nice blockquote { ${tv.blockquoteColor ? `border-left-color: ${tv.blockquoteColor} !important;` : ''} ${tv.blockquoteBg ? `background: ${tv.blockquoteBg} !important;` : ''} }`;
+  }
+  return css;
+});
+
+
 
 const syncToPlatform = (plat: 'wechat' | 'zhihu' | 'juejin' | 'csdn') => {
   copyHtml(plat === 'csdn' ? 'juejin' : plat as any);
@@ -1009,6 +1070,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
   <div class="octopus-layout">
     <component :is="'style'" v-if="themeStyleContent" id="dynamic-theme">{{ themeStyleContent }}</component>
     <component :is="'style'" v-if="codeThemeStyleContent" id="dynamic-code-theme">{{ codeThemeStyleContent }}</component>
+    <component :is="'style'" v-if="visualOverridesCss" id="dynamic-visual-theme">{{ visualOverridesCss }}</component>
     
     <!-- Tier 1: System Menu Bar -->
     <header class="octopus-header system-menu-bar">
@@ -1173,10 +1235,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           </select>
         </div>
 
-        <button class="btn-icon-text css-customize-btn" @click="toggleCSS" :title="isEditingTheme ? '关闭自定义CSS' : '配置自定义CSS样式'">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          CSS
-        </button>
+        <button class="btn btn-native" style="padding: 4px 10px; font-size: 0.85rem;" @click="isVisualConfigVisible = true; activeMenu = null">🎨 深度定制设计</button>
+        <button class="btn btn-native" style="padding: 4px 10px; font-size: 0.85rem;" @click="activeMenu = activeMenu === 'css' ? null : 'css'">⚙️ 实时 CSS</button>
 
       </div>
     </div>
@@ -1237,6 +1297,24 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
 
       <div class="preview-pane" :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isPreviewMode ? '100%' : (isEditingTheme ? '33.333%' : (100 - leftWidth + '%')) }">
+        <!-- Floating Quick Actions Restored -->
+        <div class="floating-toolbar" style="position: absolute; top: 16px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px;">
+          <!-- WeChat Copy Button -->
+          <button class="icon-btn floating-action" title="一键复制公众号文章" @click="copyHtml('wechat')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          </button>
+          
+          <!-- Plain Text Copy Button -->
+          <button class="icon-btn floating-action" title="复制全平台纯文本" @click="copyText()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+          
+          <!-- Fullscreen Toggle Button -->
+          <button class="icon-btn floating-action" title="全屏沉浸预览 (Zen Mode)" @click="togglePreviewMode" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          </button>
+        </div>
+        
         <!-- Inject dynamic CSS raw strings explicitly into the DOM -->
         <component :is="'style'" v-if="themeStyleContent && !isEditingTheme" id="markdown-theme">{{ themeStyleContent }}</component>
         <component :is="'style'" v-if="codeThemeStyleContent" id="code-theme">{{ codeThemeStyleContent }}</component>
@@ -1268,7 +1346,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       <!-- Global Modal Container -->
       <transition name="fade">
-        <div v-if="modalState.visible || isImageConfigVisible || isSyncModalVisible" class="export-overlay" @click.self="isImageConfigVisible = false; isSyncModalVisible = false; clsoeModal(false)">
+        <div v-if="modalState.visible || isImageConfigVisible || isSyncModalVisible || isVisualConfigVisible" class="export-overlay" @click.self="isImageConfigVisible = false; isSyncModalVisible = false; isVisualConfigVisible = false; clsoeModal(false)">
           <!-- General Dialog -->
           <div v-if="modalState.visible" class="export-modal custom-modal">
             <h3 style="margin-top:0;">{{ modalState.title }}</h3>
@@ -1382,6 +1460,101 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               <button class="btn btn-primary" style="width: 100%; justify-content: center;" @click="isImageConfigVisible = false">保存并关闭</button>
             </div>
           </div>
+
+          <!-- Visual Theme Designer Modal (Word-style Configuration) -->
+          <div v-if="isVisualConfigVisible" class="export-modal custom-modal visual-modal" style="width: 550px; max-width: 95vw;">
+            <h3 style="margin-top:0; margin-bottom: 1rem; color: var(--text-primary);">🎨 深度视觉定制 (Visual Builder)</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.5;">无需编写 CSS 代码。在此调整任意数值即可实时覆盖底层排版风格。留空将使用当前主题默认值。</p>
+            
+            <div class="visual-accordion">
+              <!-- Globals -->
+              <div class="visual-section">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">🌐 全局参数 (Global)</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="setting-item">
+                    <label>基础字号 (px)</label>
+                    <input type="number" v-model="visualTheme.baseFontSize" placeholder="例如: 15" class="setting-input"/>
+                  </div>
+                  <div class="setting-item">
+                    <label>正文行高</label>
+                    <input type="number" step="0.1" v-model="visualTheme.lineHeight" placeholder="例如: 1.8" class="setting-input"/>
+                  </div>
+                  <div class="setting-item">
+                    <label>全局文字颜色</label>
+                    <div style="display: flex; gap: 8px;">
+                      <input type="color" v-model="visualTheme.baseColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
+                      <input type="text" v-model="visualTheme.baseColor" placeholder="#333333" class="setting-input" style="flex: 1;"/>
+                    </div>
+                  </div>
+                  <div class="setting-item">
+                    <label>主题强调色 (主色)</label>
+                    <div style="display: flex; gap: 8px;">
+                      <input type="color" v-model="visualTheme.primaryColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
+                      <input type="text" v-model="visualTheme.primaryColor" placeholder="#ff0080" class="setting-input" style="flex: 1;"/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Headings -->
+              <div class="visual-section" style="margin-top: 24px;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">📝 标题等级 (Headings)</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="setting-item">
+                    <label>通用排版对齐</label>
+                    <select v-model="visualTheme.headingAlign" class="setting-input">
+                      <option value="">默认 (由主题控制)</option>
+                      <option value="left">左对齐 (Left)</option>
+                      <option value="center">居中 (Center)</option>
+                    </select>
+                  </div>
+                  <div class="setting-item">
+                    <label>H1 一级标题 (px)</label>
+                    <input type="number" v-model="visualTheme.h1Size" placeholder="例如: 24" class="setting-input"/>
+                  </div>
+                  <div class="setting-item">
+                    <label>H2 二级标题 (px)</label>
+                    <input type="number" v-model="visualTheme.h2Size" placeholder="例如: 20" class="setting-input"/>
+                  </div>
+                  <div class="setting-item">
+                    <label>H3 三级标题 (px)</label>
+                    <input type="number" v-model="visualTheme.h3Size" placeholder="例如: 18" class="setting-input"/>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Paragraphs -->
+              <div class="visual-section" style="margin-top: 24px;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">📐 细节组件 (Blocks)</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="setting-item">
+                    <label>段落上下外边距 (px)</label>
+                    <input type="number" v-model="visualTheme.paragraphMargin" placeholder="例如: 16" class="setting-input"/>
+                  </div>
+                  <div class="setting-item">
+                    <label>引用块竖线颜色</label>
+                    <div style="display: flex; gap: 8px;">
+                      <input type="color" v-model="visualTheme.blockquoteColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
+                      <input type="text" v-model="visualTheme.blockquoteColor" placeholder="#cccccc" class="setting-input" style="flex: 1;"/>
+                    </div>
+                  </div>
+                  <div class="setting-item" style="grid-column: span 2;">
+                    <label>引用块背景色</label>
+                    <div style="display: flex; gap: 8px;">
+                      <input type="color" v-model="visualTheme.blockquoteBg" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
+                      <input type="text" v-model="visualTheme.blockquoteBg" placeholder="例如: rgba(0,0,0,0.05)" class="setting-input" style="flex: 1;"/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div style="text-align: right; margin-top: 32px; display: flex; justify-content: space-between; align-items: center;">
+              <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size:0.9rem;" @click="clearVisualTheme">🗑️ 清空所有定制</button>
+              <button class="btn btn-primary" style="padding: 8px 24px; font-weight: 600;" @click="isVisualConfigVisible = false">应用定制并关闭 (Apply)</button>
+            </div>
+          </div>
+          
         </div>
       </transition>
 

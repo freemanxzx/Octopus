@@ -569,17 +569,7 @@ const updateHtml = () => {
     return `<figure>${imgCore}</figure>`;
   });
 
-  let fontFace = "";
-  if (documentFontFamily.value === 'system-serif') fontFace = 'font-family: Georgia, "Times New Roman", "Songti SC", "SimSun", serif !important;';
-  else if (documentFontFamily.value === 'lxgw') fontFace = 'font-family: "LXGW WenKai Screen", sans-serif !important;';
-  else if (documentFontFamily.value === 'zcool') fontFace = 'font-family: "ZCOOL XiaoWei", serif !important;';
-  else if (documentFontFamily.value === 'fira') fontFace = 'font-family: "Fira Code", monospace !important;';
-  else if (documentFontFamily.value === 'yahei') fontFace = 'font-family: "Microsoft YaHei", "微软雅黑", sans-serif !important;';
-  else if (documentFontFamily.value === 'pingfang') fontFace = 'font-family: "PingFang SC", "PingFang TC", sans-serif !important;';
-  else if (documentFontFamily.value === 'helvetica') fontFace = 'font-family: "Helvetica Neue", Helvetica, sans-serif !important;';
-  else if (documentFontFamily.value === 'times') fontFace = 'font-family: "Times New Roman", Times, serif !important;';
-
-  htmlOutput.value = `<section id="nice" class="markdown-body" style="width: 100% !important; max-width: none !important; ${fontFace}">${rawHtml}</section>`;
+  htmlOutput.value = `<section id="nice" class="markdown-body" style="width: 100% !important; max-width: none !important;">${rawHtml}</section>`;
 };
 
 watch([content, isMacCodeBlock, documentFontFamily, enableLinkFootnote, showReferences, showDiagrams], updateHtml);
@@ -712,6 +702,25 @@ const copyText = () => {
 const visualOverridesCss = computed(() => {
   let css = '';
   const tv = visualTheme;
+  const dFont = documentFontFamily.value;
+
+  if (dFont === 'lxgw') css += `@import url('https://cdn.staticfile.org/lxgw-wenkai-screen-webfont/1.6.0/lxgwwenkaiscreen.css');\n`;
+  else if (dFont === 'fira') css += `@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap');\n`;
+  else if (dFont === 'zcool') css += `@import url('https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap');\n`;
+
+  if (dFont !== 'system-sans') {
+    let f = '';
+    if (dFont === 'system-serif') f = 'Georgia, "Times New Roman", "Songti SC", "SimSun", serif';
+    else if (dFont === 'lxgw') f = '"LXGW WenKai Screen", sans-serif';
+    else if (dFont === 'zcool') f = '"ZCOOL XiaoWei", serif';
+    else if (dFont === 'fira') f = '"Fira Code", monospace';
+    else if (dFont === 'yahei') f = '"Microsoft YaHei", "微软雅黑", sans-serif';
+    else if (dFont === 'pingfang') f = '"PingFang SC", "PingFang TC", sans-serif';
+    else if (dFont === 'helvetica') f = '"Helvetica Neue", Helvetica, sans-serif';
+    else if (dFont === 'times') f = '"Times New Roman", Times, serif';
+    if (f) css += `#nice, #nice * { font-family: ${f} !important; }\n`;
+  }
+
   if (tv.baseFontSize || tv.baseColor || tv.lineHeight) {
     css += `\n#nice { ${tv.baseFontSize ? `font-size: ${tv.baseFontSize}px !important;` : ''} ${tv.baseColor ? `color: ${tv.baseColor} !important;` : ''} ${tv.lineHeight ? `line-height: ${tv.lineHeight} !important;` : ''} }`;
     css += `\n#nice p { ${tv.baseColor ? `color: ${tv.baseColor} !important;` : ''} ${tv.baseFontSize ? `font-size: ${tv.baseFontSize}px !important;` : ''} ${tv.paragraphMargin ? `margin: ${tv.paragraphMargin}px 0 !important;` : ''} }`;

@@ -96,6 +96,7 @@ watch(selectedCodeTheme, (val) => loadCodeTheme(val));
 onMounted(() => loadCodeTheme(selectedCodeTheme.value));
 
 const isEditingTheme = ref(false);
+const dsTab = ref<'visual' | 'native' | 'custom'>('visual');
 const customStyleContent = ref("");
 
 const toggleCSS = () => {
@@ -1505,12 +1506,104 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       </div>
       
-      <!-- Tier 3 CSS Pane for 3-Column Layout (Moved to the Far Right) -->
-      <div v-show="isEditingTheme && !isPreviewMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column;">
-        <div style="background: var(--bg-panel); padding: 0.6rem 1rem; color: var(--text-primary); font-weight: bold; border-bottom: 1px solid var(--border-subtle);">
-           🎨 实时 CSS 编辑器
+      <!-- Tier 3 Designer Pane (Tabs: Visual / Native CSS / Custom CSS) -->
+      <div v-show="isEditingTheme && !isPreviewMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: var(--bg-app); min-height: 0;">
+        <div class="sidebar-tabs" style="display:flex; border-bottom:1px solid var(--border-subtle); background: var(--bg-panel);">
+           <button class="s-tab" :class="{active: dsTab === 'visual'}" @click="dsTab = 'visual'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;">🎛️ 可视化定制</button>
+           <button class="s-tab" :class="{active: dsTab === 'native'}" @click="dsTab = 'native'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;" title="查看并拷贝当期内置的默认主题 CSS 模版">📚 默认源码</button>
+           <button class="s-tab" :class="{active: dsTab === 'custom'}" @click="dsTab = 'custom'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;" title="向主题注入高级自定义 CSS 规则，优先级最高。">💻 附加 CSS</button>
         </div>
-        <Codemirror v-model="customStyleContent" :extensions="[oneDark]" style="flex: 1; overflow: hidden;" />
+        
+        <div v-show="dsTab === 'visual'" style="flex:1; overflow-y: auto; padding: 20px;">
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0; margin-bottom: 20px; line-height: 1.5; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">无需敲击代码。在此调整以下数值即可“傻瓜式”快速覆盖底层排版系统的主流风格。（留空则维持原貌）</p>
+
+              <!-- 视觉定制区块提取自原 Modal -->
+              <div class="visual-section" style="margin-bottom: 24px;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0ea5e9; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">🟢 整体观感 (Typography & Base)</h4>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+                  <div class="setting-item">
+                    <label style="font-weight:600; font-size:13px; color:var(--text-primary);">核心主色 (Primary Color)</label>
+                    <div style="display: flex; gap: 8px; margin-top:6px;">
+                      <input type="color" v-model="visualTheme.primaryColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
+                      <input type="text" v-model="visualTheme.primaryColor" placeholder="#ff0080" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    </div>
+                  </div>
+                  <div class="setting-item">
+                    <label style="font-weight:600; font-size:13px; color:var(--text-primary);">正文基础字号 & 行高</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top:6px;">
+                      <input type="number" v-model="visualTheme.baseFontSize" placeholder="字号(px) 如 15" class="setting-input" style="padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                      <input type="number" v-model="visualTheme.lineHeight" placeholder="行高 如 1.8" step="0.1" class="setting-input" style="padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    </div>
+                  </div>
+                  <div class="setting-item">
+                    <label style="font-weight:600; font-size:13px; color:var(--text-primary);">正文文字颜色</label>
+                    <div style="display: flex; gap: 8px; margin-top:6px;">
+                      <input type="color" v-model="visualTheme.baseColor" style="flex: 0 0 32px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
+                      <input type="text" v-model="visualTheme.baseColor" placeholder="#333333" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="visual-section" style="margin-bottom: 24px;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0ea5e9; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">🔵 标题结构 (Headings)</h4>
+                <div style="margin-bottom: 12px;">
+                     <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">全局标题对齐</label>
+                     <select v-model="visualTheme.headingAlign" class="setting-input" style="width:100%; padding:6px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);">
+                       <option value="">默认由主题控制</option>
+                       <option value="left">左对齐 (Left)</option>
+                       <option value="center">居中 (Center)</option>
+                     </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                  <div class="setting-item">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">H1(px)</label>
+                    <input type="number" v-model="visualTheme.h1Size" placeholder="24" class="setting-input" style="width:100%; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                  </div>
+                  <div class="setting-item">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">H2(px)</label>
+                    <input type="number" v-model="visualTheme.h2Size" placeholder="20" class="setting-input" style="width:100%; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                  </div>
+                  <div class="setting-item">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">H3(px)</label>
+                    <input type="number" v-model="visualTheme.h3Size" placeholder="18" class="setting-input" style="width:100%; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                  </div>
+                </div>
+              </div>
+              
+              <div class="visual-section" style="margin-bottom: 24px;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0ea5e9; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">📐 细节小部件 (Blocks)</h4>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+                  <div class="setting-item">
+                    <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">段落上下外边距 (px)</label>
+                    <input type="number" v-model="visualTheme.paragraphMargin" placeholder="例如: 16" class="setting-input" style="width:100%; padding:6px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                  </div>
+                  <div class="setting-item">
+                    <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">引用块左竖线颜色</label>
+                    <div style="display: flex; gap: 4px;">
+                       <input type="color" v-model="visualTheme.blockquoteColor" style="flex: 0 0 32px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
+                       <input type="text" v-model="visualTheme.blockquoteColor" placeholder="#cccccc" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    </div>
+                  </div>
+                  <div class="setting-item">
+                    <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">引用块主体背景色</label>
+                    <div style="display: flex; gap: 4px;">
+                       <input type="color" v-model="visualTheme.blockquoteBg" style="flex: 0 0 32px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
+                       <input type="text" v-model="visualTheme.blockquoteBg" placeholder="如 rgba(0,0,0,0.05)" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="text-align: right; margin-top: 10px;">
+                <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size:0.85rem; width: 100%; transition: all 0.2s;" @click="clearVisualTheme" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">🗑️ 重置定制状态 (还原为主题默认值)</button>
+              </div>
+        </div>
+
+        <!-- READONLY Raw Theme Layer -->
+        <Codemirror v-show="dsTab === 'native'" v-model="themeStyleContent" :extensions="[oneDark]" style="flex: 1; overflow: auto;" />
+        <!-- USER Editable CSS Layer -->
+        <Codemirror v-show="dsTab === 'custom'" v-model="customStyleContent" :extensions="[oneDark]" style="flex: 1; overflow: auto;" />
       </div>
       <!-- Loading Overlay -->
       <transition name="fade">
@@ -1649,99 +1742,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             </div>
           </div>
 
-          <!-- Visual Theme Designer Modal (Word-style Configuration) -->
-          <div v-if="isVisualConfigVisible" class="export-modal custom-modal visual-modal premium-modal" style="width: 550px; max-width: 95vw; padding: 2.5rem; text-align: left;">
-            <h3 style="margin-top:0; margin-bottom: 0.5rem; color: var(--text-primary); font-size: 1.4rem;">🎨 深度视觉定制</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.5; border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px;">无需编写 CSS 代码。在此调整任意数值即可实时覆盖底层排版风格。留空将使用当前主题默认值。</p>
-            
-            <div class="visual-accordion">
-              <!-- Globals -->
-              <div class="visual-section">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">🌐 全局参数 (Global)</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                  <div class="setting-item">
-                    <label>基础字号 (px)</label>
-                    <input type="number" v-model="visualTheme.baseFontSize" placeholder="例如: 15" class="setting-input"/>
-                  </div>
-                  <div class="setting-item">
-                    <label>正文行高</label>
-                    <input type="number" step="0.1" v-model="visualTheme.lineHeight" placeholder="例如: 1.8" class="setting-input"/>
-                  </div>
-                  <div class="setting-item">
-                    <label>全局文字颜色</label>
-                    <div style="display: flex; gap: 8px;">
-                      <input type="color" v-model="visualTheme.baseColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
-                      <input type="text" v-model="visualTheme.baseColor" placeholder="#333333" class="setting-input" style="flex: 1;"/>
-                    </div>
-                  </div>
-                  <div class="setting-item">
-                    <label>主题强调色 (主色)</label>
-                    <div style="display: flex; gap: 8px;">
-                      <input type="color" v-model="visualTheme.primaryColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
-                      <input type="text" v-model="visualTheme.primaryColor" placeholder="#ff0080" class="setting-input" style="flex: 1;"/>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Headings -->
-              <div class="visual-section" style="margin-top: 24px;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">📝 标题等级 (Headings)</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                  <div class="setting-item">
-                    <label>通用排版对齐</label>
-                    <select v-model="visualTheme.headingAlign" class="setting-input">
-                      <option value="">默认 (由主题控制)</option>
-                      <option value="left">左对齐 (Left)</option>
-                      <option value="center">居中 (Center)</option>
-                    </select>
-                  </div>
-                  <div class="setting-item">
-                    <label>H1 一级标题 (px)</label>
-                    <input type="number" v-model="visualTheme.h1Size" placeholder="例如: 24" class="setting-input"/>
-                  </div>
-                  <div class="setting-item">
-                    <label>H2 二级标题 (px)</label>
-                    <input type="number" v-model="visualTheme.h2Size" placeholder="例如: 20" class="setting-input"/>
-                  </div>
-                  <div class="setting-item">
-                    <label>H3 三级标题 (px)</label>
-                    <input type="number" v-model="visualTheme.h3Size" placeholder="例如: 18" class="setting-input"/>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Paragraphs -->
-              <div class="visual-section" style="margin-top: 24px;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">📐 细节组件 (Blocks)</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                  <div class="setting-item">
-                    <label>段落上下外边距 (px)</label>
-                    <input type="number" v-model="visualTheme.paragraphMargin" placeholder="例如: 16" class="setting-input"/>
-                  </div>
-                  <div class="setting-item">
-                    <label>引用块竖线颜色</label>
-                    <div style="display: flex; gap: 8px;">
-                      <input type="color" v-model="visualTheme.blockquoteColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
-                      <input type="text" v-model="visualTheme.blockquoteColor" placeholder="#cccccc" class="setting-input" style="flex: 1;"/>
-                    </div>
-                  </div>
-                  <div class="setting-item" style="grid-column: span 2;">
-                    <label>引用块背景色</label>
-                    <div style="display: flex; gap: 8px;">
-                      <input type="color" v-model="visualTheme.blockquoteBg" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;"/>
-                      <input type="text" v-model="visualTheme.blockquoteBg" placeholder="例如: rgba(0,0,0,0.05)" class="setting-input" style="flex: 1;"/>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div style="text-align: right; margin-top: 32px; display: flex; justify-content: space-between; align-items: center;">
-              <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size:0.9rem;" @click="clearVisualTheme">🗑️ 清空所有定制</button>
-              <button class="btn btn-primary" style="padding: 8px 24px; font-weight: 600;" @click="isVisualConfigVisible = false">应用定制并关闭 (Apply)</button>
-            </div>
-          </div>
+
           
         </div>
       </transition>
@@ -2936,6 +2937,11 @@ html, body {
   margin: 0 !important;
   border-radius: 0 0 8px 8px !important;
 }
+
+/* Sidebar Control Tabs */
+.s-tab { border-bottom: 2px solid transparent !important; opacity: 0.5; transition: all 0.2s; }
+.s-tab:hover { opacity: 0.8; }
+.s-tab.active { border-bottom: 2px solid var(--accent-light) !important; opacity: 1; color: var(--accent-light) !important; }
 
 /* User-Requested UI Component Polish (Segments) */
 .view-toggles-pill {

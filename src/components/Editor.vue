@@ -188,10 +188,26 @@ interface TocItem {
 const tocList = ref<TocItem[]>([]);
 const showToc = ref(true);
 
+const hasExternalLinks = ref(false);
+const showLinkWarning = ref(false);
+let linkCheckDebounce: number | null = null;
+
 watch(content, (newVal) => {
   const lines = newVal.split('\n');
   const items: TocItem[] = [];
   let inCodeBlock = false;
+  
+  if (linkCheckDebounce) window.clearTimeout(linkCheckDebounce);
+  linkCheckDebounce = window.setTimeout(() => {
+    const extLinkRegex = /(?:^|[^!])\[.*?\]\((https?:\/\/[^\s\)]+)\)/;
+    if (extLinkRegex.test(newVal)) {
+      hasExternalLinks.value = true;
+      showLinkWarning.value = true;
+    } else {
+      hasExternalLinks.value = false;
+      showLinkWarning.value = false;
+    }
+  }, 600);
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -1131,6 +1147,17 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
     </div>
 
+    <div v-if="hasExternalLinks && showLinkWarning" class="wx-link-alert">
+      <div class="wx-link-msg">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        智能探测：检测到外部链接！微信公众号不支持外链点击，推荐将其转为专属“脚注格式”。
+      </div>
+      <div class="wx-link-acts">
+        <button class="wx-btn-primary" @click="toggleLinkFootnote(); showLinkWarning = false">一键转换脚注</button>
+        <button class="wx-btn-close" @click="showLinkWarning = false"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+    </div>
+
     <main class="workspace" :class="{ 'is-dragging': isDragging }">
       <div v-show="!isPreviewMode" class="editor-pane" :style="{ width: isEditingTheme ? '33.333%' : (leftWidth + '%') }">
         
@@ -1521,14 +1548,10 @@ html, body {
   left: 0;
   margin-top: 0.5rem;
   background: var(--bg-panel);
-  /* Apply heavy macOS/Vercel styling strictly for all dropdown menus */
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  background-color: rgba(var(--bg-panel-rgb, 255, 255, 255), 0.7);
   min-width: 180px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.05);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
   z-index: 100;
   padding: 6px;
   animation: menuFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -1930,17 +1953,17 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg-hover);
+  background: var(--bg-panel);
   padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
   transition: all 0.25s ease;
 }
 .theme-select-group:hover, .theme-select-group:focus-within {
-  background: transparent;
-  border-color: var(--border-subtle);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background: var(--bg-panel);
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .modern-label {
@@ -2503,5 +2526,77 @@ html, body {
 html.dark .view-toggles-pill .pill-btn.active {
   background: var(--bg-active);
   color: #ffffff;
+}
+
+/* WX Link Auto Detection Banner */
+.wx-link-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  padding: 8px 16px;
+  color: var(--text-primary);
+  font-size: 13px;
+  border-radius: 8px;
+  margin: 0 20px 10px 20px;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.08), inset 0 1px 0 rgba(255,255,255,0.2);
+  animation: appEntry 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 50;
+}
+html.dark .wx-link-alert {
+  background: rgba(234, 179, 8, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.wx-link-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #c2410c; 
+  font-weight: 500;
+}
+html.dark .wx-link-msg { color: #facc15; }
+
+.wx-link-acts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wx-btn-primary {
+  background: var(--bg-panel);
+  border: 1px solid #eab308;
+  color: #c2410c;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.wx-btn-primary:hover {
+  background: #eab308;
+  color: #ffffff;
+}
+html.dark .wx-btn-primary {
+  color: #fce68a;
+  border-color: #ca8a04;
+}
+html.dark .wx-btn-primary:hover {
+  color: #1e293b;
+}
+.wx-btn-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+.wx-btn-close:hover {
+  background: rgba(234, 179, 8, 0.2);
+  color: #ca8a04;
 }
 </style>

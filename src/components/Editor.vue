@@ -1097,6 +1097,18 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             手机壳预览
           </button>
         </div>
+
+        <!-- NEW CTA: Article Distribution Platform -->
+        <div class="publish-action" @click.stop="toggleMenu('publish')">
+           <button class="publish-btn"><svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 2l-2 22-7-6.2-4 4V13L21 2zm-8.8 9.3l-8.6 4.3 18.6-11.6z"></path></svg> 一键分发 ▾</button>
+           <div class="dropdown-menu dropdown-menu-right" v-show="activeMenu === 'publish'">
+              <div class="dropdown-item" @click="copyHtml('wechat')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg><span style="margin-left: 6px">发布到 微信公众号</span></div>
+              <div class="dropdown-item" @click="copyHtml('zhihu')"><span style="font-weight:900; margin-right:6px; display:inline-block; width:16px; text-align:center;">知</span>分发至 知乎专栏</div>
+              <div class="dropdown-item" @click="copyHtml('juejin')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg><span style="margin-left: 6px">同步至 稀土掘金</span></div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" @click="exportImage"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg><span style="margin-left: 6px">保存为超清长图</span></div>
+           </div>
+        </div>
       </div>    </header>
 
     <!-- Tier 2: Formatting Toolbar -->
@@ -1115,7 +1127,10 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <input type="file" ref="fileInput" @change="handleFileSelected" accept="image/*" style="display: none" />
         <button class="icon-btn" title="引用" @click="insertFormat('\n> ', '')" style="font-weight: 800; font-size: 1.2rem; line-height: 1; font-family: Times, serif;">"</button>
         <button class="icon-btn" title="格式化排版" @click="formatMd"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="6.5"></line></svg></button>
-        
+        <button class="icon-btn" title="双端字体切换 (衬线/无衬线)" :class="{ active: useSerifFont }" @click="toggleSerif" :style="{ color: useSerifFont ? 'var(--accent-color)' : '', background: useSerifFont ? 'rgba(56, 189, 248, 0.1)' : '' }">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+          <span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">Aa</span>
+        </button>
         <div class="toolbar-divider"></div>
         <button class="icon-btn" title="配置服务器或图床" @click="isImageConfigVisible = true; activeMenu = null"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
         <button class="icon-btn" title="转微信脚注 / 外部链接转换" @click="toggleLinkFootnote"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">WX</span></button>
@@ -1210,22 +1225,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         
         <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
         
-        <!-- Premium Floating Action Toolbar -->
-        <div class="floating-toolbar">
-          <button class="float-btn wechat" @click="copyHtml('wechat')" title="发往 微信公众号">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
-          </button>
-          <button class="float-btn zhihu" @click="copyHtml('zhihu')" title="发往 知乎平台">
-            <span style="font-size: 15px; font-weight: 800; font-family: -apple-system, sans-serif; letter-spacing: -1px; transform: scale(1.05); display: inline-block;">知</span>
-          </button>
-          <button class="float-btn juejin" @click="copyHtml('juejin')" title="发往 稀土掘金">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
-          </button>
-          <div class="float-divider"></div>
-          <button class="float-btn export" @click="exportImage" title="保存为 超清长图">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          </button>
-        </div>
+
 
       </div>
       

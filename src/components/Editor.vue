@@ -706,14 +706,30 @@ const visualOverridesCss = computed(() => {
 
   if (dFont === 'lxgw') css += `@import url('https://cdn.staticfile.org/lxgw-wenkai-screen-webfont/1.6.0/lxgwwenkaiscreen.css');\n`;
   else if (dFont === 'fira') css += `@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap');\n`;
+  else if (dFont === 'jetbrains') css += `@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');\n`;
   else if (dFont === 'zcool') css += `@import url('https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap');\n`;
+  else if (dFont === 'zcool_huangyou') css += `@import url('https://fonts.googleapis.com/css2?family=ZCOOL+QingKe+HuangYou&display=swap');\n`;
+  else if (dFont === 'mashanzheng') css += `@import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');\n`;
+  else if (dFont === 'zhimangxing') css += `@import url('https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&display=swap');\n`;
+  else if (dFont === 'longcang') css += `@import url('https://fonts.googleapis.com/css2?family=Long+Cang&display=swap');\n`;
+  else if (dFont === 'smiley') css += `@import url('https://cdn.staticfile.net/smiley-sans/1.1.1/smiley-sans.min.css');\n`;
+  else if (dFont === 'notosans') css += `@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');\n`;
+  else if (dFont === 'notoserif') css += `@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');\n`;
 
   if (dFont !== 'system-sans') {
     let f = '';
     if (dFont === 'system-serif') f = 'Georgia, "Times New Roman", "Songti SC", "SimSun", serif';
+    else if (dFont === 'notosans') f = '"Noto Sans SC", sans-serif';
+    else if (dFont === 'notoserif') f = '"Noto Serif SC", serif';
     else if (dFont === 'lxgw') f = '"LXGW WenKai Screen", sans-serif';
+    else if (dFont === 'smiley') f = 'SmileySans-Oblique, sans-serif';
     else if (dFont === 'zcool') f = '"ZCOOL XiaoWei", serif';
+    else if (dFont === 'zcool_huangyou') f = '"ZCOOL QingKe HuangYou", cursive';
+    else if (dFont === 'mashanzheng') f = '"Ma Shan Zheng", cursive';
+    else if (dFont === 'zhimangxing') f = '"Zhi Mang Xing", cursive';
+    else if (dFont === 'longcang') f = '"Long Cang", cursive';
     else if (dFont === 'fira') f = '"Fira Code", monospace';
+    else if (dFont === 'jetbrains') f = '"JetBrains Mono", monospace';
     else if (dFont === 'yahei') f = '"Microsoft YaHei", "微软雅黑", sans-serif';
     else if (dFont === 'pingfang') f = '"PingFang SC", "PingFang TC", sans-serif';
     else if (dFont === 'helvetica') f = '"Helvetica Neue", Helvetica, sans-serif';
@@ -1313,9 +1329,17 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             <optgroup label="开源免授权区域">
               <option value="system-sans">无衬线体 (原生黑体)</option>
               <option value="system-serif">经典衬线 (原生宋明)</option>
+              <option value="notosans">思源黑体 (Noto Sans)</option>
+              <option value="notoserif">思源宋体 (Noto Serif)</option>
               <option value="lxgw">霞鹜文楷 (手写黑板报)</option>
+              <option value="smiley">得意黑 (Smiley Sans)</option>
               <option value="zcool">站酷小薇 (文艺优雅)</option>
-              <option value="fira">Fira Code (极客编程)</option>
+              <option value="zcool_huangyou">站酷黄油体</option>
+              <option value="mashanzheng">马善政毛笔体</option>
+              <option value="zhimangxing">志莽行书</option>
+              <option value="longcang">龙藏草书</option>
+              <option value="fira">Fira Code (编程等宽)</option>
+              <option value="jetbrains">JetBrains Mono</option>
             </optgroup>
             <optgroup label="⚠️ 商业版权/风险区">
               <option value="pingfang">PingFang (⚠️ 商用禁忌)</option>

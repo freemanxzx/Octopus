@@ -191,9 +191,38 @@ interface TocItem {
 const tocList = ref<TocItem[]>([]);
 const showToc = ref(true);
 
-const hasExternalLinks = ref(false);
+interface ExtLinkItem {
+  text: string;
+  url: string;
+  line: number;
+}
+const externalLinks = ref<ExtLinkItem[]>([]);
+const hasExternalLinks = computed(() => externalLinks.value.length > 0);
+const activeExtLinkIdx = ref(0);
 const showLinkWarning = ref(false);
 let linkCheckDebounce: number | null = null;
+
+const jumpToExtLine = (direction: 'next' | 'prev' | 'current') => {
+  if (externalLinks.value.length === 0) return;
+  
+  if (direction === 'next') {
+    activeExtLinkIdx.value = (activeExtLinkIdx.value + 1) % externalLinks.value.length;
+  } else if (direction === 'prev') {
+    activeExtLinkIdx.value = (activeExtLinkIdx.value - 1 + externalLinks.value.length) % externalLinks.value.length;
+  }
+  
+  if (view.value) {
+    try {
+      const ln = externalLinks.value[activeExtLinkIdx.value].line;
+      const targetPos = view.value.state.doc.line(ln).from;
+      view.value.dispatch({
+        selection: { anchor: targetPos, head: targetPos },
+        effects: EditorView.scrollIntoView(targetPos, { y: "center" })
+      });
+      view.value.focus();
+    } catch(e) {}
+  }
+};
 
 watch(content, (newVal) => {
   const lines = newVal.split('\n');
@@ -202,13 +231,30 @@ watch(content, (newVal) => {
   
   if (linkCheckDebounce) window.clearTimeout(linkCheckDebounce);
   linkCheckDebounce = window.setTimeout(() => {
-    const extLinkRegex = /(?:^|[^!])\[.*?\]\((https?:\/\/[^\s\)]+)\)/;
-    if (extLinkRegex.test(newVal)) {
-      hasExternalLinks.value = true;
+    const linksFound: ExtLinkItem[] = [];
+    const extLinkRegex = /(?:^|[^!])\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/g;
+    
+    lines.forEach((lineText, idx) => {
+      let match;
+      while ((match = extLinkRegex.exec(lineText)) !== null) {
+        linksFound.push({
+          text: match[1],
+          url: match[2],
+          line: idx + 1
+        });
+      }
+    });
+
+    if (linksFound.length > 0 && externalLinks.value.length === 0) {
       showLinkWarning.value = true;
-    } else {
-      hasExternalLinks.value = false;
+      activeExtLinkIdx.value = 0;
+    } else if (linksFound.length === 0) {
       showLinkWarning.value = false;
+    }
+    
+    externalLinks.value = linksFound;
+    if (activeExtLinkIdx.value >= externalLinks.value.length) {
+      activeExtLinkIdx.value = 0;
     }
   }, 600);
   
@@ -1292,14 +1338,27 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
     </div>
 
-    <div v-if="hasExternalLinks && showLinkWarning" class="wx-link-alert">
-      <div class="wx-link-msg">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        智能探测：检测到外部链接！微信公众号不支持外链点击，推荐将其转为专属“脚注格式”。
+    <div v-if="hasExternalLinks && showLinkWarning" class="wx-link-alert" style="display:flex; flex-direction:column; gap:8px;">
+      <div class="wx-link-msg" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          微信外链阻断预警：共发现 {{ externalLinks.length }} 个外部链接，微信不支持外链点击。
+        </div>
+        <div class="wx-link-acts" style="display: flex; gap: 8px;">
+          <button class="wx-btn-primary" @click="toggleLinkFootnote(); showLinkWarning = false">一键防丢转脚注</button>
+          <button class="wx-btn-close" @click="showLinkWarning = false"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        </div>
       </div>
-      <div class="wx-link-acts">
-        <button class="wx-btn-primary" @click="toggleLinkFootnote(); showLinkWarning = false">一键转换脚注</button>
-        <button class="wx-btn-close" @click="showLinkWarning = false"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      
+      <div v-if="externalLinks.length > 0" style="background: rgba(255,165,0,0.1); padding: 8px 12px; border-radius: 6px; display:flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,165,0,0.3);">
+        <div @click="jumpToExtLine('current')" style="cursor:pointer; font-size:0.85rem; color:#b45309; display:flex; flex-direction:column; gap:4px; max-width:75%;" title="点击定位到源码行">
+           <span style="font-weight:bold; font-family:monospace;">源文件第 {{ externalLinks[activeExtLinkIdx].line }} 行 : [{{ externalLinks[activeExtLinkIdx].text }}]</span>
+           <span style="opacity:0.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration: underline dashed; text-underline-offset: 3px;">{{ externalLinks[activeExtLinkIdx].url }}</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+           <button @click="jumpToExtLine('prev')" style="border:none; background:white; cursor:pointer; padding:4px 8px; border-radius:4px; color:#b45309; box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:0.8rem; border:1px solid rgba(255,165,0,0.2);">上一个</button>
+           <button @click="jumpToExtLine('next')" style="border:none; background:white; cursor:pointer; padding:4px 8px; border-radius:4px; color:#b45309; box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:0.8rem; border:1px solid rgba(255,165,0,0.2);">下一个 {{ activeExtLinkIdx + 1 }}/{{ externalLinks.length }}</button>
+        </div>
       </div>
     </div>
 

@@ -1,4 +1,4 @@
-import { prefix } from '../prefix'
+const prefix = 'markdown-body';
 
 export const baseCSSContent = `
 .${prefix}__hr {

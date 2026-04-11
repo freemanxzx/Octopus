@@ -1,12 +1,30 @@
 import { ref, onMounted, onUnmounted, watch, shallowRef, computed } from 'vue';
 import MarkdownIt from 'markdown-it';
 import footnote from 'markdown-it-footnote';
+import mathjax3 from 'markdown-it-mathjax3';
 import hljs from 'highlight.js';
 // @ts-ignore
 import * as htmlToImage from 'html-to-image';
 import { Codemirror } from 'vue-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
+import { EditorView } from '@codemirror/view';
+import { uploadImage } from '../utils/uploader';
+// Static raw CSS imports to bypass Vite dynamic loader sandbox and CDN blocks
+import githubCss from 'highlight.js/styles/github.css?raw';
+import vs2015Css from 'highlight.js/styles/vs2015.css?raw';
+import atomOneDarkCss from 'highlight.js/styles/atom-one-dark.css?raw';
+import atomOneLightCss from 'highlight.js/styles/atom-one-light.css?raw';
+import monokaiCss from 'highlight.js/styles/monokai.css?raw';
+import draculaCss from 'highlight.js/styles/base16/dracula.css?raw';
+const codeThemeMap = {
+    'github': githubCss,
+    'vs2015': vs2015Css,
+    'atom-one-dark': atomOneDarkCss,
+    'atom-one-light': atomOneLightCss,
+    'monokai': monokaiCss,
+    'dracula': draculaCss
+};
 const isDesktop = ref(!!window.electronAPI);
 const isWechatAvailable = ref(!!window.wechatAPI);
 // Wenyan Parity: Themes Picker (BMPI Collection)
@@ -33,8 +51,9 @@ const selectedTheme = ref('wechat-bmpi-16-orange-blue');
 const themeStyleContent = ref("");
 const loadTheme = async (themeId) => {
     try {
-        const cssObj = await import(`../assets/themes/${themeId}.css?raw`);
-        themeStyleContent.value = cssObj.default || "";
+        const baseCssObj = await import(`../assets/themes/_base/basic.css?raw`);
+        const themeCssObj = await import(`../assets/themes/${themeId}.css?raw`);
+        themeStyleContent.value = (baseCssObj.default || "") + "\n\n/* ----- THEME OVERRIDES ----- */\n\n" + (themeCssObj.default || "");
     }
     catch (e) {
         console.error("Theme load failed", e);
@@ -53,10 +72,16 @@ const codeThemes = [
 ];
 const selectedCodeTheme = ref('github');
 const codeThemeStyleContent = ref("");
-const loadCodeTheme = async (themeId) => {
+const loadCodeTheme = (themeId) => {
     try {
-        const cssObj = await import(`highlight.js/styles/${themeId}.css?raw`);
-        codeThemeStyleContent.value = cssObj.default || "";
+        const rawCss = codeThemeMap[themeId] || "";
+        const boostedCss = rawCss.replace(/(^|}|,)\s*([^{}]+?)\s*(?={|,)/g, (m, prefix, selector) => {
+            const sel = selector.trim();
+            if (sel.startsWith('@') || sel === '')
+                return m;
+            return `${prefix}\n#nice ${sel}`;
+        });
+        codeThemeStyleContent.value = boostedCss;
     }
     catch (e) {
         console.error("Code Theme load failed", e);
@@ -109,32 +134,201 @@ function initializeOctopus(config) {
 这里放入一张高清水印配图：
 ![Octopus 架构流引擎](https://images.unsplash.com/photo-1542831371-29b0f74f9713?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80 "程序员工作空间模拟") 
 
-## 4. 微信图文黑科技测试 (WeChat Black Magic)
+## 5. 多图横向滑动测试 (Image Flow)
 
-在微信公众号生态中，外链总是会被无情拦截。但现在您可以直接写标准链接，比如探讨前沿技术的 [苹果官方设计与技术规范](https://developer.apple.com/design/ "Human Interface Guidelines")，以及深度的 [TypeScript 官方权威接口指南](https://www.typescriptlang.org/)。
+如果需要在同一排版位置放入多张图片作横向滚动展示，只需要使用原生的尖括号（前后带有 \`<\` 和 \`>\`）包裹图库，并在图片之间用英文逗号分隔：
 
-*点击顶部菜单中的 \`[格式] -> [微信外链转脚注]\`，您会看到所有带超链接的文字旁边会自动升起极致优雅的蓝色数字上标，紧接着文章末尾会自动生成一条由高亮分割线隔开的【参考资料】深度摘要版块！这在过去的 Markdown2Html 原生文颜工具中备受大量推文作者的热烈追捧！*
+<![横屏图 1](https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80),![横屏图 2](https://images.unsplash.com/photo-1542831371-29b0f74f9713?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80),![横屏图 3](https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80)>
+
+## 6. 数学公式与方程测试 (Math / LaTeX)
+
+支持原生内联公式，比如爱因斯坦的神秘魔法 $E=mc^2$。如果你在推导算法模型，甚至可以直接唤醒强大的 MathJax 渲染引擎：
+
+$$
+\\frac{\\partial f}{\\partial x} = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}
+$$
+
+$$
+\\mathcal{L} = -\\frac{1}{2} \\log \\left( 2\\pi\\sigma^2 \\right) - \\frac{(x-\\mu)^2}{2\\sigma^2}
+$$
 
 ---
 ✨ **测试结束**。以上排版在右侧的引擎中全部被严格遵守并在任何设备下稳定呈现。点按上方的「复制到微信」按钮，粘贴到公众号编辑后台体验终极无损穿透效果吧！
 `);
 const htmlOutput = ref('');
 const previewContainer = ref(null);
-// Setup MarkdownIt with Highlight.js
+// Status Bar Computations
+const wordCount = computed(() => {
+    const text = content.value || '';
+    const cnMatches = text.match(/[\u4e00-\u9fa5]/g) || [];
+    const enWords = text.replace(/[\u4e00-\u9fa5]/g, ' ').split(/\s+/).filter(w => w.length > 0) || [];
+    return cnMatches.length + enWords.length;
+});
+const lineCount = computed(() => {
+    return (content.value || '').split('\n').length;
+});
+const tocList = ref([]);
+const showToc = ref(true);
+watch(content, (newVal) => {
+    const lines = newVal.split('\n');
+    const items = [];
+    let inCodeBlock = false;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim().startsWith('```')) {
+            inCodeBlock = !inCodeBlock;
+            continue;
+        }
+        if (inCodeBlock)
+            continue;
+        const match = line.match(/^(#{1,2})\s+(.+)$/);
+        if (match) {
+            items.push({
+                level: match[1].length,
+                text: match[2].replace(/<[^>]+>/g, '').trim(),
+                line: i + 1
+            });
+        }
+    }
+    tocList.value = items;
+}, { immediate: true });
+const scrollToLine = (lineNode) => {
+    if (!view.value)
+        return;
+    const state = view.value.state;
+    const targetLine = Math.min(Math.max(1, lineNode), state.doc.lines);
+    const pos = state.doc.line(targetLine).from;
+    view.value.dispatch({
+        selection: { anchor: pos },
+        scrollIntoView: true
+    });
+    view.value.focus();
+};
+// Weiyan/MarkdownNice Parity Core Mutators
+function markdownItSpan(md) {
+    md.core.ruler.push("heading_span", (state) => {
+        for (let i = 0; i < state.tokens.length - 1; i++) {
+            if (state.tokens[i].type !== "heading_open" || state.tokens[i + 1].type !== "inline")
+                continue;
+            const inlineToken = state.tokens[i + 1];
+            if (!inlineToken.content)
+                continue;
+            const p1 = new state.Token("html_inline", "", 0);
+            p1.content = `<span class="prefix"></span><span class="content">`;
+            inlineToken.children.unshift(p1);
+            const p2 = new state.Token("html_inline", "", 0);
+            p2.content = `</span><span class="suffix"></span>`;
+            inlineToken.children.push(p2);
+            i += 2;
+        }
+    });
+}
+function markdownItTableContainer(md) {
+    md.core.ruler.push("table-container", (state) => {
+        const arr = [];
+        for (let i = 0; i < state.tokens.length; i++) {
+            const cur = state.tokens[i];
+            if (cur.type === "table_open") {
+                const span = new state.Token("html_inline", "", 0);
+                span.content = `<section class="table-container">`;
+                arr.push(span);
+                arr.push(cur);
+            }
+            else if (cur.type === "table_close") {
+                const span = new state.Token("html_inline", "", 0);
+                span.content = `</section>`;
+                arr.push(cur);
+                arr.push(span);
+            }
+            else {
+                arr.push(cur);
+            }
+        }
+        state.tokens = arr;
+    });
+}
+function markdownItLiReplacer(md) {
+    md.renderer.rules.list_item_open = () => "<li><section>";
+    md.renderer.rules.list_item_close = () => "</section></li>";
+}
+function markdownItMultiquote(md) {
+    md.core.ruler.push("blockquote-class", (state) => {
+        let count = 0;
+        let outerQuote;
+        for (let i = 0; i < state.tokens.length; i++) {
+            const cur = state.tokens[i];
+            if (cur.type === "blockquote_open") {
+                if (count === 0)
+                    outerQuote = cur;
+                count++;
+                continue;
+            }
+            if (count > 0) {
+                outerQuote.attrs = [["class", "multiquote-" + count]];
+                count = 0;
+            }
+        }
+    });
+}
+function markdownItImageFlow(md) {
+    const tokenize = (state, start) => {
+        const matchReg = /^<((!\[[^[\]]*\]\([^()]+\)(,?\s*(?=>)|,\s*(?!>)))+)>/;
+        const srcLine = state.src.slice(state.bMarks[start], state.eMarks[start]);
+        if (srcLine.charCodeAt(0) !== 0x3c /* < */) {
+            return false;
+        }
+        const match = matchReg.exec(srcLine);
+        if (match) {
+            const images = match[1].match(/\[[^\]]*\]\([^)]+\)/g);
+            if (images && images.length > 0) {
+                const token = state.push("imageFlow", "", 0);
+                token.meta = images;
+                token.block = true;
+                state.line++;
+                return true;
+            }
+        }
+        return false;
+    };
+    md.renderer.rules.imageFlow = (tokens, idx) => {
+        const start = `<section class="imageflow-layer1"><section class="imageflow-layer2">`;
+        const end = `</section></section><p class="imageflow-caption"><<< 左右滑动见更多 >>></p>`;
+        const contents = tokens[idx].meta;
+        let wrappedContent = "";
+        contents.forEach((content) => {
+            let altMatch = content.match(/\[([^[\]]*)\]/);
+            let srcMatch = content.match(/[^[]*\(([^()]*)\)[^\]]*/);
+            let alt = altMatch ? altMatch[1] : "";
+            let src = srcMatch ? srcMatch[1] : "";
+            wrappedContent += `<section class="imageflow-layer3"><img alt="${alt}" src="${src}" class="imageflow-img" /></section>`;
+        });
+        return start + wrappedContent + end;
+    };
+    md.block.ruler.before("paragraph", "imageFlow", tokenize);
+}
+// Setup MarkdownIt with Highlight.js and all Weiyan Parity Injectors
 const md = new MarkdownIt({
     html: true,
     linkify: true,
     typographer: true,
     highlight: function (str, lang) {
+        const escapeHtml = (s) => s.replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
         if (lang && hljs.getLanguage(lang)) {
             try {
-                return hljs.highlight(str, { language: lang }).value;
+                return '<pre class="custom hljs"><code>' + hljs.highlight(str, { language: lang }).value + '</code></pre>';
             }
             catch (__) { }
         }
-        return ''; // use external default escaping
+        return '<pre class="custom hljs"><code>' + escapeHtml(str) + '</code></pre>';
     }
-}).use(footnote);
+})
+    .use(footnote)
+    .use(mathjax3)
+    .use(markdownItSpan)
+    .use(markdownItTableContainer)
+    .use(markdownItLiReplacer)
+    .use(markdownItMultiquote)
+    .use(markdownItImageFlow);
 // Unified Toast System
 const toastState = ref({ message: '', type: 'info', visible: false });
 let toastTimer = null;
@@ -159,6 +353,62 @@ const clsoeModal = (result) => {
 // Replace standard alerts
 const customAlert = (msg) => showModal("提示", msg, false);
 const customConfirm = (msg) => showModal("确认操作", msg, true);
+// Image Upload State
+const isImageConfigVisible = ref(false);
+const uploadConfig = ref((() => {
+    try {
+        const saved = localStorage.getItem('octopus-upload-config');
+        return saved ? JSON.parse(saved) : { provider: 'base64' };
+    }
+    catch {
+        return { provider: 'base64' };
+    }
+})());
+watch(uploadConfig, (val) => localStorage.setItem('octopus-upload-config', JSON.stringify(val)), { deep: true });
+// Manual Toolbar Image Upload
+const fileInput = ref(null);
+const triggerImageUpload = () => {
+    if (fileInput.value) {
+        fileInput.value.value = '';
+        fileInput.value.click();
+    }
+};
+const handleFileSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (!file)
+        return;
+    if (view.value) {
+        const pos = view.value.state.selection.main.head;
+        handleFileUpload(file, view.value, pos);
+    }
+};
+const handleFileUpload = async (file, viewArg, pos) => {
+    if (!file.type.startsWith('image/'))
+        return;
+    showToast('正在向图床传输图片...', 'info');
+    const tempName = `![上传中... ${file.name}]()`;
+    viewArg.dispatch({ changes: { from: pos, insert: tempName } });
+    try {
+        const url = await uploadImage(file, uploadConfig.value);
+        const finalSyntax = `![image](${url})`;
+        const docStr = viewArg.state.doc.toString();
+        const startIdx = docStr.indexOf(tempName);
+        if (startIdx !== -1) {
+            viewArg.dispatch({
+                changes: { from: startIdx, to: startIdx + tempName.length, insert: finalSyntax }
+            });
+            showToast('✅ 图片上传成功！', 'success');
+        }
+    }
+    catch (e) {
+        customAlert(`图片上传失败: ${e.message}`);
+        const docStr = viewArg.state.doc.toString();
+        const startIdx = docStr.indexOf(tempName);
+        if (startIdx !== -1) {
+            viewArg.dispatch({ changes: { from: startIdx, to: startIdx + tempName.length, insert: "" } });
+        }
+    }
+};
 // Feature Toggles
 const isMacCodeBlock = ref(false);
 const useSerifFont = ref(false);
@@ -167,32 +417,35 @@ const showReferences = ref(true);
 const showDiagrams = ref(true);
 const updateHtml = () => {
     let rawHtml = md.render(content.value);
+    // Deep Parity: Mac Code Block Styling
+    if (isMacCodeBlock.value) {
+        rawHtml = rawHtml.replace(/<pre class="custom hljs">/g, (match) => {
+            return `<div class="mac-code-block"><div class="mac-header"><span class="mac-dot" style="background:#ff5f56"></span><span class="mac-dot" style="background:#ffbd2e"></span><span class="mac-dot" style="background:#27c93f"></span></div>` + match;
+        }).replace(/<\/pre>/g, '</pre></div>');
+    }
     // Deep Parity: WeChat Link Footnotes & References
     if (enableLinkFootnote.value || showReferences.value) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(rawHtml, 'text/html');
         const links = doc.querySelectorAll('a[href^="http"]');
         if (links.length > 0) {
-            let refsHtml = '<div class="references-section" style="margin-top: 50px; border-top: 1px solid #e1e4e8; padding-top: 20px;">';
-            refsHtml += '<h3 style="font-size: 16px; margin-bottom: 12px;">参考资料</h3><ul style="list-style: none; padding: 0; margin: 0;">';
+            let refsHtml = '<h3 class="footnotes-sep"></h3>\n<section class="footnotes">\n';
             links.forEach((a, i) => {
                 const num = i + 1;
                 if (enableLinkFootnote.value) {
                     const sup = doc.createElement('sup');
-                    sup.className = 'wechat-footnote-ref';
-                    sup.style.cssText = "font-size: 12px; color: #4f46e5; margin-left: 2px;";
-                    sup.textContent = `[${num}]`;
+                    sup.className = 'footnote-ref';
+                    sup.innerHTML = `[${num}]`;
+                    const textNode = a.innerHTML;
+                    a.innerHTML = `<span class="footnote-word">${textNode}</span>`;
                     a.appendChild(sup);
                 }
                 if (showReferences.value) {
-                    refsHtml += `<li style="margin-bottom: 8px; font-size: 14px; line-height: 1.6;">
-             <span style="display:inline-block; width:1.8rem; color:#64748b; font-weight:500;">[${num}]</span>
-             <strong style="color: #333;">${a.textContent.replace(`[${num}]`, '')}</strong>: 
-             <span style="color:#64748b; word-break: break-all;">${a.href}</span>
-           </li>`;
+                    // Weiyan Parity: .footnote-item > p > .footnote-word
+                    refsHtml += `<span id="fn${num}" class="footnote-item"><span class="footnote-num">[${num}] </span><p><span class="footnote-word">${a.textContent.replace(`[${num}]`, '')}</span>: <em>${a.href}</em></p></span>\n`;
                 }
             });
-            refsHtml += '</ul></div>';
+            refsHtml += '</section>';
             if (showReferences.value) {
                 rawHtml = doc.body.innerHTML + refsHtml;
             }
@@ -201,44 +454,22 @@ const updateHtml = () => {
             }
         }
     }
-    htmlOutput.value = `<section id="nice" class="markdown-body" style="width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important;">${rawHtml}</section>`;
+    // Deep Parity: Implicit Figures
+    rawHtml = rawHtml.replace(/<p>\s*(<img[^>]+alt="([^"]*)"[^>]*>)\s*<\/p>/g, (match, imgCore, altText) => {
+        if (altText && altText.trim() !== '') {
+            return `<figure>${imgCore}<figcaption>${altText}</figcaption></figure>`;
+        }
+        return `<figure>${imgCore}</figure>`;
+    });
+    const serifStyle = useSerifFont.value ? "font-family: Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif !important;" : "";
+    htmlOutput.value = `<section id="nice" class="markdown-body ${useSerifFont.value ? 'use-serif' : ''}" style="width: 100% !important; max-width: none !important; ${serifStyle}">${rawHtml}</section>`;
 };
-watch(content, updateHtml);
+watch([content, isMacCodeBlock, useSerifFont, enableLinkFootnote, showReferences, showDiagrams], updateHtml);
 onMounted(updateHtml);
 // Dropdown Menu Logic
 const activeMenu = ref(null);
 const toggleMenu = (menu) => {
     activeMenu.value = activeMenu.value === menu ? null : menu;
-};
-// File I/O Operations
-const importMd = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.md';
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file)
-            return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if (e.target && typeof e.target.result === 'string') {
-                content.value = e.target.result;
-                showToast("✅ 文档导入成功", "success");
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-};
-const exportMd = () => {
-    const blob = new Blob([content.value], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'document.md';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("✅ Markdown 源文件下载成功", "success");
 };
 const exportHtmlFile = () => {
     const boilerplate = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Markdown Export</title><style>${themeStyleContent.value}\n${customStyleContent.value}</style></head><body>${htmlOutput.value}</body></html>`;
@@ -350,6 +581,42 @@ const copyHtml = (platform = 'wechat') => {
     clone.style.position = 'absolute';
     clone.style.left = '-9999px';
     document.body.appendChild(clone);
+    // Weiyan MathJax Parity Handling for WeChat
+    if (platform === 'wechat') {
+        const mjxs = clone.getElementsByTagName('mjx-container');
+        // First, fix SVG attributes dynamically
+        for (let i = 0; i < mjxs.length; i++) {
+            const mjx = mjxs[i];
+            mjx.removeAttribute("jax");
+            mjx.removeAttribute("tabindex");
+            mjx.removeAttribute("ctxtmenu_counter");
+            const svg = mjx.querySelector('svg');
+            if (svg) {
+                const width = svg.getAttribute("width");
+                const height = svg.getAttribute("height");
+                svg.removeAttribute("width");
+                svg.removeAttribute("height");
+                if (width)
+                    svg.style.width = width;
+                if (height)
+                    svg.style.height = height;
+            }
+        }
+        clone.querySelectorAll('style').forEach(s => s.remove());
+        let cloneHtml = clone.innerHTML;
+        // Replace <mjx-container display="true"> with <section> (Block)
+        cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?display="true"[^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<section $1>$2</section>");
+        // Replace remaining <mjx-container> with <span> (Inline)
+        cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<span $1>$2</span>");
+        // Padding spaces for inline elements to avoid WeChat crowding bugs
+        cloneHtml = cloneHtml.replace(/\s<span class="MathJax"/g, '&nbsp;<span class="MathJax"');
+        cloneHtml = cloneHtml.replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
+        // Explicit borders for fractional strokes and tables
+        cloneHtml = cloneHtml.replace(/class="mjx-solid"/g, 'fill="none" stroke-width="70"');
+        // Strip MathML hidden assistive tags that pollute WeChat copy 
+        cloneHtml = cloneHtml.replace(/<mjx-assistive-mml[\s\S]*?<\/mjx-assistive-mml>/g, "");
+        clone.innerHTML = cloneHtml;
+    }
     const selection = window.getSelection();
     const range = document.createRange();
     range.selectNodeContents(clone);
@@ -371,7 +638,60 @@ const printPdf = () => {
     window.setTimeout(() => window.print(), 100);
 };
 const isPreviewMode = ref(false);
-const viewMode = ref('pc');
+const viewMode = ref('mobile');
+const importMd = async () => {
+    if (isDesktop.value && window.electronAPI && window.electronAPI.readFile) {
+        try {
+            // Dummy default for graceful fallback if user hasn't explicitly patched electronAPI yet
+            const result = await window.electronAPI.readFile();
+            if (result && result.content) {
+                content.value = result.content;
+                showToast("✅ 已成功载入本地 Markdown 文件", "success");
+            }
+        }
+        catch (e) {
+            customAlert("❌ 读取失败: " + e.message);
+        }
+    }
+    else {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.md, .txt';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file)
+                return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                content.value = e.target.result;
+                showToast("✅ SaaS云通道：成功解析导入 Markdown 文档", "success");
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+};
+const exportMd = async () => {
+    if (isDesktop.value && window.electronAPI && window.electronAPI.writeFile) {
+        try {
+            await window.electronAPI.writeFile('./export.md', content.value, 'utf-8');
+            showToast("✅ 原生通道写入完毕，已保存为 export.md", "success");
+        }
+        catch (e) {
+            customAlert("保存失败: " + e.message);
+        }
+    }
+    else {
+        const blob = new Blob([content.value], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'document.md';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("✅ Markdown 源码文件下载成功", "success");
+    }
+};
 const togglePreviewMode = () => {
     isPreviewMode.value = !isPreviewMode.value;
     showToast(isPreviewMode.value ? "已进入沉浸预览模式" : "已退出沉浸预览模式", "success");
@@ -382,20 +702,34 @@ const exportImage = async () => {
     try {
         isExporting.value = true;
         showToast("正在拼合超清长图，这可能需要几秒钟...", "info");
-        // Allow Vue to render the overlay
-        await new Promise(r => setTimeout(r, 100));
+        // TEMPORARY FIX: Switch to PC view so Mobile Notch/Borders are not exported!
+        const wasMobile = viewMode.value === 'mobile';
+        if (wasMobile) {
+            viewMode.value = 'pc';
+        }
+        // Allow Vue to render the overlay and the PC view
+        await new Promise(r => setTimeout(r, 200));
         const contentNode = previewContainer.value.querySelector('.preview-content');
         if (!contentNode)
             throw new Error("无法定位预览区域内容");
         const dataUrl = await htmlToImage.toPng(contentNode, {
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-preview)',
             pixelRatio: 2, // Retina resolution
             style: {
                 transform: 'none',
                 height: contentNode.scrollHeight + 'px',
-                width: contentNode.scrollWidth + 'px'
+                width: '850px', // Standard comfortable reading width for long images
+                padding: '40px',
+                margin: '0',
+                borderRadius: '0',
+                boxShadow: 'none',
+                border: 'none',
+                maxWidth: 'none'
             }
         });
+        if (wasMobile) {
+            viewMode.value = 'mobile'; // Restore the phone shell immediately after capture
+        }
         if (isDesktop.value) {
             const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
             // @ts-ignore
@@ -458,7 +792,59 @@ const syncScroll = (source, target) => {
     clearTimeout(scrollTimeout);
     scrollTimeout = setTimeout(() => { isSyncing = false; }, 50);
 };
-const extensions = [markdown(), oneDark];
+// CodeMirror dynamic theme management
+const isDarkMode = ref(false);
+onMounted(() => {
+    if (typeof document !== 'undefined') {
+        isDarkMode.value = document.documentElement.classList.contains('dark');
+        const observer = new MutationObserver(() => {
+            isDarkMode.value = document.documentElement.classList.contains('dark');
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+});
+const extensions = computed(() => {
+    const exts = [
+        markdown(),
+        EditorView.domEventHandlers({
+            paste(event, view) {
+                const items = event.clipboardData?.items;
+                if (items) {
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            const file = items[i].getAsFile();
+                            if (file) {
+                                handleFileUpload(file, view, view.state.selection.main.head);
+                                event.preventDefault();
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            },
+            drop(event, view) {
+                const files = event.dataTransfer?.files;
+                if (files && files.length > 0) {
+                    const file = files[0];
+                    if (file.type.startsWith('image/')) {
+                        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+                        if (pos !== null) {
+                            handleFileUpload(file, view, pos);
+                            event.preventDefault();
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+        })
+    ];
+    if (isDarkMode.value) {
+        exts.push(oneDark);
+    }
+    return exts;
+});
 const view = shallowRef();
 const handleReady = (payload) => {
     view.value = payload.view;
@@ -503,12 +889,28 @@ const __VLS_ctx = {
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['cm-scroller']} */ ;
+/** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['cm-scroller']} */ ;
+/** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['cm-scroller']} */ ;
+/** @type {__VLS_StyleScopedClasses['octopus-layout']} */ ;
+/** @type {__VLS_StyleScopedClasses['octopus-layout']} */ ;
+/** @type {__VLS_StyleScopedClasses['system-menu-bar']} */ ;
+/** @type {__VLS_StyleScopedClasses['system-menu-bar']} */ ;
 /** @type {__VLS_StyleScopedClasses['formatting-toolbar']} */ ;
+/** @type {__VLS_StyleScopedClasses['actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['brand-group']} */ ;
 /** @type {__VLS_StyleScopedClasses['menu-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['menu-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['dropdown-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['dropdown-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['dropdown-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['octopus-status-bar']} */ ;
 /** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['brand']} */ ;
@@ -519,6 +921,12 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['workspace']} */ ;
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['cm-scroller']} */ ;
+/** @type {__VLS_StyleScopedClasses['toc-content']} */ ;
+/** @type {__VLS_StyleScopedClasses['toc-content']} */ ;
+/** @type {__VLS_StyleScopedClasses['toc-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['toc-level-2']} */ ;
 /** @type {__VLS_StyleScopedClasses['resizer']} */ ;
 /** @type {__VLS_StyleScopedClasses['workspace']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-dragging']} */ ;
@@ -526,6 +934,10 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-mobile']} */ ;
+/** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
 /** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-mobile']} */ ;
 /** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
@@ -538,21 +950,28 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['view-toggles']} */ ;
 /** @type {__VLS_StyleScopedClasses['btn-toggle']} */ ;
 /** @type {__VLS_StyleScopedClasses['active']} */ ;
-/** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
-/** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
-/** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
-/** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
 /** @type {__VLS_StyleScopedClasses['mac-code-enabled']} */ ;
-/** @type {__VLS_StyleScopedClasses['copy-group']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
-/** @type {__VLS_StyleScopedClasses['copy-group']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
-/** @type {__VLS_StyleScopedClasses['copy-group']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
-/** @type {__VLS_StyleScopedClasses['copy-group']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
-/** @type {__VLS_StyleScopedClasses['copy-group']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
+/** @type {__VLS_StyleScopedClasses['actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['toolbar-divider']} */ ;
+/** @type {__VLS_StyleScopedClasses['premium-select']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-icon-text']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-primary-filled']} */ ;
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['active']} */ ;
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['wechat']} */ ;
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['zhihu']} */ ;
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['juejin']} */ ;
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
 /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
 /** @type {__VLS_StyleScopedClasses['serif-font']} */ ;
@@ -563,6 +982,20 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['workspace']} */ ;
+/** @type {__VLS_StyleScopedClasses['mac-code-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['mac-code-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['mac-code-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
+/** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['active']} */ ;
+/** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['active']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "octopus-layout" },
 });
@@ -941,7 +1374,12 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 __VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.activeMenu === 'settings') }, null, null);
 /** @type {__VLS_StyleScopedClasses['dropdown-menu']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ onClick: (__VLS_ctx.notImpl) },
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.isImageConfigVisible = true;
+            __VLS_ctx.activeMenu = null;
+            // @ts-ignore
+            [activeMenu, activeMenu, isImageConfigVisible,];
+        } },
     ...{ class: "dropdown-item" },
 });
 /** @type {__VLS_StyleScopedClasses['dropdown-item']} */ ;
@@ -958,7 +1396,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.toggleMenu('help');
             // @ts-ignore
-            [toggleMenu, activeMenu, notImpl, resetEditor,];
+            [toggleMenu, resetEditor,];
         } },
     ...{ class: "menu-item" },
 });
@@ -988,6 +1426,82 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 });
 /** @type {__VLS_StyleScopedClasses['actions']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "view-toggles-pill" },
+});
+/** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.viewMode = 'pc';
+            // @ts-ignore
+            [activeMenu, notImpl, notImpl, viewMode, showAbout,];
+        } },
+    ...{ class: "pill-btn" },
+    ...{ class: ({ active: __VLS_ctx.viewMode === 'pc' }) },
+});
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['active']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+    viewBox: "0 0 24 24",
+    width: "14",
+    height: "14",
+    stroke: "currentColor",
+    'stroke-width': "2.5",
+    fill: "none",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.rect, __VLS_intrinsics.rect)({
+    x: "2",
+    y: "3",
+    width: "20",
+    height: "14",
+    rx: "2",
+    ry: "2",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "8",
+    y1: "21",
+    x2: "16",
+    y2: "21",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "12",
+    y1: "17",
+    x2: "12",
+    y2: "21",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.viewMode = 'mobile';
+            // @ts-ignore
+            [viewMode, viewMode,];
+        } },
+    ...{ class: "pill-btn" },
+    ...{ class: ({ active: __VLS_ctx.viewMode === 'mobile' }) },
+});
+/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['active']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+    viewBox: "0 0 24 24",
+    width: "16",
+    height: "16",
+    stroke: "currentColor",
+    'stroke-width': "2.5",
+    fill: "none",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.rect, __VLS_intrinsics.rect)({
+    x: "5",
+    y: "2",
+    width: "14",
+    height: "20",
+    rx: "2",
+    ry: "2",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "12",
+    y1: "18",
+    x2: "12.01",
+    y2: "18",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "octopus-header formatting-toolbar" },
 });
 /** @type {__VLS_StyleScopedClasses['octopus-header']} */ ;
@@ -998,9 +1512,68 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 /** @type {__VLS_StyleScopedClasses['format-actions']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.showToc = !__VLS_ctx.showToc;
+            // @ts-ignore
+            [viewMode, showToc, showToc,];
+        } },
+    ...{ class: "icon-btn" },
+    title: "侧边大纲导航",
+    ...{ style: ({ color: __VLS_ctx.showToc ? 'var(--accent-color)' : '', background: __VLS_ctx.showToc ? 'rgba(56, 189, 248, 0.1)' : '' }) },
+});
+/** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+    viewBox: "0 0 24 24",
+    width: "16",
+    height: "16",
+    stroke: "currentColor",
+    fill: "none",
+    'stroke-width': "2",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "8",
+    y1: "6",
+    x2: "21",
+    y2: "6",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "8",
+    y1: "12",
+    x2: "21",
+    y2: "12",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "8",
+    y1: "18",
+    x2: "21",
+    y2: "18",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "3",
+    y1: "6",
+    x2: "3.01",
+    y2: "6",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "3",
+    y1: "12",
+    x2: "3.01",
+    y2: "12",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "3",
+    y1: "18",
+    x2: "3.01",
+    y2: "18",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "toolbar-divider" },
+});
+/** @type {__VLS_StyleScopedClasses['toolbar-divider']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.insertFormat('~~', '~~');
             // @ts-ignore
-            [activeMenu, insertFormat, notImpl, notImpl, showAbout,];
+            [insertFormat, showToc, showToc,];
         } },
     ...{ class: "icon-btn" },
     title: "删除线",
@@ -1168,13 +1741,9 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
     y2: "21",
 });
 __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.insertFormat('![图片描述](', ') ');
-            // @ts-ignore
-            [insertFormat,];
-        } },
+    ...{ onClick: (__VLS_ctx.triggerImageUpload) },
     ...{ class: "icon-btn" },
-    title: "图片",
+    title: "上传/插入图片",
 });
 /** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
@@ -1201,11 +1770,18 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
 __VLS_asFunctionalElement1(__VLS_intrinsics.polyline, __VLS_intrinsics.polyline)({
     points: "21 15 16 10 5 21",
 });
+__VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+    ...{ onChange: (__VLS_ctx.handleFileSelected) },
+    type: "file",
+    ref: "fileInput",
+    accept: "image/*",
+    ...{ style: {} },
+});
 __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.insertFormat('\n> ', '');
             // @ts-ignore
-            [insertFormat,];
+            [insertFormat, triggerImageUpload, handleFileSelected,];
         } },
     ...{ class: "icon-btn" },
     title: "引用",
@@ -1246,89 +1822,18 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 });
 /** @type {__VLS_StyleScopedClasses['actions']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "view-toggles" },
-    ...{ style: {} },
+    ...{ class: "control-group" },
 });
-/** @type {__VLS_StyleScopedClasses['view-toggles']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.viewMode = 'pc';
-            // @ts-ignore
-            [formatMd, viewMode,];
-        } },
-    ...{ class: "btn-toggle" },
-    ...{ class: ({ active: __VLS_ctx.viewMode === 'pc' }) },
+/** @type {__VLS_StyleScopedClasses['control-group']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "premium-select-wrapper" },
 });
-/** @type {__VLS_StyleScopedClasses['btn-toggle']} */ ;
-/** @type {__VLS_StyleScopedClasses['active']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-    viewBox: "0 0 24 24",
-    width: "14",
-    height: "14",
-    stroke: "currentColor",
-    'stroke-width': "2",
-    fill: "none",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.rect, __VLS_intrinsics.rect)({
-    x: "2",
-    y: "3",
-    width: "20",
-    height: "14",
-    rx: "2",
-    ry: "2",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
-    x1: "8",
-    y1: "21",
-    x2: "16",
-    y2: "21",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
-    x1: "12",
-    y1: "17",
-    x2: "12",
-    y2: "21",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.viewMode = 'mobile';
-            // @ts-ignore
-            [viewMode, viewMode,];
-        } },
-    ...{ class: "btn-toggle" },
-    ...{ class: ({ active: __VLS_ctx.viewMode === 'mobile' }) },
-});
-/** @type {__VLS_StyleScopedClasses['btn-toggle']} */ ;
-/** @type {__VLS_StyleScopedClasses['active']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-    viewBox: "0 0 24 24",
-    width: "16",
-    height: "16",
-    stroke: "currentColor",
-    'stroke-width': "2",
-    fill: "none",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.rect, __VLS_intrinsics.rect)({
-    x: "5",
-    y: "2",
-    width: "14",
-    height: "20",
-    rx: "2",
-    ry: "2",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
-    x1: "12",
-    y1: "18",
-    x2: "12.01",
-    y2: "18",
-});
+/** @type {__VLS_StyleScopedClasses['premium-select-wrapper']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.select, __VLS_intrinsics.select)({
     value: (__VLS_ctx.selectedCodeTheme),
-    ...{ class: "theme-select inline-select" },
-    ...{ style: {} },
+    ...{ class: "premium-select" },
 });
-/** @type {__VLS_StyleScopedClasses['theme-select']} */ ;
-/** @type {__VLS_StyleScopedClasses['inline-select']} */ ;
+/** @type {__VLS_StyleScopedClasses['premium-select']} */ ;
 for (const [c] of __VLS_vFor((__VLS_ctx.codeThemes))) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
         key: (c.id),
@@ -1336,15 +1841,17 @@ for (const [c] of __VLS_vFor((__VLS_ctx.codeThemes))) {
     });
     (c.name);
     // @ts-ignore
-    [viewMode, selectedCodeTheme, codeThemes,];
+    [formatMd, selectedCodeTheme, codeThemes,];
 }
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "premium-select-wrapper" },
+});
+/** @type {__VLS_StyleScopedClasses['premium-select-wrapper']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.select, __VLS_intrinsics.select)({
     value: (__VLS_ctx.selectedTheme),
-    ...{ class: "theme-select inline-select" },
-    ...{ style: {} },
+    ...{ class: "premium-select" },
 });
-/** @type {__VLS_StyleScopedClasses['theme-select']} */ ;
-/** @type {__VLS_StyleScopedClasses['inline-select']} */ ;
+/** @type {__VLS_StyleScopedClasses['premium-select']} */ ;
 for (const [t] of __VLS_vFor((__VLS_ctx.themes))) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
         key: (t.id),
@@ -1356,96 +1863,26 @@ for (const [t] of __VLS_vFor((__VLS_ctx.themes))) {
 }
 __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (__VLS_ctx.toggleCSS) },
-    ...{ class: "btn btn-native" },
+    ...{ class: "btn-icon-text" },
     ...{ style: {} },
+    title: (__VLS_ctx.isEditingTheme ? '关闭自定义CSS' : '配置自定义CSS样式'),
 });
-/** @type {__VLS_StyleScopedClasses['btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-native']} */ ;
-if (!__VLS_ctx.isEditingTheme) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
-}
-else {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
-}
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "copy-group" },
-    ...{ style: {} },
-});
-/** @type {__VLS_StyleScopedClasses['copy-group']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.copyHtml('wechat');
-            // @ts-ignore
-            [toggleCSS, isEditingTheme, copyHtml,];
-        } },
-    ...{ class: "btn-copy wechat" },
-});
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
-/** @type {__VLS_StyleScopedClasses['wechat']} */ ;
+/** @type {__VLS_StyleScopedClasses['btn-icon-text']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
     viewBox: "0 0 24 24",
-    width: "13",
-    height: "13",
+    width: "16",
+    height: "16",
     stroke: "currentColor",
-    'stroke-width': "2",
     fill: "none",
+    'stroke-width': "2",
 });
-__VLS_asFunctionalElement1(__VLS_intrinsics.rect, __VLS_intrinsics.rect)({
-    x: "9",
-    y: "9",
-    width: "13",
-    height: "13",
-    rx: "2",
-    ry: "2",
+__VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+    cx: "12",
+    cy: "12",
+    r: "3",
 });
 __VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
-    d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.copyHtml('zhihu');
-            // @ts-ignore
-            [copyHtml,];
-        } },
-    ...{ class: "btn-copy zhihu" },
-});
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
-/** @type {__VLS_StyleScopedClasses['zhihu']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.copyHtml('juejin');
-            // @ts-ignore
-            [copyHtml,];
-        } },
-    ...{ class: "btn-copy juejin" },
-});
-/** @type {__VLS_StyleScopedClasses['btn-copy']} */ ;
-/** @type {__VLS_StyleScopedClasses['juejin']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (__VLS_ctx.exportImage) },
-    ...{ class: "btn btn-primary" },
-});
-/** @type {__VLS_StyleScopedClasses['btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-primary']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-    viewBox: "0 0 24 24",
-    width: "14",
-    height: "14",
-    stroke: "currentColor",
-    'stroke-width': "2",
-    fill: "none",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
-    d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.polyline, __VLS_intrinsics.polyline)({
-    points: "7 10 12 15 17 10",
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
-    x1: "12",
-    y1: "15",
-    x2: "12",
-    y2: "3",
+    d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z",
 });
 __VLS_asFunctionalElement1(__VLS_intrinsics.main, __VLS_intrinsics.main)({
     ...{ class: "workspace" },
@@ -1459,12 +1896,63 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 });
 __VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isPreviewMode) }, null, null);
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "toc-panel" },
+});
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.showToc) }, null, null);
+/** @type {__VLS_StyleScopedClasses['toc-panel']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "toc-header" },
+});
+/** @type {__VLS_StyleScopedClasses['toc-header']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.showToc = false;
+            // @ts-ignore
+            [isPreviewMode, showToc, showToc, toggleCSS, isEditingTheme, isEditingTheme, isDragging, leftWidth,];
+        } },
+    ...{ class: "icon-btn" },
+    ...{ style: {} },
+});
+/** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "toc-content" },
+});
+/** @type {__VLS_StyleScopedClasses['toc-content']} */ ;
+for (const [item, idx] of __VLS_vFor((__VLS_ctx.tocList))) {
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ onClick: (...[$event]) => {
+                __VLS_ctx.scrollToLine(item.line);
+                // @ts-ignore
+                [tocList, scrollToLine,];
+            } },
+        key: (idx),
+        ...{ class: "toc-item" },
+        ...{ class: ('toc-level-' + item.level) },
+    });
+    /** @type {__VLS_StyleScopedClasses['toc-item']} */ ;
+    (item.text);
+    // @ts-ignore
+    [];
+}
+if (__VLS_ctx.tocList.length === 0) {
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ style: {} },
+    });
+}
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "cm-wrapper" },
+});
+/** @type {__VLS_StyleScopedClasses['cm-wrapper']} */ ;
 let __VLS_12;
 /** @ts-ignore @type {typeof __VLS_components.Codemirror} */
 Codemirror;
 // @ts-ignore
 const __VLS_13 = __VLS_asFunctionalComponent1(__VLS_12, new __VLS_12({
     ...{ 'onReady': {} },
+    ...{ 'onFocus': {} },
+    ...{ 'onChange': {} },
     modelValue: (__VLS_ctx.content),
     placeholder: "Start writing...",
     ...{ style: ({ height: '100%', width: '100%', fontSize: '15px' }) },
@@ -1475,6 +1963,8 @@ const __VLS_13 = __VLS_asFunctionalComponent1(__VLS_12, new __VLS_12({
 }));
 const __VLS_14 = __VLS_13({
     ...{ 'onReady': {} },
+    ...{ 'onFocus': {} },
+    ...{ 'onChange': {} },
     modelValue: (__VLS_ctx.content),
     placeholder: "Start writing...",
     ...{ style: ({ height: '100%', width: '100%', fontSize: '15px' }) },
@@ -1486,6 +1976,18 @@ const __VLS_14 = __VLS_13({
 let __VLS_17;
 const __VLS_18 = ({ ready: {} },
     { onReady: (__VLS_ctx.handleReady) });
+const __VLS_19 = ({ focus: {} },
+    { onFocus: (...[$event]) => {
+            __VLS_ctx.showToc = false;
+            // @ts-ignore
+            [showToc, tocList, content, extensions, handleReady,];
+        } });
+const __VLS_20 = ({ change: {} },
+    { onChange: (...[$event]) => {
+            __VLS_ctx.showToc = false;
+            // @ts-ignore
+            [showToc,];
+        } });
 var __VLS_15;
 var __VLS_16;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
@@ -1506,20 +2008,50 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 });
 /** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-mobile']} */ ;
-if (__VLS_ctx.customStyleContent) {
-    const __VLS_19 = ('style');
+if (__VLS_ctx.themeStyleContent && !__VLS_ctx.isEditingTheme) {
+    const __VLS_21 = ('style');
     // @ts-ignore
-    const __VLS_20 = __VLS_asFunctionalComponent1(__VLS_19, new __VLS_19({
+    const __VLS_22 = __VLS_asFunctionalComponent1(__VLS_21, new __VLS_21({
+        id: "markdown-theme",
+    }));
+    const __VLS_23 = __VLS_22({
+        id: "markdown-theme",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_22));
+    const { default: __VLS_26 } = __VLS_24.slots;
+    (__VLS_ctx.themeStyleContent);
+    // @ts-ignore
+    [themeStyleContent, themeStyleContent, viewMode, isPreviewMode, isPreviewMode, isEditingTheme, isEditingTheme, isEditingTheme, leftWidth, startDrag,];
+    var __VLS_24;
+}
+if (__VLS_ctx.codeThemeStyleContent) {
+    const __VLS_27 = ('style');
+    // @ts-ignore
+    const __VLS_28 = __VLS_asFunctionalComponent1(__VLS_27, new __VLS_27({
+        id: "code-theme",
+    }));
+    const __VLS_29 = __VLS_28({
+        id: "code-theme",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_28));
+    const { default: __VLS_32 } = __VLS_30.slots;
+    (__VLS_ctx.codeThemeStyleContent);
+    // @ts-ignore
+    [codeThemeStyleContent, codeThemeStyleContent,];
+    var __VLS_30;
+}
+if (__VLS_ctx.customStyleContent && __VLS_ctx.isEditingTheme) {
+    const __VLS_33 = ('style');
+    // @ts-ignore
+    const __VLS_34 = __VLS_asFunctionalComponent1(__VLS_33, new __VLS_33({
         id: "custom-theme",
     }));
-    const __VLS_21 = __VLS_20({
+    const __VLS_35 = __VLS_34({
         id: "custom-theme",
-    }, ...__VLS_functionalComponentArgsRest(__VLS_20));
-    const { default: __VLS_24 } = __VLS_22.slots;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_34));
+    const { default: __VLS_38 } = __VLS_36.slots;
     (__VLS_ctx.customStyleContent);
     // @ts-ignore
-    [exportImage, viewMode, isPreviewMode, isPreviewMode, isPreviewMode, isEditingTheme, isEditingTheme, isEditingTheme, isDragging, leftWidth, leftWidth, content, extensions, handleReady, startDrag, customStyleContent, customStyleContent,];
-    var __VLS_22;
+    [isEditingTheme, customStyleContent, customStyleContent,];
+    var __VLS_36;
 }
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "preview-content" },
@@ -1527,6 +2059,95 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 });
 __VLS_asFunctionalDirective(__VLS_directives.vHtml, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.htmlOutput) }, null, null);
 /** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "floating-toolbar" },
+});
+/** @type {__VLS_StyleScopedClasses['floating-toolbar']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.copyHtml('wechat');
+            // @ts-ignore
+            [extraCssClass, htmlOutput, copyHtml,];
+        } },
+    ...{ class: "float-btn wechat" },
+    title: "发往 微信公众号",
+});
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['wechat']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+    viewBox: "0 0 24 24",
+    width: "22",
+    height: "22",
+    fill: "currentColor",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.path)({
+    d: "M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.copyHtml('zhihu');
+            // @ts-ignore
+            [copyHtml,];
+        } },
+    ...{ class: "float-btn zhihu" },
+    title: "发往 知乎平台",
+});
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['zhihu']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+    ...{ style: {} },
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.copyHtml('juejin');
+            // @ts-ignore
+            [copyHtml,];
+        } },
+    ...{ class: "float-btn juejin" },
+    title: "发往 稀土掘金",
+});
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['juejin']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+    viewBox: "0 0 24 24",
+    width: "20",
+    height: "20",
+    fill: "currentColor",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
+    d: "M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "float-divider" },
+});
+/** @type {__VLS_StyleScopedClasses['float-divider']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (__VLS_ctx.exportImage) },
+    ...{ class: "float-btn export" },
+    title: "保存为 超清长图",
+});
+/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['export']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+    viewBox: "0 0 24 24",
+    width: "20",
+    height: "20",
+    stroke: "currentColor",
+    'stroke-width': "2",
+    fill: "none",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
+    d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.polyline, __VLS_intrinsics.polyline)({
+    points: "7 10 12 15 17 10",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+    x1: "12",
+    y1: "15",
+    x2: "12",
+    y2: "3",
+});
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "editor-pane css-pane" },
     ...{ style: {} },
@@ -1537,31 +2158,31 @@ __VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directi
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ style: {} },
 });
-let __VLS_25;
+let __VLS_39;
 /** @ts-ignore @type {typeof __VLS_components.Codemirror} */
 Codemirror;
 // @ts-ignore
-const __VLS_26 = __VLS_asFunctionalComponent1(__VLS_25, new __VLS_25({
+const __VLS_40 = __VLS_asFunctionalComponent1(__VLS_39, new __VLS_39({
     modelValue: (__VLS_ctx.customStyleContent),
     extensions: ([__VLS_ctx.oneDark]),
     ...{ style: {} },
 }));
-const __VLS_27 = __VLS_26({
+const __VLS_41 = __VLS_40({
     modelValue: (__VLS_ctx.customStyleContent),
     extensions: ([__VLS_ctx.oneDark]),
     ...{ style: {} },
-}, ...__VLS_functionalComponentArgsRest(__VLS_26));
-let __VLS_30;
+}, ...__VLS_functionalComponentArgsRest(__VLS_40));
+let __VLS_44;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_31 = __VLS_asFunctionalComponent1(__VLS_30, new __VLS_30({
+const __VLS_45 = __VLS_asFunctionalComponent1(__VLS_44, new __VLS_44({
     name: "fade",
 }));
-const __VLS_32 = __VLS_31({
+const __VLS_46 = __VLS_45({
     name: "fade",
-}, ...__VLS_functionalComponentArgsRest(__VLS_31));
-const { default: __VLS_35 } = __VLS_33.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_45));
+const { default: __VLS_49 } = __VLS_47.slots;
 if (__VLS_ctx.isExporting) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "export-overlay" },
@@ -1580,84 +2201,293 @@ if (__VLS_ctx.isExporting) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({});
 }
 // @ts-ignore
-[isPreviewMode, isEditingTheme, customStyleContent, extraCssClass, htmlOutput, oneDark, isExporting,];
-var __VLS_33;
-let __VLS_36;
+[exportImage, isPreviewMode, isEditingTheme, customStyleContent, oneDark, isExporting,];
+var __VLS_47;
+let __VLS_50;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_37 = __VLS_asFunctionalComponent1(__VLS_36, new __VLS_36({
+const __VLS_51 = __VLS_asFunctionalComponent1(__VLS_50, new __VLS_50({
     name: "fade",
 }));
-const __VLS_38 = __VLS_37({
+const __VLS_52 = __VLS_51({
     name: "fade",
-}, ...__VLS_functionalComponentArgsRest(__VLS_37));
-const { default: __VLS_41 } = __VLS_39.slots;
-if (__VLS_ctx.modalState.visible) {
+}, ...__VLS_functionalComponentArgsRest(__VLS_51));
+const { default: __VLS_55 } = __VLS_53.slots;
+if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ onClick: (...[$event]) => {
+                if (!(__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible))
+                    return;
+                __VLS_ctx.isImageConfigVisible = false;
+                __VLS_ctx.clsoeModal(false);
+                // @ts-ignore
+                [isImageConfigVisible, isImageConfigVisible, modalState, clsoeModal,];
+            } },
         ...{ class: "export-overlay" },
     });
     /** @type {__VLS_StyleScopedClasses['export-overlay']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "export-modal custom-modal" },
-    });
-    /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
-    /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
-        ...{ style: {} },
-    });
-    (__VLS_ctx.modalState.title);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-        ...{ style: {} },
-    });
-    (__VLS_ctx.modalState.message);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "modal-actions" },
-    });
-    /** @type {__VLS_StyleScopedClasses['modal-actions']} */ ;
-    if (__VLS_ctx.modalState.isConfirm) {
+    if (__VLS_ctx.modalState.visible) {
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "export-modal custom-modal" },
+        });
+        /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
+        /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
+            ...{ style: {} },
+        });
+        (__VLS_ctx.modalState.title);
+        __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+            ...{ style: {} },
+        });
+        (__VLS_ctx.modalState.message);
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "modal-actions" },
+        });
+        /** @type {__VLS_StyleScopedClasses['modal-actions']} */ ;
+        if (__VLS_ctx.modalState.isConfirm) {
+            __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+                ...{ onClick: (...[$event]) => {
+                        if (!(__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible))
+                            return;
+                        if (!(__VLS_ctx.modalState.visible))
+                            return;
+                        if (!(__VLS_ctx.modalState.isConfirm))
+                            return;
+                        __VLS_ctx.clsoeModal(false);
+                        // @ts-ignore
+                        [modalState, modalState, modalState, modalState, clsoeModal,];
+                    } },
+                ...{ class: "btn btn-native" },
+            });
+            /** @type {__VLS_StyleScopedClasses['btn']} */ ;
+            /** @type {__VLS_StyleScopedClasses['btn-native']} */ ;
+        }
         __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
             ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible))
+                        return;
                     if (!(__VLS_ctx.modalState.visible))
                         return;
-                    if (!(__VLS_ctx.modalState.isConfirm))
-                        return;
-                    __VLS_ctx.clsoeModal(false);
+                    __VLS_ctx.clsoeModal(true);
                     // @ts-ignore
-                    [modalState, modalState, modalState, modalState, clsoeModal,];
+                    [clsoeModal,];
                 } },
-            ...{ class: "btn btn-native" },
+            ...{ class: "btn btn-primary" },
         });
         /** @type {__VLS_StyleScopedClasses['btn']} */ ;
-        /** @type {__VLS_StyleScopedClasses['btn-native']} */ ;
+        /** @type {__VLS_StyleScopedClasses['btn-primary']} */ ;
     }
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.modalState.visible))
-                    return;
-                __VLS_ctx.clsoeModal(true);
-                // @ts-ignore
-                [clsoeModal,];
-            } },
-        ...{ class: "btn btn-primary" },
-    });
-    /** @type {__VLS_StyleScopedClasses['btn']} */ ;
-    /** @type {__VLS_StyleScopedClasses['btn-primary']} */ ;
+    if (__VLS_ctx.isImageConfigVisible) {
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "export-modal custom-modal" },
+            ...{ style: {} },
+        });
+        /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
+        /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
+            ...{ style: {} },
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ style: {} },
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+            ...{ style: {} },
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.select, __VLS_intrinsics.select)({
+            value: (__VLS_ctx.uploadConfig.provider),
+            ...{ style: {} },
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
+            value: "base64",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
+            value: "picgo",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
+            value: "github",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
+            value: "alioss",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
+            value: "txcos",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
+            value: "qiniu",
+        });
+        if (__VLS_ctx.uploadConfig.provider === 'github') {
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                value: (__VLS_ctx.uploadConfig.githubRepo),
+                type: "text",
+                placeholder: "username/repo",
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                type: "password",
+                placeholder: "ghp_xxxxxxxxxxxxxxxxxxx",
+                ...{ style: {} },
+            });
+            (__VLS_ctx.uploadConfig.githubToken);
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                value: (__VLS_ctx.uploadConfig.githubPath),
+                type: "text",
+                placeholder: "images/2026",
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                value: (__VLS_ctx.uploadConfig.githubBranch),
+                type: "text",
+                placeholder: "main",
+                ...{ style: {} },
+            });
+        }
+        if (['alioss', 'txcos', 'qiniu'].includes(__VLS_ctx.uploadConfig.provider)) {
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                value: (__VLS_ctx.uploadConfig.accessKey),
+                type: "text",
+                placeholder: "AccessKey ID",
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                type: "password",
+                placeholder: "AccessKey Secret",
+                ...{ style: {} },
+            });
+            (__VLS_ctx.uploadConfig.secretKey);
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                value: (__VLS_ctx.uploadConfig.bucket),
+                type: "text",
+                placeholder: "Bucket 名称",
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                value: (__VLS_ctx.uploadConfig.region),
+                type: "text",
+                placeholder: (__VLS_ctx.uploadConfig.provider === 'qiniu' ? 'z0' : (__VLS_ctx.uploadConfig.provider === 'alioss' ? 'oss-cn-hangzhou' : 'ap-guangzhou')),
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                value: (__VLS_ctx.uploadConfig.path),
+                type: "text",
+                placeholder: "blog/uploads/",
+                ...{ style: {} },
+            });
+            if (__VLS_ctx.uploadConfig.provider === 'qiniu') {
+                __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
+                __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                    ...{ style: {} },
+                });
+                __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
+                    value: (__VLS_ctx.uploadConfig.domain),
+                    type: "text",
+                    placeholder: "https://cdn.example.com",
+                    ...{ style: {} },
+                });
+            }
+        }
+        if (__VLS_ctx.uploadConfig.provider === 'picgo') {
+            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+                ...{ style: {} },
+            });
+        }
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "modal-actions" },
+            ...{ style: {} },
+        });
+        /** @type {__VLS_StyleScopedClasses['modal-actions']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible))
+                        return;
+                    if (!(__VLS_ctx.isImageConfigVisible))
+                        return;
+                    __VLS_ctx.isImageConfigVisible = false;
+                    // @ts-ignore
+                    [isImageConfigVisible, isImageConfigVisible, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig,];
+                } },
+            ...{ class: "btn btn-primary" },
+            ...{ style: {} },
+        });
+        /** @type {__VLS_StyleScopedClasses['btn']} */ ;
+        /** @type {__VLS_StyleScopedClasses['btn-primary']} */ ;
+    }
 }
 // @ts-ignore
 [];
-var __VLS_39;
-let __VLS_42;
+var __VLS_53;
+let __VLS_56;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_43 = __VLS_asFunctionalComponent1(__VLS_42, new __VLS_42({
+const __VLS_57 = __VLS_asFunctionalComponent1(__VLS_56, new __VLS_56({
     name: "slide-up",
 }));
-const __VLS_44 = __VLS_43({
+const __VLS_58 = __VLS_57({
     name: "slide-up",
-}, ...__VLS_functionalComponentArgsRest(__VLS_43));
-const { default: __VLS_47 } = __VLS_45.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_57));
+const { default: __VLS_61 } = __VLS_59.slots;
 if (__VLS_ctx.toastState.visible) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "toast-container" },
@@ -1668,8 +2498,92 @@ if (__VLS_ctx.toastState.visible) {
 }
 // @ts-ignore
 [toastState, toastState, toastState,];
-var __VLS_45;
+var __VLS_59;
+__VLS_asFunctionalElement1(__VLS_intrinsics.footer, __VLS_intrinsics.footer)({
+    ...{ class: "octopus-status-bar" },
+});
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isPreviewMode) }, null, null);
+/** @type {__VLS_StyleScopedClasses['octopus-status-bar']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "status-left" },
+});
+/** @type {__VLS_StyleScopedClasses['status-left']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+    ...{ class: "status-item" },
+});
+/** @type {__VLS_StyleScopedClasses['status-item']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({
+    ...{ style: {} },
+});
+(__VLS_ctx.wordCount);
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+    ...{ class: "status-item" },
+});
+/** @type {__VLS_StyleScopedClasses['status-item']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({
+    ...{ style: {} },
+});
+(__VLS_ctx.lineCount);
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "status-right" },
+});
+/** @type {__VLS_StyleScopedClasses['status-right']} */ ;
+if (__VLS_ctx.isDesktop) {
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ class: "status-item" },
+        ...{ style: {} },
+    });
+    /** @type {__VLS_StyleScopedClasses['status-item']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+        ...{ style: {} },
+        viewBox: "0 0 24 24",
+        width: "14",
+        height: "14",
+        stroke: "currentColor",
+        'stroke-width': "2",
+        fill: "none",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
+        d: "M22 11.08V12a10 10 0 1 1-5.93-9.14",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.polyline, __VLS_intrinsics.polyline)({
+        points: "22 4 12 14.01 9 11.01",
+    });
+}
+else {
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ class: "status-item" },
+        ...{ style: {} },
+    });
+    /** @type {__VLS_StyleScopedClasses['status-item']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+        ...{ style: {} },
+        viewBox: "0 0 24 24",
+        width: "14",
+        height: "14",
+        stroke: "currentColor",
+        'stroke-width': "2",
+        fill: "none",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+        cx: "12",
+        cy: "12",
+        r: "10",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+        x1: "12",
+        y1: "8",
+        x2: "12",
+        y2: "12",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.line, __VLS_intrinsics.line)({
+        x1: "12",
+        y1: "16",
+        x2: "12.01",
+        y2: "16",
+    });
+}
 // @ts-ignore
-[];
+[isDesktop, isPreviewMode, wordCount, lineCount,];
 const __VLS_export = (await import('vue')).defineComponent({});
 export default {};

@@ -9,6 +9,8 @@ import * as htmlToImage from 'html-to-image';
 import { Codemirror } from 'vue-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
+import { EditorView } from '@codemirror/view';
+import { uploadImage, type UploadConfig } from '../utils/uploader';
 
 // Static raw CSS imports to bypass Vite dynamic loader sandbox and CDN blocks
 import githubCss from 'highlight.js/styles/github.css?raw';
@@ -381,6 +383,65 @@ const clsoeModal = (result: boolean) => {
 const customAlert = (msg: string) => showModal("提示", msg, false);
 const customConfirm = (msg: string) => showModal("确认操作", msg, true);
 
+// Image Upload State
+const isImageConfigVisible = ref(false);
+const uploadConfig = ref<UploadConfig>(
+  (() => {
+    try {
+      const saved = localStorage.getItem('octopus-upload-config');
+      return saved ? JSON.parse(saved) : { provider: 'base64' };
+    } catch {
+      return { provider: 'base64' };
+    }
+  })()
+);
+watch(uploadConfig, (val) => localStorage.setItem('octopus-upload-config', JSON.stringify(val)), { deep: true });
+
+// Manual Toolbar Image Upload
+const fileInput = ref<HTMLInputElement | null>(null);
+const triggerImageUpload = () => {
+  if (fileInput.value) {
+    fileInput.value.value = '';
+    fileInput.value.click();
+  }
+};
+
+const handleFileSelected = (e: any) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (view.value) {
+    const pos = view.value.state.selection.main.head;
+    handleFileUpload(file, view.value, pos);
+  }
+};
+
+const handleFileUpload = async (file: File, viewArg: EditorView, pos: number) => {
+  if (!file.type.startsWith('image/')) return;
+  showToast('正在向图床传输图片...', 'info');
+  const tempName = `![上传中... ${file.name}]()`;
+  viewArg.dispatch({ changes: { from: pos, insert: tempName } });
+  
+  try {
+    const url = await uploadImage(file, uploadConfig.value);
+    const finalSyntax = `![image](${url})`;
+    const docStr = viewArg.state.doc.toString();
+    const startIdx = docStr.indexOf(tempName);
+    if (startIdx !== -1) {
+      viewArg.dispatch({
+        changes: { from: startIdx, to: startIdx + tempName.length, insert: finalSyntax }
+      });
+      showToast('✅ 图片上传成功！', 'success');
+    }
+  } catch (e: any) {
+    customAlert(`图片上传失败: ${e.message}`);
+    const docStr = viewArg.state.doc.toString();
+    const startIdx = docStr.indexOf(tempName);
+    if (startIdx !== -1) {
+      viewArg.dispatch({ changes: { from: startIdx, to: startIdx + tempName.length, insert: "" } });
+    }
+  }
+};
+
 // Feature Toggles
 const isMacCodeBlock = ref(false);
 const useSerifFont = ref(false);
@@ -723,7 +784,7 @@ const exportImage = async () => {
     if (!contentNode) throw new Error("无法定位预览区域内容");
 
     const dataUrl = await htmlToImage.toPng(contentNode, { 
-      backgroundColor: '#ffffff',
+      backgroundColor: 'var(--bg-preview)',
       pixelRatio: 2, // Retina resolution
       style: {
         transform: 'none',
@@ -810,7 +871,63 @@ const syncScroll = (source: HTMLElement, target: HTMLElement) => {
   scrollTimeout = setTimeout(() => { isSyncing = false; }, 50);
 };
 
-const extensions = [markdown(), oneDark];
+// CodeMirror dynamic theme management
+const isDarkMode = ref(false);
+
+onMounted(() => {
+  if (typeof document !== 'undefined') {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+    const observer = new MutationObserver(() => {
+      isDarkMode.value = document.documentElement.classList.contains('dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  }
+});
+
+const extensions = computed(() => {
+  const exts: any[] = [
+    markdown(), 
+    EditorView.domEventHandlers({
+      paste(event: ClipboardEvent, view: EditorView) {
+        const items = event.clipboardData?.items;
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+              const file = items[i].getAsFile();
+              if (file) {
+                handleFileUpload(file, view, view.state.selection.main.head);
+                event.preventDefault();
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      },
+      drop(event: DragEvent, view: EditorView) {
+        const files = event.dataTransfer?.files;
+        if (files && files.length > 0) {
+          const file = files[0];
+          if (file.type.startsWith('image/')) {
+            const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+            if (pos !== null) {
+              handleFileUpload(file, view, pos);
+              event.preventDefault();
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+    })
+  ];
+  
+  if (isDarkMode.value) {
+    exts.push(oneDark);
+  }
+  
+  return exts;
+});
 const view = shallowRef();
 const handleReady = (payload: any) => { 
   view.value = payload.view; 
@@ -936,7 +1053,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('settings')">
             设置
             <div class="dropdown-menu" v-show="activeMenu === 'settings'">
-              <div class="dropdown-item" @click="notImpl">图床配置绑定</div>
+              <div class="dropdown-item" @click="isImageConfigVisible = true; activeMenu = null">配置图床 (Image Host)</div>
               <div class="dropdown-divider"></div>
               <div class="dropdown-item" @click="resetEditor">重置编辑器内容</div>
             </div>
@@ -954,7 +1071,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
 
       <div class="actions">
-
         <div class="view-toggles-pill">
           <button class="pill-btn" :class="{active: viewMode === 'pc'}" @click="viewMode = 'pc'">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
@@ -965,13 +1081,12 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             手机壳预览
           </button>
         </div>
-      </div>
-    </header>
+      </div>    </header>
 
     <!-- Tier 2: Formatting Toolbar -->
     <div class="octopus-header formatting-toolbar">
       <div class="format-actions">
-        <button class="icon-btn" title="侧边大纲导航" @click="showToc = !showToc" :style="{ color: showToc ? '#38bdf8' : '', background: showToc ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+        <button class="icon-btn" title="侧边大纲导航" @click="showToc = !showToc" :style="{ color: showToc ? 'var(--accent-color)' : '', background: showToc ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
         <div class="toolbar-divider"></div>
         <button class="icon-btn" title="删除线" @click="insertFormat('~~', '~~')"><span style="text-decoration: line-through; font-weight: bold; font-family: sans-serif;">S</span></button>
         <button class="icon-btn" title="加粗" @click="insertFormat('**', '**')"><strong style="font-family: serif; font-size: 1.1rem;">B</strong></button>
@@ -980,29 +1095,38 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <button class="icon-btn" title="行内代码" @click="insertFormat('`', '`')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline><line x1="14" y1="4" x2="10" y2="20"></line></svg></button>
         <button class="icon-btn" title="链接" @click="insertFormat('[', '](https://)')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
         <button class="icon-btn" title="表格" @click="insertFormat('\n| 表头 | 表头 |\n| :--- | :--- |\n| 内容 | 内容 |\n', '')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg></button>
-        <button class="icon-btn" title="图片" @click="insertFormat('![图片描述](', ') ')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
+        <button class="icon-btn" title="上传/插入图片" @click="triggerImageUpload"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
+        <input type="file" ref="fileInput" @change="handleFileSelected" accept="image/*" style="display: none" />
         <button class="icon-btn" title="引用" @click="insertFormat('\n> ', '')" style="font-weight: 800; font-size: 1.2rem; line-height: 1; font-family: Times, serif;">"</button>
         <button class="icon-btn" title="格式化排版" @click="formatMd"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="6.5"></line></svg></button>
+        
+        <div class="toolbar-divider"></div>
+        <button class="icon-btn" title="配置服务器或图床" @click="isImageConfigVisible = true; activeMenu = null"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
+        <button class="icon-btn" title="转微信脚注 / 外部链接转换" @click="toggleLinkFootnote"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">WX</span></button>
+        <button class="icon-btn" title="MAC 风格代码块" :class="{ active: isMacCodeBlock }" @click="toggleMacCodeBlock" :style="{ color: isMacCodeBlock ? 'var(--accent-color)' : '', background: isMacCodeBlock ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><circle cx="6" cy="7" r="1.5"></circle><circle cx="12" cy="7" r="1.5"></circle></svg></button>
+        <button class="icon-btn" title="沉浸视图 / 全屏" @click="togglePreviewMode" :style="{ color: isPreviewMode ? 'var(--accent-color)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
       </div>
 
-      <div class="actions">
+      <div class="actions" style="display: flex; gap: 12px; align-items: center;">
 
-        <div class="control-group">
-          <div class="premium-select-wrapper">
-            <select v-model="selectedCodeTheme" class="premium-select">
-              <option v-for="c in codeThemes" :key="c.id" :value="c.id">代码: {{c.name}}</option>
-            </select>
-          </div>
-          <div class="premium-select-wrapper">
-            <select v-model="selectedTheme" class="premium-select">
-              <option v-for="t in themes" :key="t.id" :value="t.id">{{t.name}}</option>
-            </select>
-          </div>
-
-          <button class="btn-icon-text" style="padding: 0 0.2rem; margin-top: 2px; color: #64748b;" @click="toggleCSS" :title="isEditingTheme ? '关闭自定义CSS' : '配置自定义CSS样式'">
-            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          </button>
+        <div class="theme-select-group">
+          <span class="modern-label"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>代码块</span>
+          <select v-model="selectedCodeTheme" class="modern-select">
+            <option v-for="c in codeThemes" :key="c.id" :value="c.id">{{c.name}}</option>
+          </select>
         </div>
+
+        <div class="theme-select-group">
+          <span class="modern-label"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>排版主题</span>
+          <select v-model="selectedTheme" class="modern-select">
+            <option v-for="t in themes" :key="t.id" :value="t.id">{{t.name}}</option>
+          </select>
+        </div>
+
+        <button class="btn-icon-text css-customize-btn" @click="toggleCSS" :title="isEditingTheme ? '关闭自定义CSS' : '配置自定义CSS样式'">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          CSS
+        </button>
 
       </div>
     </div>
@@ -1024,7 +1148,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               @click="scrollToLine(item.line)">
               {{ item.text }}
             </div>
-            <div v-if="tocList.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.8rem;">
+            <div v-if="tocList.length === 0" style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
               暂无 1~2 级标题
             </div>
           </div>
@@ -1079,8 +1203,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
       
       <!-- Tier 3 CSS Pane for 3-Column Layout (Moved to the Far Right) -->
-      <div v-show="isEditingTheme && !isPreviewMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
-        <div style="background: #1e293b; padding: 0.6rem 1rem; color: #cbd5e1; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <div v-show="isEditingTheme && !isPreviewMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column;">
+        <div style="background: var(--bg-panel); padding: 0.6rem 1rem; color: var(--text-primary); font-weight: bold; border-bottom: 1px solid var(--border-subtle);">
            🎨 实时 CSS 编辑器
         </div>
         <Codemirror v-model="customStyleContent" :extensions="[oneDark]" style="flex: 1; overflow: hidden;" />
@@ -1098,13 +1222,89 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       <!-- Global Modal Container -->
       <transition name="fade">
-        <div v-if="modalState.visible" class="export-overlay">
-          <div class="export-modal custom-modal">
+        <div v-if="modalState.visible || isImageConfigVisible" class="export-overlay" @click.self="isImageConfigVisible = false; clsoeModal(false)">
+          <!-- General Dialog -->
+          <div v-if="modalState.visible" class="export-modal custom-modal">
             <h3 style="margin-top:0;">{{ modalState.title }}</h3>
             <p style="margin: 1.5rem 0; white-space: pre-wrap;">{{ modalState.message }}</p>
             <div class="modal-actions">
               <button v-if="modalState.isConfirm" class="btn btn-native" @click="clsoeModal(false)">取消</button>
               <button class="btn btn-primary" @click="clsoeModal(true)">确定</button>
+            </div>
+          </div>
+          
+          <!-- Image Host Configuration Dialog -->
+          <div v-if="isImageConfigVisible" class="export-modal custom-modal" style="width: 420px; max-width: 90vw;">
+            <h3 style="margin-top:0; margin-bottom: 1rem; color: var(--text-primary);">图床上传服务配置</h3>
+            
+            <div style="margin-bottom: 1rem;">
+              <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 500;">选择默认支持策略</p>
+              <select v-model="uploadConfig.provider" style="width: 100%; padding: 0.5rem; border-radius: 6px; background: var(--border-subtle); color: var(--text-primary); border: 1px solid var(--border-strong);">
+                <option value="base64">本地 Base64 原生内联 (免配置/体积受限)</option>
+                <option value="picgo">PicGo 本地服务器挂载 (http://127.0.0.1:36677)</option>
+                <option value="github">GitHub 仓库直连 (jsDelivr CDN 全球分发)</option>
+                <option value="alioss">阿里云 OSS 存储 (AliOSS)</option>
+                <option value="txcos">腾讯云 COS 存储 (TxCOS)</option>
+                <option value="qiniu">七牛云 存储 (Qiniu)</option>
+              </select>
+            </div>
+            
+            <div v-if="uploadConfig.provider === 'github'" style="display: flex; flex-direction: column; gap: 0.8rem;">
+              <div>
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">GitHub Repo (例如: john/blog-assets)</p>
+                <input v-model="uploadConfig.githubRepo" type="text" placeholder="username/repo" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+              <div>
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">Personal Access Token (用于 API 写权限)</p>
+                <input v-model="uploadConfig.githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxx" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+              <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">存储路径</p>
+                  <input v-model="uploadConfig.githubPath" type="text" placeholder="images/2026" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                </div>
+                <div style="flex: 1;">
+                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">分支</p>
+                  <input v-model="uploadConfig.githubBranch" type="text" placeholder="main" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                </div>
+              </div>
+            </div>
+
+            <div v-if="['alioss', 'txcos', 'qiniu'].includes(uploadConfig.provider)" style="display: flex; flex-direction: column; gap: 0.8rem;">
+              <div>
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">AccessKey (AK)</p>
+                <input v-model="uploadConfig.accessKey" type="text" placeholder="AccessKey ID" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+              <div>
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">SecretKey (SK)</p>
+                <input v-model="uploadConfig.secretKey" type="password" placeholder="AccessKey Secret" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+              <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">Bucket</p>
+                  <input v-model="uploadConfig.bucket" type="text" placeholder="Bucket 名称" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                </div>
+                <div style="flex: 1;">
+                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">Region / 区域</p>
+                  <input v-model="uploadConfig.region" type="text" :placeholder="uploadConfig.provider === 'qiniu' ? 'z0' : (uploadConfig.provider === 'alioss' ? 'oss-cn-hangzhou' : 'ap-guangzhou')" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                </div>
+              </div>
+              <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">存储目录路径 (可选)</p>
+                  <input v-model="uploadConfig.path" type="text" placeholder="blog/uploads/" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                </div>
+              </div>
+              <div v-if="uploadConfig.provider === 'qiniu'">
+                 <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">CDN 访问域名 (七牛必填)</p>
+                 <input v-model="uploadConfig.domain" type="text" placeholder="https://cdn.example.com" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+            </div>
+            
+            <p v-if="uploadConfig.provider === 'picgo'" style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">* 确保您的后台已启动 PicGo 客户端进程并默认开启了 Server 支持，即可无缝连接任意外部图床 (AliOSS/COS/SMMS)。</p>
+            
+            <div class="modal-actions" style="margin-top: 1.5rem;">
+              <button class="btn btn-primary" style="width: 100%; justify-content: center;" @click="isImageConfigVisible = false">保存并关闭</button>
             </div>
           </div>
         </div>
@@ -1121,8 +1321,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
     <!-- Tier 4: Bottom Status Bar -->
     <footer v-show="!isPreviewMode" class="octopus-status-bar">
       <div class="status-left">
-        <span class="status-item">字符数: <strong style="color: #f8fafc">{{ wordCount }}</strong></span>
-        <span class="status-item">行数: <strong style="color: #f8fafc">{{ lineCount }}</strong></span>
+        <span class="status-item">字符数: <strong style="color: var(--text-primary)">{{ wordCount }}</strong></span>
+        <span class="status-item">行数: <strong style="color: var(--text-primary)">{{ lineCount }}</strong></span>
       </div>
       <div class="status-right">
         <span class="status-item" style="color: #10b981" v-if="isDesktop"><svg style="vertical-align: middle; margin-right: 4px;" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>桌面原生核心加载完毕</span>
@@ -1140,7 +1340,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0f172a;
+  background: var(--bg-app);
 }
 
 /* Workspace Specific Scrollbars - Dual Mode (Dark/Light) */
@@ -1153,14 +1353,14 @@ html, body {
   background: transparent;
 }
 .preview-pane::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border: 4px solid #ffffff; /* Match preview-pane background */
+  background: var(--text-primary);
+  border: 4px solid var(--bg-preview); /* Match preview-pane background */
   border-radius: 9999px;
   background-clip: padding-box;
 }
 .preview-pane::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-  border: 4px solid #ffffff;
+  background: var(--text-secondary);
+  border: 4px solid var(--bg-preview);
 }
 
 /* Dark Mode Scrollbar for Editor/CSS Panes */
@@ -1174,13 +1374,13 @@ html, body {
 }
 .editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-thumb {
   background: #475569;
-  border: 4px solid #282c34; /* Match editor background */
+  border: 4px solid var(--bg-panel); /* Match editor background */
   border-radius: 9999px;
   background-clip: padding-box;
 }
 .editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-  border: 4px solid #282c34;
+  background: var(--text-muted);
+  border: 4px solid var(--bg-panel);
 }
 
 .octopus-layout {
@@ -1189,9 +1389,43 @@ html, body {
   display: flex;
   flex-direction: column;
   font-family: 'Inter', system-ui, sans-serif;
-  background: #0f172a;
-  color: #fff;
+  background: var(--bg-app);
+  color: var(--text-primary);
   overflow: hidden;
+  padding: 16px 20px;
+  gap: 16px;
+  transition: background-color var(--transition-speed) var(--transition-timing);
+  animation: appEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes appEntry {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Ambient Deep Glow in the Background */
+.octopus-layout::before {
+  content: '';
+  position: absolute;
+  top: -10vw;
+  left: -10vw;
+  width: 50vw;
+  height: 50vw;
+  background: var(--ambient-glow);
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.5;
+  z-index: 0;
+  pointer-events: none;
+}
+.octopus-layout > * {
+  z-index: 1; /* Keep content above ambient glow */
 }
 
 .octopus-header {
@@ -1199,18 +1433,20 @@ html, body {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--bg-toolbar);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
   z-index: 100;
+  transition: all var(--transition-speed) var(--transition-timing);
 }
 
 .system-menu-bar {
   padding: 0.5rem 1.5rem;
-  background: #1e293b;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
   position: relative;
   z-index: 200;
   box-shadow: none;
@@ -1228,7 +1464,7 @@ html, body {
 
 .formatting-toolbar {
   padding: 0.5rem 1.5rem;
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--bg-toolbar);
   backdrop-filter: blur(16px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
   display: flex;
@@ -1236,7 +1472,7 @@ html, body {
   justify-content: space-between;
   position: relative;
   z-index: 100;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .formatting-toolbar .actions {
@@ -1264,7 +1500,7 @@ html, body {
 }
 
 .menu-item {
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-size: 0.88rem;
   padding: 0.4rem 0.8rem;
   cursor: pointer;
@@ -1275,46 +1511,60 @@ html, body {
 }
 
 .menu-item:hover, .menu-item.active {
-  color: white;
-  background: rgba(255,255,255,0.1);
+  color: var(--text-primary);
+  background: var(--border-strong);
 }
 
 .dropdown-menu {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 0.2rem;
-  background: #1e293b;
-  min-width: 160px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  margin-top: 0.5rem;
+  background: var(--bg-panel);
+  /* Apply heavy macOS/Vercel styling strictly for all dropdown menus */
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background-color: rgba(var(--bg-panel-rgb, 255, 255, 255), 0.7);
+  min-width: 180px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.05);
   z-index: 100;
-  padding: 0.4rem 0;
+  padding: 6px;
+  animation: menuFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .dropdown-menu-large {
-  min-width: 200px;
+  min-width: 220px;
 }
 
 .dropdown-item {
-  padding: 0.5rem 1rem;
-  color: #cbd5e1;
-  font-size: 0.85rem;
+  padding: 6px 12px;
+  margin: 2px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   justify-content: flex-start;
   align-items: center;
   position: relative;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 .dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .dropdown-item .shortcut {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.75rem;
   margin-left: auto;
   position: absolute;
@@ -1332,10 +1582,10 @@ html, body {
   justify-content: space-between;
   align-items: center;
   padding: 0.3rem 1.2rem;
-  background: #1e293b;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-subtle);
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   user-select: none;
   z-index: 100;
 }
@@ -1346,8 +1596,8 @@ html, body {
 
 .dropdown-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 0.3rem 0;
+  background: var(--border-subtle);
+  margin: 4px 6px;
 }
 
 .format-actions {
@@ -1358,7 +1608,7 @@ html, body {
 
 .icon-btn {
   background: transparent;
-  color: #cbd5e1;
+  color: var(--text-primary);
   border: 1px solid transparent;
   width: 32px;
   height: 32px;
@@ -1373,9 +1623,9 @@ html, body {
 }
 
 .icon-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: white;
-  border-color: rgba(255,255,255,0.15);
+  background: var(--border-strong);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
 }
 
 .icon-btn svg {
@@ -1385,7 +1635,7 @@ html, body {
 .toolbar-divider {
   width: 1px;
   height: 20px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border-strong);
   margin: 0 0.5rem;
 }
 
@@ -1408,16 +1658,17 @@ html, body {
 
 .brand h1 {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  background: linear-gradient(135deg, #FF0080, #7928CA);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
 }
 
 .current-env-indicator {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -1431,7 +1682,7 @@ html, body {
 
 .badge.web {
   background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+  color: var(--accent-color);
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
@@ -1441,13 +1692,13 @@ html, body {
   gap: 0.75rem;
   font-size: 0.85rem;
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--text-primary);
 }
 
 .theme-select {
-  background: rgba(255,255,255,0.1);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.2);
+  background: var(--border-strong);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 0.4rem 0.75rem;
   font-family: inherit;
@@ -1456,8 +1707,8 @@ html, body {
   outline: none;
 }
 .theme-select option {
-  background: #1e293b;
-  color: white;
+  background: var(--bg-panel);
+  color: var(--text-primary);
 }
 
 .btn {
@@ -1480,24 +1731,24 @@ html, body {
 }
 
 .btn-primary {
-  background: linear-gradient(to right, #3b82f6, #4f46e5);
-  color: white;
+  background: linear-gradient(to right, var(--accent-color), #4f46e5);
+  color: var(--text-primary);
 }
 
 .btn-copy {
   background: linear-gradient(to right, #f59e0b, #d97706);
-  color: white;
+  color: var(--text-primary);
 }
 
 .btn-native {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-strong);
   color: #f1f5f9;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
 }
 
 .btn-wechat {
   background: linear-gradient(to right, #059669, #10b981);
-  color: white;
+  color: var(--text-primary);
 }
 
 .workspace {
@@ -1508,6 +1759,13 @@ html, body {
   overflow: hidden;
   position: relative;
   min-height: 0; /* CRITICAL BUGFIX: Prevents flex children blowout */
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 
+    var(--shadow-glass),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05); /* Premium Top Border Glow */
+  background: var(--bg-panel);
+  transition: all var(--transition-speed) var(--transition-timing);
 }
 
 .workspace.is-dragging {
@@ -1517,11 +1775,12 @@ html, body {
 
 .editor-pane {
   height: 100%;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  background: #282c34;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
   overflow: hidden;
   display: flex;
   flex-direction: row;
+  transition: background-color var(--transition-speed) var(--transition-timing);
 }
 
 /* Force CodeMirror to fill bounds without stretching */
@@ -1546,8 +1805,8 @@ html, body {
 .toc-panel {
   width: 220px;
   height: 100%;
-  background: #1e2329;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -1559,8 +1818,8 @@ html, body {
   align-items: center;
   padding: 0 12px;
   font-size: 0.8rem;
-  color: #94a3b8;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -1570,11 +1829,11 @@ html, body {
   padding: 8px 0;
 }
 .toc-content::-webkit-scrollbar { width: 6px; }
-.toc-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+.toc-content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 .toc-item {
   padding: 6px 12px 6px 20px;
   font-size: 0.8rem;
-  color: #cbd5e1;
+  color: var(--text-primary);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -1583,8 +1842,8 @@ html, body {
   line-height: 1.4;
 }
 .toc-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #38bdf8;
+  background: var(--border-subtle);
+  color: var(--accent-color);
 }
 .toc-level-1 {
   font-weight: 600;
@@ -1594,7 +1853,7 @@ html, body {
 .toc-level-2 {
   padding-left: 24px;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 .toc-level-2::before {
   content: '└ ';
@@ -1603,7 +1862,7 @@ html, body {
 
 .resizer {
   width: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--border-subtle);
   cursor: col-resize;
   position: relative;
   z-index: 10;
@@ -1612,7 +1871,7 @@ html, body {
 }
 
 .resizer:hover, .workspace.is-dragging .resizer {
-  background: #3b82f6;
+  background: var(--accent-color);
 }
 
 .resizer-handle {
@@ -1621,8 +1880,8 @@ html, body {
 
 .preview-pane {
   height: 100%;
-  background: #ffffff;  /* Edge-to-edge true white PC view */
-  color: #334155;
+  background: var(--bg-preview);  /* Edge-to-edge true white PC view */
+  color: var(--text-primary);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0;
@@ -1631,16 +1890,16 @@ html, body {
 }
 
 .preview-pane::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.2);
+  background: var(--border-strong);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 .preview-pane::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--border-strong);
 }
 
 .preview-pane.is-mobile {
-  background: #0f172a;
+  background: var(--bg-app);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -1653,36 +1912,132 @@ html, body {
   max-width: none !important;
   margin: 0 !important;
   min-height: 100% !important;
-  background: #ffffff !important;
+  background: var(--bg-preview) !important;
   box-sizing: border-box !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+.view-toggles-pill {
+  display: flex;
+  background: var(--bg-app); /* Match the dark nav background */
+}
+
+/* --- UI Components --- */
+
+.theme-select-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-hover);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  transition: all 0.25s ease;
+}
+.theme-select-group:hover, .theme-select-group:focus-within {
+  background: transparent;
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.modern-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 10px;
+  margin-right: 4px;
+}
+
+.modern-select {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 16px 0 0;
+  outline: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M2%204l4%204%204-4%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+  max-width: 150px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.css-customize-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.css-customize-btn:hover {
+  background: transparent;
+  color: var(--accent-color);
+  border-color: var(--accent-color);
 }
 
 .preview-pane.is-mobile .preview-content {
   width: 414px !important;
   max-width: 414px !important;
   min-height: 852px !important;
-  border-radius: 36px !important;
-  border: 12px solid #1e293b !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
-  padding: 4.5rem 1.5rem 2.5rem 1.5rem !important;
+  border-radius: 46px !important;
+  border: 4px solid var(--bg-panel) !important;
+  box-shadow: 
+    var(--shadow-preview-device),
+    0 0 0 10px var(--border-subtle),
+    inset 0 0 0 1px var(--border-subtle) !important;
+  padding: 5.5rem 1.5rem 2.5rem 1.5rem !important;
   margin: 0 auto !important;
   position: relative;
+  background: var(--bg-preview) !important;
 }
 
+/* Modern iPhone Dynamic Island */
 .preview-pane.is-mobile .preview-content::before {
   content: '';
   position: absolute;
-  top: 0;
+  top: 14px;
   left: 50%;
   transform: translateX(-50%);
-  width: 150px;
-  height: 30px;
-  background: #1e293b;
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
+  width: 120px;
+  height: 35px;
+  background: #000000;
+  border-radius: 20px;
   z-index: 10;
+  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+/* iPhone physical buttons simulation (Volume and Power) */
+.preview-pane.is-mobile .preview-content::after {
+  content: '';
+  position: absolute;
+  top: 200px;
+  left: -14px;
+  width: 4px;
+  height: 60px;
+  background: var(--border-strong);
+  border-radius: 4px 0 0 4px;
+  box-shadow: 
+    0 -80px 0 0 var(--border-strong), 
+    0 -120px 0 -1px var(--border-strong),
+    432px 30px 0 0 var(--border-strong); /* Right power button */
 }
 
 /* Force Weiyan containers to strictly fill the pane to eliminate right-side gaps */
@@ -1695,15 +2050,15 @@ html, body {
 
 .view-toggles {
   display: flex;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--bg-toolbar);
   padding: 4px;
   border-radius: 8px;
   margin-right: 1.5rem;
-  box-shadow: inset 0 1px 4px rgba(0,0,0,0.3), 0 1px 1px rgba(255,255,255,0.05);
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.3), 0 1px 1px var(--border-subtle);
 }
 .view-toggles .btn-toggle {
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-secondary);
   border: none;
   border-radius: 6px;
   padding: 0.45rem 1.1rem;
@@ -1716,11 +2071,11 @@ html, body {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .view-toggles .btn-toggle:hover {
-  color: #f8fafc;
+  color: var(--text-primary);
 }
 .view-toggles .btn-toggle.active {
-  background: #4a8df8;
-  color: #ffffff;
+  background: var(--accent-color);
+  color: var(--bg-preview);
   box-shadow: 0 2px 8px rgba(74, 141, 248, 0.4);
 }
 
@@ -1764,7 +2119,7 @@ html, body {
 .toolbar-divider {
   width: 1px;
   height: 20px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-strong);
 }
 
 .premium-select-wrapper {
@@ -1774,31 +2129,31 @@ html, body {
 
 .premium-select {
   appearance: none;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
   padding: 0.35rem 2.2rem 0.35rem 0.8rem;
   border-radius: 6px;
   font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
   outline: none;
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M2%204l4%204%204-4%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat;
   background-position: right 0.7rem center;
-  max-width: 140px;
+  max-width: 170px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .premium-select:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--bg-active);
 }
 
 .btn-icon-text {
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-secondary);
   border: none;
   cursor: pointer;
   display: flex;
@@ -1812,24 +2167,24 @@ html, body {
 }
 
 .btn-icon-text:hover {
-  color: white;
-  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .copy-group {
   display: flex;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-hover);
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .btn-group-item {
   background: transparent;
   border: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
+  border-right: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   padding: 0.35rem 0.85rem;
   cursor: pointer;
   display: flex;
@@ -1841,8 +2196,8 @@ html, body {
 }
 
 .btn-group-item:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+  background: var(--border-strong);
 }
 
 .btn-group-item:last-child {
@@ -1854,8 +2209,8 @@ html, body {
 .btn-group-item.juejin:hover { background: #1e80ff; }
 
 .btn-primary-filled {
-  background: #3b82f6;
-  color: white;
+  background: var(--accent-color);
+  color: var(--text-primary);
   border: none;
   border-radius: 6px;
   padding: 0.35rem 1rem;
@@ -1876,15 +2231,15 @@ html, body {
 
 .view-toggles-pill {
   display: flex;
-  background: #0f172a; /* Match the dark nav background */
+  background: var(--bg-app); /* Match the dark nav background */
   padding: 4px;
   border-radius: 8px;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.05);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 1px 1px var(--border-subtle);
 }
 
 .pill-btn {
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-secondary);
   border: none;
   border-radius: 6px;
   padding: 0.45rem 1rem;
@@ -1898,12 +2253,12 @@ html, body {
 }
 
 .pill-btn:hover {
-  color: white;
+  color: var(--text-primary);
 }
 
 .pill-btn.active {
   background: #498df8;
-  color: white;
+  color: var(--text-primary);
   box-shadow: 0 2px 10px rgba(73, 141, 248, 0.4);
 }
 
@@ -1915,12 +2270,12 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: rgba(30, 41, 59, 0.85); /* Deep Slate Glassmorphism */
+  background: var(--bg-glass); /* Bugfix: Using global glass variable */
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   padding: 14px 10px;
   border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.08);
+  box-shadow: var(--shadow-glass); /* Bugfix: Premium generic shadow instead of hardcoded dark shadow */
   z-index: 50;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1929,38 +2284,39 @@ html, body {
   width: 44px; height: 44px;
   border-radius: 12px;
   border: none;
-  background: rgba(255,255,255,0.04);
-  color: #94a3b8;
+  background: var(--bg-hover); /* Contrast Bugfix: Uses dynamic theme token */
+  color: var(--text-secondary);
   cursor: pointer;
   display: flex; 
   justify-content: center; 
   align-items: center;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
 
 .float-btn:hover {
-  color: white;
-  transform: translateX(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  color: var(--text-primary);
+  transform: translateX(-4px) scale(1.05); /* Enhanced Micro-animation */
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.1);
 }
 
-.float-btn.wechat:hover { background: #059669; }
-.float-btn.zhihu:hover { background: #0084ff; }
-.float-btn.juejin:hover { background: #1e80ff; }
-.float-btn.export:hover { background: #6366f1; }
+.float-btn.wechat:hover { background: rgba(5, 150, 105, 0.15); color: #10b981; }
+.float-btn.zhihu:hover { background: rgba(0, 132, 255, 0.15); color: #38bdf8; }
+.float-btn.juejin:hover { background: rgba(30, 128, 255, 0.15); color: #60a5fa; }
+.float-btn.export:hover { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
 .float-divider {
   width: 100%;
   height: 1px;
-  background: rgba(255,255,255,0.1);
+  background: var(--border-strong);
   margin: 6px 0;
 }
 
 .export-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 23, 42, 0.85);
+  background: var(--bg-glass); /* Bugfix: Support light mode for export overlay */
   backdrop-filter: blur(8px);
   z-index: 99999;
   display: flex;
@@ -1969,12 +2325,12 @@ html, body {
 }
 
 .export-modal {
-  background: #1e293b;
+  background: var(--bg-panel);
   padding: 2.5rem 3rem;
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   text-align: center;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--border-strong);
   max-width: 400px;
   min-width: 320px;
 }
@@ -1993,23 +2349,26 @@ html, body {
 
 .toast-container {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  background: #1e293b;
-  color: white;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  bottom: 2.5rem;
+  right: 2.5rem;
+  background: rgba(15, 23, 42, 0.75); /* MacOS Glassmorphism */
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  color: #f8fafc;
+  padding: 1.2rem 1.8rem;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08); /* Elite shadow */
   z-index: 99999;
   display: flex;
   align-items: center;
   font-weight: 500;
-  border-left: 4px solid #3b82f6; 
+  border-left: 4px solid var(--accent-color); 
+  letter-spacing: 0.01em;
 }
 
-.toast-success { border-left-color: #10b981; }
-.toast-error { border-left-color: #ef4444; }
-.toast-info { border-left-color: #3b82f6; }
+.toast-success { border-left-color: #34d399; }
+.toast-error { border-left-color: #fb7185; }
+.toast-info { border-left-color: var(--accent-color); }
 
 .slide-up-enter-active, .slide-up-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2025,7 +2384,7 @@ html, body {
 }
 
 .export-modal p {
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0;
@@ -2034,8 +2393,8 @@ html, body {
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid rgba(255,255,255,0.1);
-  border-top-color: #3b82f6;
+  border: 4px solid var(--border-strong);
+  border-top-color: var(--accent-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto;
@@ -2087,5 +2446,47 @@ html, body {
 .mac-code-block pre.hljs {
   margin: 0 !important;
   border-radius: 0 0 8px 8px !important;
+}
+
+/* User-Requested UI Component Polish (Segments) */
+.view-toggles-pill {
+  display: flex;
+  background: var(--bg-hover);
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.view-toggles-pill .pill-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.view-toggles-pill .pill-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-active);
+}
+
+.view-toggles-pill .pill-btn.active {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+html.dark .view-toggles-pill .pill-btn.active {
+  background: var(--bg-active);
+  color: #ffffff;
 }
 </style>

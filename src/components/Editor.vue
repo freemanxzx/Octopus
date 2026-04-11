@@ -705,9 +705,8 @@ const syncToPlatform = (plat: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter'
   
   // URL routing is now handled safely by the COSE Extension mapping in background.js.
   // We keep this generic fallback ONLY if the extension isn't installed.
-  const extensionListening = typeof window !== 'undefined' && Object.keys(window).includes('chrome');
   window.setTimeout(() => {
-    if (!extensionListening) {
+    if (!isCoseInstalled.value) {
       window.open(urls[plat], '_blank');
     }
   }, 100);
@@ -803,8 +802,7 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' |
     
     // Check if the Extension bridge is listening. If yes, pass raw payloads via IPC.
     // If not, it falls back instantly to the old behavior (just copying).
-    let extensionIntercepted = false;
-    if (typeof window !== 'undefined' && window.postMessage) {
+    if (isCoseInstalled.value) {
         window.postMessage({
             type: 'OCTOPUS_EMIT_SYNC',
             payload: {
@@ -817,14 +815,13 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' |
                 }
             }
         }, '*');
-        extensionIntercepted = true;
     }
   
     document.execCommand('copy');
-    if (extensionIntercepted) {
-        showToast(`🚀 已存入剪贴板！正由 COSE 扩展为您接管前往【${platName}】尝试自动注入...`, "success");
+    if (isCoseInstalled.value) {
+        showToast(`🚀 已存入剪贴板！正由 COSE 扩展接管前往【${platName}】并尝试自动注入...`, "success");
     } else {
-        showToast(`✅ CSS深度适配成功！已专门适配【${platName}】并复制，可以直接去粘贴了！`, "success");
+        showToast(`✅ 已入板！请直接去【${platName}】粘贴以完成发布。(推荐安装 COSE 扩展实现全自动)`, "success");
     }
   } catch (e) {
     customAlert("获取剪贴板权限失败，请确保您在 HTTPS 环境下或检查浏览器设置。");
@@ -835,6 +832,17 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' |
 };
 
 const isExporting = ref(false);
+const isCoseInstalled = ref(false);
+
+onMounted(() => {
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data && event.data.type === 'OCTOPUS_COSE_INSTALLED') {
+      isCoseInstalled.value = true;
+      console.log('✅ Octopus COSE Extension detected: v' + event.data.version);
+    }
+  });
+});
 
 const printPdf = () => {
   window.setTimeout(() => window.print(), 100);

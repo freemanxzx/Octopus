@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "Octopus COSE (Sync Everywhere)",
+  "version": "1.0.0",
+  "description": "Octopus MD 专属多平台文章无损同步分发与 DOM 注入引擎。支持微信、知乎、掘金、微博、X (Twitter)、CSDN。",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage",
+    "tabs",
+    "cookies"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:5173/*",
+        "https://octopus.md/*"
+      ],
+      "js": ["scripts/octopus-bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://mp.weixin.qq.com/cgi-bin/appmsg*"],
+      "js": ["scripts/inject-wechat.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://zhuanlan.zhihu.com/write*"],
+      "js": ["scripts/inject-zhihu.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://juejin.cn/editor/drafts/*"],
+      "js": ["scripts/inject-juejin.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://mp.csdn.net/mp_blog/creation/editor*"],
+      "js": ["scripts/inject-csdn.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://weibo.com/*"],
+      "js": ["scripts/inject-weibo.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://x.com/compose/tweet*", "https://twitter.com/compose/tweet*"],
+      "js": ["scripts/inject-twitter.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Octopus COSE"
+  }
+}

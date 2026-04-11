@@ -690,26 +690,31 @@ const visualOverridesCss = computed(() => {
 
 
 
-const syncToPlatform = (plat: 'wechat' | 'zhihu' | 'juejin' | 'csdn') => {
-  copyHtml(plat === 'csdn' ? 'juejin' : plat as any);
+const syncToPlatform = (plat: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' | 'weibo') => {
+  copyHtml(plat);
   isSyncModalVisible.value = false;
   
   const urls: Record<string, string> = {
     wechat: 'https://mp.weixin.qq.com/',
     zhihu: 'https://zhuanlan.zhihu.com/write',
     juejin: 'https://juejin.cn/editor/drafts/new',
-    csdn: 'https://mp.csdn.net/mp_blog/creation/editor'
+    csdn: 'https://mp.csdn.net/mp_blog/creation/editor',
+    twitter: 'https://twitter.com/compose/tweet',
+    weibo: 'https://weibo.com/'
   };
   
+  // URL routing is now handled safely by the COSE Extension mapping in background.js.
+  // We keep this generic fallback ONLY if the extension isn't installed.
+  const extensionListening = typeof window !== 'undefined' && Object.keys(window).includes('chrome');
   window.setTimeout(() => {
-    const platNames: Record<string, string> = { wechat: '微信公众号', zhihu: '知乎专栏', juejin: '稀土掘金', csdn: 'CSDN博客' };
-    window.open(urls[plat], '_blank');
-    showToast(`内容与样式已成功提取为富文本剪贴板！已为您跳转至 ${platNames[plat]}，请直接使用 Ctrl+V 粘贴完成发布。`, 'success');
+    if (!extensionListening) {
+      window.open(urls[plat], '_blank');
+    }
   }, 100);
 };
 
 // Feature: Complete CSS-Inlined HTML Copy for Multi-Platform
-const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' = 'wechat') => {
+const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' | 'weibo' = 'wechat') => {
   if (!previewContainer.value) return;
   const original = previewContainer.value.querySelector('.preview-content') as HTMLElement;
   if (!original) return;
@@ -794,11 +799,35 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' = 'wechat') => {
   selection?.addRange(range);
   
   try {
+    const platName = platform === 'wechat' ? '微信' : (platform === 'zhihu' ? '知乎' : (platform === 'weibo' ? '微博' : (platform === 'twitter' ? 'X (Twitter)' : '云端')));
+    
+    // Check if the Extension bridge is listening. If yes, pass raw payloads via IPC.
+    // If not, it falls back instantly to the old behavior (just copying).
+    let extensionIntercepted = false;
+    if (typeof window !== 'undefined' && window.postMessage) {
+        window.postMessage({
+            type: 'OCTOPUS_EMIT_SYNC',
+            payload: {
+                target: platform,
+                html: clone.innerHTML,
+                markdown: content.value,
+                meta: {
+                    title: content.value.split('\n')[0].replace(/^[#\s]+/, '').trim() || "Untitled Octopus Draft",
+                    tags: ["Markdown", "Octopus"]
+                }
+            }
+        }, '*');
+        extensionIntercepted = true;
+    }
+  
     document.execCommand('copy');
-    const platName = platform === 'wechat' ? '微信' : (platform === 'zhihu' ? '知乎' : '掘金');
-    showToast(`✅ CSS深度内联成功！已专门适配【${platName}】并复制，可以直接去粘贴了！`, "success");
+    if (extensionIntercepted) {
+        showToast(`🚀 已存入剪贴板！正由 COSE 扩展为您接管前往【${platName}】尝试自动注入...`, "success");
+    } else {
+        showToast(`✅ CSS深度适配成功！已专门适配【${platName}】并复制，可以直接去粘贴了！`, "success");
+    }
   } catch (e) {
-    customAlert("❌ 复制失败，浏览器阻止了剪贴板访问。");
+    customAlert("获取剪贴板权限失败，请确保您在 HTTPS 环境下或检查浏览器设置。");
   }
   
   selection?.removeAllRanges();
@@ -1396,7 +1425,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             <h3 style="margin-top:0; color: var(--text-primary);">🚀 跨平台内容分发与同步中心</h3>
             <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">系统将通过深层 DOM 提取内联样式并锁定入富文本剪贴板，随后自动为您调起目标平台的编辑后台。<br/><span style="color:var(--accent-color);font-weight:600;">受限于浏览器安全策略机制，云端无法为您自动粘贴。您进入平台后只需按下</span> <kbd style="background:var(--bg-active);padding:2px 4px;border-radius:4px;border:1px solid var(--border-strong);">Ctrl+V</kbd> <span style="color:var(--accent-color);font-weight:600;">即可实现 100% 格式转网同步过去无损粘贴！</span></p>
             
-            <div class="sync-platform-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="sync-platform-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 480px; overflow-y: auto;">
               <button class="sync-grid-btn wechat" @click="syncToPlatform('wechat')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #10b981; background:rgba(16,185,129,0.05); color:#059669; cursor:pointer; transition:all 0.2s;">
                 <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
                 <span style="font-weight:600; font-size: 1rem;">同步至 微信公众号</span>
@@ -1408,6 +1437,15 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               <button class="sync-grid-btn juejin" @click="syncToPlatform('juejin')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #6366f1; background:rgba(99,102,241,0.05); color:#4f46e5; cursor:pointer; transition:all 0.2s;">
                 <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
                 <span style="font-weight:600; font-size: 1rem;">一键推流 稀土掘金</span>
+              </button>
+              <button class="sync-grid-btn twitter" @click="syncToPlatform('twitter')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #000; background:rgba(0,0,0,0.05); color:#000; cursor:pointer; transition:all 0.2s;">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                <span style="font-weight:600; font-size: 1rem;">分布 X (Twitter) 线索</span>
+              </button>
+              <button class="sync-grid-btn weibo" @click="syncToPlatform('weibo')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #ef4444; background:rgba(239,68,68,0.05); color:#dc2626; cursor:pointer; transition:all 0.2s;">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M20.1 9.8c-.8-.2-1.3-.3-1.3-.3 1.1-.6 1.7-1.4 1.5-2.4-.2-1.2-1.6-1.8-3.4-1.3l-1.3.4s.5-.6.5-1.1c.1-1.1-1-2.1-2.4-2-1.5.1-2.7 1.2-2.7 2.6v.5l-.8-.8C8.9 4 7 3.5 5.2 4.3 2 5.5.3 9.4 1.5 12.8c.8 2.3 2.7 4 4.8 4.7 4.5 1.5 9.7-.5 11.9-4.8.8-1.5.8-2.6.4-3.3zm-6.6 5.8c-2.3 2.1-6.1 1.7-8.5-.9-2.4-2.6-2.6-6.4-.3-8.5 2.3-2.1 6.1-1.7 8.5.9 2.4 2.6 2.6 6.4.3 8.5zm-1.8-4.4c-.6.9-1.9 1.4-3.1 1.2-1.2-.2-2-.9-2.3-1.8-.2-.7.1-1.3.6-1.5.5-.3 1.2-.2 1.8.2.9.7 1.2 1.7 1 2.3zm-.1-2.5c-.3.4-1 .6-1.6.4-.6-.2-1-.7-.9-1.2.1-.4.5-.5.9-.3.6.1 1 .5.9 1zm3.8 2.4c-.2 1.5-1.4 2.8-3.1 3.2-2.1.4-4.2-.3-5.2-1.8-.9-1.3-.8-3 0-4.3 1-1.5 3.3-2.2 5.3-1.4 1.7.7 2.6 2.3 2.4 3.9z"/></svg>
+                <span style="font-weight:600; font-size: 1rem;">同步至 微博长文章</span>
+              </button>
               </button>
               <button class="sync-grid-btn csdn" @click="syncToPlatform('csdn')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #ef4444; background:rgba(239,68,68,0.05); color:#dc2626; cursor:pointer; transition:all 0.2s;">
                 <span style="font-size: 32px; font-weight: bold; font-family: Courier New, monospace; letter-spacing: -1px; line-height: 1;">C</span>

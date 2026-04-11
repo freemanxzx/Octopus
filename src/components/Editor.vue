@@ -1454,7 +1454,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
                 <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M20.1 9.8c-.8-.2-1.3-.3-1.3-.3 1.1-.6 1.7-1.4 1.5-2.4-.2-1.2-1.6-1.8-3.4-1.3l-1.3.4s.5-.6.5-1.1c.1-1.1-1-2.1-2.4-2-1.5.1-2.7 1.2-2.7 2.6v.5l-.8-.8C8.9 4 7 3.5 5.2 4.3 2 5.5.3 9.4 1.5 12.8c.8 2.3 2.7 4 4.8 4.7 4.5 1.5 9.7-.5 11.9-4.8.8-1.5.8-2.6.4-3.3zm-6.6 5.8c-2.3 2.1-6.1 1.7-8.5-.9-2.4-2.6-2.6-6.4-.3-8.5 2.3-2.1 6.1-1.7 8.5.9 2.4 2.6 2.6 6.4.3 8.5zm-1.8-4.4c-.6.9-1.9 1.4-3.1 1.2-1.2-.2-2-.9-2.3-1.8-.2-.7.1-1.3.6-1.5.5-.3 1.2-.2 1.8.2.9.7 1.2 1.7 1 2.3zm-.1-2.5c-.3.4-1 .6-1.6.4-.6-.2-1-.7-.9-1.2.1-.4.5-.5.9-.3.6.1 1 .5.9 1zm3.8 2.4c-.2 1.5-1.4 2.8-3.1 3.2-2.1.4-4.2-.3-5.2-1.8-.9-1.3-.8-3 0-4.3 1-1.5 3.3-2.2 5.3-1.4 1.7.7 2.6 2.3 2.4 3.9z"/></svg>
                 <span style="font-weight:600; font-size: 1rem;">同步至 微博长文章</span>
               </button>
-              </button>
               <button class="sync-grid-btn csdn" @click="syncToPlatform('csdn')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #ef4444; background:rgba(239,68,68,0.05); color:#dc2626; cursor:pointer; transition:all 0.2s;">
                 <span style="font-size: 32px; font-weight: bold; font-family: Courier New, monospace; letter-spacing: -1px; line-height: 1;">C</span>
                 <span style="font-weight:600; font-size: 1rem;">推流至 CSDN 博客</span>

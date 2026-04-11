@@ -621,6 +621,26 @@ const extraCssClass = computed(() => {
   return classes.join(' ');
 });
 
+const isSyncModalVisible = ref(false);
+
+const syncToPlatform = (plat: 'wechat' | 'zhihu' | 'juejin' | 'csdn') => {
+  copyHtml(plat === 'csdn' ? 'juejin' : plat as any);
+  isSyncModalVisible.value = false;
+  
+  const urls: Record<string, string> = {
+    wechat: 'https://mp.weixin.qq.com/',
+    zhihu: 'https://zhuanlan.zhihu.com/write',
+    juejin: 'https://juejin.cn/editor/drafts/new',
+    csdn: 'https://mp.csdn.net/mp_blog/creation/editor'
+  };
+  
+  window.setTimeout(() => {
+    const platNames: Record<string, string> = { wechat: '微信公众号', zhihu: '知乎专栏', juejin: '稀土掘金', csdn: 'CSDN博客' };
+    window.open(urls[plat], '_blank');
+    showToast(`内容与样式已成功提取为富文本剪贴板！已为您跳转至 ${platNames[plat]}，请直接使用 Ctrl+V 粘贴完成发布。`, 'success');
+  }, 100);
+};
+
 // Feature: Complete CSS-Inlined HTML Copy for Multi-Platform
 const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' = 'wechat') => {
   if (!previewContainer.value) return;
@@ -648,6 +668,7 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' = 'wechat') => {
         cssStr += `${prop}:${val};`;
       }
     });
+
     if (cssStr) {
       (targetNodes[i] as HTMLElement).style.cssText = cssStr;
     }
@@ -1099,15 +1120,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
 
         <!-- NEW CTA: Article Distribution Platform -->
-        <div class="publish-action" @click.stop="toggleMenu('publish')">
-           <button class="publish-btn"><svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 2l-2 22-7-6.2-4 4V13L21 2zm-8.8 9.3l-8.6 4.3 18.6-11.6z"></path></svg> 一键分发 ▾</button>
-           <div class="dropdown-menu dropdown-menu-right" v-show="activeMenu === 'publish'">
-              <div class="dropdown-item" @click="copyHtml('wechat')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg><span style="margin-left: 6px">发布到 微信公众号</span></div>
-              <div class="dropdown-item" @click="copyHtml('zhihu')"><span style="font-weight:900; margin-right:6px; display:inline-block; width:16px; text-align:center;">知</span>分发至 知乎专栏</div>
-              <div class="dropdown-item" @click="copyHtml('juejin')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg><span style="margin-left: 6px">同步至 稀土掘金</span></div>
-              <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="exportImage"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg><span style="margin-left: 6px">保存为超清长图</span></div>
-           </div>
+        <div class="publish-action">
+           <button class="publish-btn" @click="isSyncModalVisible = true"><svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 2l-2 22-7-6.2-4 4V13L21 2zm-8.8 9.3l-8.6 4.3 18.6-11.6z"></path></svg> 跨平台同步中心 (COSE)</button>
         </div>
       </div>    </header>
 
@@ -1127,10 +1141,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <input type="file" ref="fileInput" @change="handleFileSelected" accept="image/*" style="display: none" />
         <button class="icon-btn" title="引用" @click="insertFormat('\n> ', '')" style="font-weight: 800; font-size: 1.2rem; line-height: 1; font-family: Times, serif;">"</button>
         <button class="icon-btn" title="格式化排版" @click="formatMd"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="6.5"></line></svg></button>
-        <button class="icon-btn" title="双端字体切换 (衬线/无衬线)" :class="{ active: useSerifFont }" @click="toggleSerif" :style="{ color: useSerifFont ? 'var(--accent-color)' : '', background: useSerifFont ? 'rgba(56, 189, 248, 0.1)' : '' }">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
-          <span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">Aa</span>
-        </button>
+
         <div class="toolbar-divider"></div>
         <button class="icon-btn" title="配置服务器或图床" @click="isImageConfigVisible = true; activeMenu = null"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
         <button class="icon-btn" title="转微信脚注 / 外部链接转换" @click="toggleLinkFootnote"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">WX</span></button>
@@ -1139,6 +1150,14 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
 
       <div class="actions" style="display: flex; gap: 12px; align-items: center;">
+
+        <div class="theme-select-group">
+          <span class="modern-label"><span style="font-weight:900;margin-right:2px;font-family:serif;">Aa</span>正文字体</span>
+          <select v-model="useSerifFont" class="modern-select" style="min-width: 140px;">
+            <option :value="false">无衬线体 (标准)</option>
+            <option :value="true">经典衬线 (学术)</option>
+          </select>
+        </div>
 
         <div class="theme-select-group">
           <span class="modern-label"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>代码块</span>
@@ -1249,7 +1268,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       <!-- Global Modal Container -->
       <transition name="fade">
-        <div v-if="modalState.visible || isImageConfigVisible" class="export-overlay" @click.self="isImageConfigVisible = false; clsoeModal(false)">
+        <div v-if="modalState.visible || isImageConfigVisible || isSyncModalVisible" class="export-overlay" @click.self="isImageConfigVisible = false; isSyncModalVisible = false; clsoeModal(false)">
           <!-- General Dialog -->
           <div v-if="modalState.visible" class="export-modal custom-modal">
             <h3 style="margin-top:0;">{{ modalState.title }}</h3>
@@ -1257,6 +1276,35 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             <div class="modal-actions">
               <button v-if="modalState.isConfirm" class="btn btn-native" @click="clsoeModal(false)">取消</button>
               <button class="btn btn-primary" @click="clsoeModal(true)">确定</button>
+            </div>
+          </div>
+          
+          <!-- Sync Center Modal (COSE Emulation) -->
+          <div v-if="isSyncModalVisible" class="export-modal custom-modal sync-modal" style="width: 500px; max-width: 95vw;">
+            <h3 style="margin-top:0; color: var(--text-primary);">🚀 跨平台内容分发与同步中心</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">系统将通过深层 DOM 提取内联样式并锁定入富文本剪贴板，随后自动为您调起目标平台的编辑后台。<br/>您只需在目标编辑器按下 <kbd style="background:var(--bg-active);padding:2px 4px;border-radius:4px;border:1px solid var(--border-strong);">Ctrl+V</kbd> 即可完成 100% 格式无损同步。</p>
+            
+            <div class="sync-platform-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <button class="sync-grid-btn wechat" @click="syncToPlatform('wechat')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #10b981; background:rgba(16,185,129,0.05); color:#059669; cursor:pointer; transition:all 0.2s;">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
+                <span style="font-weight:600; font-size: 1rem;">同步至 微信公众号</span>
+              </button>
+              <button class="sync-grid-btn zhihu" @click="syncToPlatform('zhihu')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #3b82f6; background:rgba(59,130,246,0.05); color:#2563eb; cursor:pointer; transition:all 0.2s;">
+                <span style="font-size: 32px; font-weight: 900; font-family: -apple-system, sans-serif; letter-spacing: -2px; line-height: 1;">知</span>
+                <span style="font-weight:600; font-size: 1rem;">快速分发 知乎专栏</span>
+              </button>
+              <button class="sync-grid-btn juejin" @click="syncToPlatform('juejin')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #6366f1; background:rgba(99,102,241,0.05); color:#4f46e5; cursor:pointer; transition:all 0.2s;">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
+                <span style="font-weight:600; font-size: 1rem;">一键推流 稀土掘金</span>
+              </button>
+              <button class="sync-grid-btn csdn" @click="syncToPlatform('csdn')" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; border-radius:8px; border:1px solid #ef4444; background:rgba(239,68,68,0.05); color:#dc2626; cursor:pointer; transition:all 0.2s;">
+                <span style="font-size: 32px; font-weight: bold; font-family: Courier New, monospace; letter-spacing: -1px; line-height: 1;">C</span>
+                <span style="font-weight:600; font-size: 1rem;">推流至 CSDN 博客</span>
+              </button>
+            </div>
+            
+            <div style="text-align: right; margin-top: 24px;">
+              <button class="btn btn-native" @click="isSyncModalVisible = false">关闭同步中心</button>
             </div>
           </div>
           

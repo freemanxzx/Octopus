@@ -1338,26 +1338,43 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
     </div>
 
-    <div v-if="hasExternalLinks && showLinkWarning" class="wx-link-alert" style="display:flex; flex-direction:column; gap:8px;">
-      <div class="wx-link-msg" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-          微信外链阻断预警：共发现 {{ externalLinks.length }} 个外部链接，微信不支持外链点击。
+    <div v-if="hasExternalLinks && showLinkWarning" class="smart-link-palette">
+      <div class="smart-link-header">
+        <div class="smart-title">
+          <div class="smart-icon-box pulse-warning">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <span>外链探测雷达</span>
+          <span class="smart-badge badge-warn">{{ externalLinks.length }} 个发现</span>
         </div>
-        <div class="wx-link-acts" style="display: flex; gap: 8px;">
-          <button class="wx-btn-primary" @click="toggleLinkFootnote(); showLinkWarning = false">一键防丢转脚注</button>
-          <button class="wx-btn-close" @click="showLinkWarning = false"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        <div class="smart-actions">
+          <button class="smart-btn-primary" @click="toggleLinkFootnote(); showLinkWarning = false">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            一键转为脚注
+          </button>
+          <button class="smart-btn-icon" @click="showLinkWarning = false" title="忽略警告">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
       </div>
       
-      <div v-if="externalLinks.length > 0" style="background: rgba(255,165,0,0.1); padding: 8px 12px; border-radius: 6px; display:flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,165,0,0.3);">
-        <div @click="jumpToExtLine('current')" style="cursor:pointer; font-size:0.85rem; color:#b45309; display:flex; flex-direction:column; gap:4px; max-width:75%;" title="点击定位到源码行">
-           <span style="font-weight:bold; font-family:monospace;">源文件第 {{ externalLinks[activeExtLinkIdx].line }} 行 : [{{ externalLinks[activeExtLinkIdx].text }}]</span>
-           <span style="opacity:0.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration: underline dashed; text-underline-offset: 3px;">{{ externalLinks[activeExtLinkIdx].url }}</span>
+      <div v-if="externalLinks.length > 0" class="smart-locator-glass">
+        <div class="locator-info-block" @click="jumpToExtLine('current')" title="点击传送至源码处">
+           <div class="locator-top-meta">
+             <span class="locator-line-tag">Line {{ externalLinks[activeExtLinkIdx].line }}</span>
+             <span class="locator-anchor-text">{{ externalLinks[activeExtLinkIdx].text }}</span>
+           </div>
+           <div class="locator-url-track">{{ externalLinks[activeExtLinkIdx].url }}</div>
         </div>
-        <div style="display:flex; gap:6px;">
-           <button @click="jumpToExtLine('prev')" style="border:none; background:white; cursor:pointer; padding:4px 8px; border-radius:4px; color:#b45309; box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:0.8rem; border:1px solid rgba(255,165,0,0.2);">上一个</button>
-           <button @click="jumpToExtLine('next')" style="border:none; background:white; cursor:pointer; padding:4px 8px; border-radius:4px; color:#b45309; box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:0.8rem; border:1px solid rgba(255,165,0,0.2);">下一个 {{ activeExtLinkIdx + 1 }}/{{ externalLinks.length }}</button>
+        
+        <div class="locator-nav-controls">
+           <button class="locator-nav-btn" @click="jumpToExtLine('prev')" title="上一个冲突项">
+             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+           </button>
+           <span class="locator-counter-text">{{ activeExtLinkIdx + 1 }}/{{ externalLinks.length }}</span>
+           <button class="locator-nav-btn" @click="jumpToExtLine('next')" title="下一个冲突项">
+             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+           </button>
         </div>
       </div>
     </div>
@@ -2930,74 +2947,209 @@ html.dark .view-toggles-pill .pill-btn.active {
 }
 
 /* WX Link Auto Detection Banner */
-.wx-link-alert {
+.smart-link-palette {
+  margin: 0 20px 10px 20px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  animation: appEntry 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+html.dark .smart-link-palette {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.smart-link-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(234, 179, 8, 0.12);
-  border: 1px solid rgba(234, 179, 8, 0.3);
-  padding: 8px 16px;
+  padding: 10px 16px;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.smart-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
   color: var(--text-primary);
-  font-size: 13px;
-  border-radius: 8px;
-  margin: 0 20px 10px 20px;
-  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.08), inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: appEntry 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  z-index: 50;
 }
-html.dark .wx-link-alert {
-  background: rgba(234, 179, 8, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+.smart-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: #fff;
+  background: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
 }
-.wx-link-msg {
+
+.smart-badge {
+  font-size: 0.7rem;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.badge-warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.smart-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #c2410c; 
-  font-weight: 500;
 }
-html.dark .wx-link-msg { color: #facc15; }
 
-.wx-link-acts {
+.smart-btn-primary {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-.wx-btn-primary {
-  background: var(--bg-panel);
-  border: 1px solid #eab308;
-  color: #c2410c;
-  padding: 4px 12px;
+  gap: 6px;
+  background: linear-gradient(to bottom, #fff, #f8fafc);
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 6px 14px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-.wx-btn-primary:hover {
-  background: #eab308;
-  color: #ffffff;
+.smart-btn-primary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
-html.dark .wx-btn-primary {
-  color: #fce68a;
-  border-color: #ca8a04;
+html.dark .smart-btn-primary {
+  background: linear-gradient(to bottom, #334155, #1e293b);
+  border-color: #475569;
+  color: #f8fafc;
 }
-html.dark .wx-btn-primary:hover {
-  color: #1e293b;
+html.dark .smart-btn-primary:hover {
+  background: #475569;
+  border-color: #64748b;
 }
-.wx-btn-close {
+
+.smart-btn-icon {
   background: transparent;
   border: none;
   color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+.smart-btn-icon:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.smart-locator-glass {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 16px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.smart-locator-glass:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-style: solid;
+}
+
+.locator-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 75%;
+  cursor: pointer;
+}
+
+.locator-top-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.locator-line-tag {
+  background: #f59e0b;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.locator-anchor-text {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.locator-url-track {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-decoration: underline dashed;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+}
+
+.locator-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-app);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.locator-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  opacity: 0.6;
   cursor: pointer;
   display: flex;
   align-items: center;
   padding: 4px;
   border-radius: 4px;
+  transition: all 0.2s;
 }
-.wx-btn-close:hover {
-  background: rgba(234, 179, 8, 0.2);
-  color: #ca8a04;
+.locator-nav-btn:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+}
+
+.locator-counter-text {
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--text-primary);
+  min-width: 38px;
+  text-align: center;
 }
 </style>

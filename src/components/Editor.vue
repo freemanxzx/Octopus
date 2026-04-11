@@ -2,12 +2,30 @@
 import { ref, onMounted, onUnmounted, watch, shallowRef, computed } from 'vue';
 import MarkdownIt from 'markdown-it';
 import footnote from 'markdown-it-footnote';
+import mathjax3 from 'markdown-it-mathjax3';
 import hljs from 'highlight.js';
 // @ts-ignore
 import * as htmlToImage from 'html-to-image';
 import { Codemirror } from 'vue-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
+
+// Static raw CSS imports to bypass Vite dynamic loader sandbox and CDN blocks
+import githubCss from 'highlight.js/styles/github.css?raw';
+import vs2015Css from 'highlight.js/styles/vs2015.css?raw';
+import atomOneDarkCss from 'highlight.js/styles/atom-one-dark.css?raw';
+import atomOneLightCss from 'highlight.js/styles/atom-one-light.css?raw';
+import monokaiCss from 'highlight.js/styles/monokai.css?raw';
+import draculaCss from 'highlight.js/styles/base16/dracula.css?raw';
+
+const codeThemeMap: Record<string, string> = {
+  'github': githubCss,
+  'vs2015': vs2015Css,
+  'atom-one-dark': atomOneDarkCss,
+  'atom-one-light': atomOneLightCss,
+  'monokai': monokaiCss,
+  'dracula': draculaCss
+};
 
 const isDesktop = ref(!!(window as any).electronAPI);
 const isWechatAvailable = ref(!!(window as any).wechatAPI);
@@ -37,8 +55,9 @@ const selectedTheme = ref('wechat-bmpi-16-orange-blue');
 const themeStyleContent = ref("");
 const loadTheme = async (themeId: string) => {
   try {
-    const cssObj = await import(`../assets/themes/${themeId}.css?raw`);
-    themeStyleContent.value = cssObj.default || "";
+    const baseCssObj = await import(`../assets/themes/_base/basic.css?raw`);
+    const themeCssObj = await import(`../assets/themes/${themeId}.css?raw`);
+    themeStyleContent.value = (baseCssObj.default || "") + "\n\n/* ----- THEME OVERRIDES ----- */\n\n" + (themeCssObj.default || "");
   } catch(e) {
     console.error("Theme load failed", e);
   }
@@ -58,10 +77,15 @@ const codeThemes = [
 const selectedCodeTheme = ref('github');
 const codeThemeStyleContent = ref("");
 
-const loadCodeTheme = async (themeId: string) => {
+const loadCodeTheme = (themeId: string) => {
   try {
-    const cssObj = await import(`highlight.js/styles/${themeId}.css?raw`);
-    codeThemeStyleContent.value = cssObj.default || "";
+    const rawCss = codeThemeMap[themeId] || "";
+    const boostedCss = rawCss.replace(/(^|}|,)\s*([^{}]+?)\s*(?={|,)/g, (m: string, prefix: string, selector: string) => {
+      const sel = selector.trim();
+      if (sel.startsWith('@') || sel === '') return m;
+      return `${prefix}\n#nice ${sel}`;
+    });
+    codeThemeStyleContent.value = boostedCss;
   } catch(e) {
     console.error("Code Theme load failed", e);
   }
@@ -115,33 +139,222 @@ function initializeOctopus(config) {
 这里放入一张高清水印配图：
 ![Octopus 架构流引擎](https://images.unsplash.com/photo-1542831371-29b0f74f9713?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80 "程序员工作空间模拟") 
 
-## 4. 微信图文黑科技测试 (WeChat Black Magic)
+## 5. 多图横向滑动测试 (Image Flow)
 
-在微信公众号生态中，外链总是会被无情拦截。但现在您可以直接写标准链接，比如探讨前沿技术的 [苹果官方设计与技术规范](https://developer.apple.com/design/ "Human Interface Guidelines")，以及深度的 [TypeScript 官方权威接口指南](https://www.typescriptlang.org/)。
+如果需要在同一排版位置放入多张图片作横向滚动展示，只需要使用原生的尖括号（前后带有 \`<\` 和 \`>\`）包裹图库，并在图片之间用英文逗号分隔：
 
-*点击顶部菜单中的 \`[格式] -> [微信外链转脚注]\`，您会看到所有带超链接的文字旁边会自动升起极致优雅的蓝色数字上标，紧接着文章末尾会自动生成一条由高亮分割线隔开的【参考资料】深度摘要版块！这在过去的 Markdown2Html 原生文颜工具中备受大量推文作者的热烈追捧！*
+<![横屏图 1](https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80),![横屏图 2](https://images.unsplash.com/photo-1542831371-29b0f74f9713?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80),![横屏图 3](https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80)>
+
+## 6. 数学公式与方程测试 (Math / LaTeX)
+
+支持原生内联公式，比如爱因斯坦的神秘魔法 $E=mc^2$。如果你在推导算法模型，甚至可以直接唤醒强大的 MathJax 渲染引擎：
+
+$$
+\\frac{\\partial f}{\\partial x} = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}
+$$
+
+$$
+\\mathcal{L} = -\\frac{1}{2} \\log \\left( 2\\pi\\sigma^2 \\right) - \\frac{(x-\\mu)^2}{2\\sigma^2}
+$$
 
 ---
 ✨ **测试结束**。以上排版在右侧的引擎中全部被严格遵守并在任何设备下稳定呈现。点按上方的「复制到微信」按钮，粘贴到公众号编辑后台体验终极无损穿透效果吧！
 `);
 
 const htmlOutput = ref<string>('');
+
+
 const previewContainer = ref<HTMLElement | null>(null);
 
-// Setup MarkdownIt with Highlight.js
+// Status Bar Computations
+const wordCount = computed(() => {
+  const text = content.value || '';
+  const cnMatches = text.match(/[\u4e00-\u9fa5]/g) || [];
+  const enWords = text.replace(/[\u4e00-\u9fa5]/g, ' ').split(/\s+/).filter(w => w.length > 0) || [];
+  return cnMatches.length + enWords.length;
+});
+const lineCount = computed(() => {
+  return (content.value || '').split('\n').length;
+});
+
+// TOC Sidebar Logic
+interface TocItem {
+  level: number;
+  text: string;
+  line: number;
+}
+const tocList = ref<TocItem[]>([]);
+const showToc = ref(true);
+
+watch(content, (newVal) => {
+  const lines = newVal.split('\n');
+  const items: TocItem[] = [];
+  let inCodeBlock = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim().startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+    
+    const match = line.match(/^(#{1,2})\s+(.+)$/);
+    if (match) {
+      items.push({
+        level: match[1].length,
+        text: match[2].replace(/<[^>]+>/g, '').trim(),
+        line: i + 1
+      });
+    }
+  }
+  tocList.value = items;
+}, { immediate: true });
+
+const scrollToLine = (lineNode: number) => {
+  if (!view.value) return;
+  const state = view.value.state;
+  const targetLine = Math.min(Math.max(1, lineNode), state.doc.lines);
+  const pos = state.doc.line(targetLine).from;
+  
+  view.value.dispatch({
+    selection: { anchor: pos },
+    scrollIntoView: true
+  });
+  view.value.focus();
+};
+
+// Weiyan/MarkdownNice Parity Core Mutators
+function markdownItSpan(md: any) {
+  md.core.ruler.push("heading_span", (state: any) => {
+    for (let i = 0; i < state.tokens.length - 1; i++) {
+      if (state.tokens[i].type !== "heading_open" || state.tokens[i + 1].type !== "inline") continue;
+      const inlineToken = state.tokens[i + 1];
+      if (!inlineToken.content) continue;
+      const p1 = new state.Token("html_inline", "", 0);
+      p1.content = `<span class="prefix"></span><span class="content">`;
+      inlineToken.children.unshift(p1);
+      const p2 = new state.Token("html_inline", "", 0);
+      p2.content = `</span><span class="suffix"></span>`;
+      inlineToken.children.push(p2);
+      i += 2;
+    }
+  });
+}
+
+function markdownItTableContainer(md: any) {
+  md.core.ruler.push("table-container", (state: any) => {
+    const arr = [];
+    for (let i = 0; i < state.tokens.length; i++) {
+      const cur = state.tokens[i];
+      if (cur.type === "table_open") {
+        const span = new state.Token("html_inline", "", 0);
+        span.content = `<section class="table-container">`;
+        arr.push(span);
+        arr.push(cur);
+      } else if (cur.type === "table_close") {
+        const span = new state.Token("html_inline", "", 0);
+        span.content = `</section>`;
+        arr.push(cur);
+        arr.push(span);
+      } else {
+        arr.push(cur);
+      }
+    }
+    state.tokens = arr;
+  });
+}
+
+function markdownItLiReplacer(md: any) {
+  md.renderer.rules.list_item_open = () => "<li><section>";
+  md.renderer.rules.list_item_close = () => "</section></li>";
+}
+
+function markdownItMultiquote(md: any) {
+  md.core.ruler.push("blockquote-class", (state: any) => {
+    let count = 0;
+    let outerQuote: any;
+    for (let i = 0; i < state.tokens.length; i++) {
+      const cur = state.tokens[i];
+      if (cur.type === "blockquote_open") {
+        if (count === 0) outerQuote = cur;
+        count++;
+        continue;
+      }
+      if (count > 0) {
+        outerQuote.attrs = [["class", "multiquote-" + count]];
+        count = 0;
+      }
+    }
+  });
+}
+
+function markdownItImageFlow(md: any) {
+  const tokenize = (state: any, start: any) => {
+    const matchReg = /^<((!\[[^[\]]*\]\([^()]+\)(,?\s*(?=>)|,\s*(?!>)))+)>/;
+    const srcLine = state.src.slice(state.bMarks[start], state.eMarks[start]);
+
+    if (srcLine.charCodeAt(0) !== 0x3c /* < */) {
+      return false;
+    }
+    const match = matchReg.exec(srcLine);
+
+    if (match) {
+      const images = match[1].match(/\[[^\]]*\]\([^)]+\)/g);
+      if (images && images.length > 0) {
+        const token = state.push("imageFlow", "", 0);
+        token.meta = images;
+        token.block = true;
+        state.line++;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  md.renderer.rules.imageFlow = (tokens: any, idx: any) => {
+    const start = `<section class="imageflow-layer1"><section class="imageflow-layer2">`;
+    const end = `</section></section><p class="imageflow-caption"><<< 左右滑动见更多 >>></p>`;
+    const contents = tokens[idx].meta;
+    let wrappedContent = "";
+    contents.forEach((content: any) => {
+      let altMatch = content.match(/\[([^[\]]*)\]/);
+      let srcMatch = content.match(/[^[]*\(([^()]*)\)[^\]]*/);
+      let alt = altMatch ? altMatch[1] : "";
+      let src = srcMatch ? srcMatch[1] : "";
+      wrappedContent += `<section class="imageflow-layer3"><img alt="${alt}" src="${src}" class="imageflow-img" /></section>`;
+    });
+
+    return start + wrappedContent + end;
+  };
+
+  md.block.ruler.before("paragraph", "imageFlow", tokenize);
+}
+
+
+
+// Setup MarkdownIt with Highlight.js and all Weiyan Parity Injectors
 const md = new MarkdownIt({ 
   html: true, 
   linkify: true, 
   typographer: true,
   highlight: function (str: string, lang: string) {
+    const escapeHtml = (s: string) => s.replace(/[&<>'"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[c] as string));
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return hljs.highlight(str, { language: lang }).value;
+        return '<pre class="custom hljs"><code>' + hljs.highlight(str, { language: lang }).value + '</code></pre>';
       } catch (__) {}
     }
-    return ''; // use external default escaping
+    return '<pre class="custom hljs"><code>' + escapeHtml(str) + '</code></pre>';
   }
-}).use(footnote);
+})
+.use(footnote)
+.use(mathjax3)
+.use(markdownItSpan)
+.use(markdownItTableContainer)
+.use(markdownItLiReplacer)
+.use(markdownItMultiquote)
+.use(markdownItImageFlow);
 
 // Unified Toast System
 const toastState = ref({ message: '', type: 'info' as 'success'|'error'|'info', visible: false });
@@ -178,6 +391,13 @@ const showDiagrams = ref(true);
 const updateHtml = () => {
   let rawHtml = md.render(content.value);
 
+  // Deep Parity: Mac Code Block Styling
+  if (isMacCodeBlock.value) {
+    rawHtml = rawHtml.replace(/<pre class="custom hljs">/g, (match) => {
+      return `<div class="mac-code-block"><div class="mac-header"><span class="mac-dot" style="background:#ff5f56"></span><span class="mac-dot" style="background:#ffbd2e"></span><span class="mac-dot" style="background:#27c93f"></span></div>` + match;
+    }).replace(/<\/pre>/g, '</pre></div>');
+  }
+
   // Deep Parity: WeChat Link Footnotes & References
   if (enableLinkFootnote.value || showReferences.value) {
     const parser = new DOMParser();
@@ -185,29 +405,27 @@ const updateHtml = () => {
     const links = doc.querySelectorAll('a[href^="http"]');
     
     if (links.length > 0) {
-      let refsHtml = '<div class="references-section" style="margin-top: 50px; border-top: 1px solid #e1e4e8; padding-top: 20px;">';
-      refsHtml += '<h3 style="font-size: 16px; margin-bottom: 12px;">参考资料</h3><ul style="list-style: none; padding: 0; margin: 0;">';
+      let refsHtml = '<h3 class="footnotes-sep"></h3>\n<section class="footnotes">\n';
       
       links.forEach((a, i) => {
          const num = i + 1;
          
          if (enableLinkFootnote.value) {
            const sup = doc.createElement('sup');
-           sup.className = 'wechat-footnote-ref';
-           sup.style.cssText = "font-size: 12px; color: #4f46e5; margin-left: 2px;";
-           sup.textContent = `[${num}]`;
+           sup.className = 'footnote-ref';
+           sup.innerHTML = `[${num}]`;
+           
+           const textNode = a.innerHTML;
+           a.innerHTML = `<span class="footnote-word">${textNode}</span>`;
            a.appendChild(sup);
          }
          
          if (showReferences.value) {
-           refsHtml += `<li style="margin-bottom: 8px; font-size: 14px; line-height: 1.6;">
-             <span style="display:inline-block; width:1.8rem; color:#64748b; font-weight:500;">[${num}]</span>
-             <strong style="color: #333;">${a.textContent.replace(`[${num}]`,'')}</strong>: 
-             <span style="color:#64748b; word-break: break-all;">${(a as HTMLAnchorElement).href}</span>
-           </li>`;
+           // Weiyan Parity: .footnote-item > p > .footnote-word
+           refsHtml += `<span id="fn${num}" class="footnote-item"><span class="footnote-num">[${num}] </span><p><span class="footnote-word">${a.textContent.replace(`[${num}]`,'')}</span>: <em>${(a as HTMLAnchorElement).href}</em></p></span>\n`;
          }
       });
-      refsHtml += '</ul></div>';
+      refsHtml += '</section>';
       
       if (showReferences.value) {
         rawHtml = doc.body.innerHTML + refsHtml;
@@ -217,10 +435,20 @@ const updateHtml = () => {
     }
   }
 
-  htmlOutput.value = `<section id="nice" class="markdown-body" style="width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important;">${rawHtml}</section>`;
+  // Deep Parity: Implicit Figures
+  rawHtml = rawHtml.replace(/<p>\s*(<img[^>]+alt="([^"]*)"[^>]*>)\s*<\/p>/g, (match, imgCore, altText) => {
+    if (altText && altText.trim() !== '') {
+      return `<figure>${imgCore}<figcaption>${altText}</figcaption></figure>`;
+    }
+    return `<figure>${imgCore}</figure>`;
+  });
+
+  const serifStyle = useSerifFont.value ? "font-family: Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif !important;" : "";
+
+  htmlOutput.value = `<section id="nice" class="markdown-body ${useSerifFont.value ? 'use-serif' : ''}" style="width: 100% !important; max-width: none !important; ${serifStyle}">${rawHtml}</section>`;
 };
 
-watch(content, updateHtml);
+watch([content, isMacCodeBlock, useSerifFont, enableLinkFootnote, showReferences, showDiagrams], updateHtml);
 onMounted(updateHtml);
 
 // Dropdown Menu Logic
@@ -229,36 +457,6 @@ const toggleMenu = (menu: string) => {
   activeMenu.value = activeMenu.value === menu ? null : menu;
 };
 
-// File I/O Operations
-const importMd = () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.md';
-  input.onchange = (e: any) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target && typeof e.target.result === 'string') {
-        content.value = e.target.result;
-        showToast("✅ 文档导入成功", "success");
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-};
-
-const exportMd = () => {
-  const blob = new Blob([content.value], { type: 'text/markdown' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'document.md';
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast("✅ Markdown 源文件下载成功", "success");
-};
 
 const exportHtmlFile = () => {
   const boilerplate = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Markdown Export</title><style>${themeStyleContent.value}\n${customStyleContent.value}</style></head><body>${htmlOutput.value}</body></html>`;
@@ -382,6 +580,48 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' = 'wechat') => {
   clone.style.left = '-9999px';
   document.body.appendChild(clone);
 
+  // Weiyan MathJax Parity Handling for WeChat
+  if (platform === 'wechat') {
+    const mjxs = clone.getElementsByTagName('mjx-container');
+    // First, fix SVG attributes dynamically
+    for (let i = 0; i < mjxs.length; i++) {
+        const mjx = mjxs[i] as HTMLElement;
+        mjx.removeAttribute("jax");
+        mjx.removeAttribute("tabindex");
+        mjx.removeAttribute("ctxtmenu_counter");
+        
+        const svg = mjx.querySelector('svg');
+        if (svg) {
+            const width = svg.getAttribute("width");
+            const height = svg.getAttribute("height");
+            svg.removeAttribute("width");
+            svg.removeAttribute("height");
+            if (width) svg.style.width = width;
+            if (height) svg.style.height = height;
+        }
+    }
+    clone.querySelectorAll('style').forEach(s => s.remove());
+    
+    
+    let cloneHtml = clone.innerHTML;
+    // Replace <mjx-container display="true"> with <section> (Block)
+    cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?display="true"[^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<section $1>$2</section>");
+    // Replace remaining <mjx-container> with <span> (Inline)
+    cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<span $1>$2</span>");
+    
+    // Padding spaces for inline elements to avoid WeChat crowding bugs
+    cloneHtml = cloneHtml.replace(/\s<span class="MathJax"/g, '&nbsp;<span class="MathJax"');
+    cloneHtml = cloneHtml.replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
+    
+    // Explicit borders for fractional strokes and tables
+    cloneHtml = cloneHtml.replace(/class="mjx-solid"/g, 'fill="none" stroke-width="70"');
+    
+    // Strip MathML hidden assistive tags that pollute WeChat copy 
+    cloneHtml = cloneHtml.replace(/<mjx-assistive-mml[\s\S]*?<\/mjx-assistive-mml>/g, "");
+    
+    clone.innerHTML = cloneHtml;
+  }
+
   const selection = window.getSelection();
   const range = document.createRange();
   range.selectNodeContents(clone);
@@ -407,6 +647,58 @@ const printPdf = () => {
 };
 
 const isPreviewMode = ref(false);
+const viewMode = ref<'pc' | 'mobile'>('mobile');
+
+const importMd = async () => {
+  if (isDesktop.value && (window as any).electronAPI && (window as any).electronAPI.readFile) {
+    try {
+       // Dummy default for graceful fallback if user hasn't explicitly patched electronAPI yet
+       const result = await (window as any).electronAPI.readFile();
+       if (result && result.content) {
+         content.value = result.content;
+         showToast("✅ 已成功载入本地 Markdown 文件", "success");
+       }
+    } catch(e: any) {
+       customAlert("❌ 读取失败: " + e.message);
+    }
+  } else {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.md, .txt';
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        content.value = e.target.result;
+        showToast("✅ SaaS云通道：成功解析导入 Markdown 文档", "success");
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+};
+
+const exportMd = async () => {
+  if (isDesktop.value && (window as any).electronAPI && (window as any).electronAPI.writeFile) {
+    try {
+      await (window as any).electronAPI.writeFile('./export.md', content.value, 'utf-8');
+      showToast("✅ 原生通道写入完毕，已保存为 export.md", "success");
+    } catch(e: any) {
+      customAlert("保存失败: " + e.message);
+    }
+  } else {
+    const blob = new Blob([content.value], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'document.md';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("✅ Markdown 源码文件下载成功", "success");
+  }
+};
+
 const togglePreviewMode = () => {
   isPreviewMode.value = !isPreviewMode.value;
   showToast(isPreviewMode.value ? "已进入沉浸预览模式" : "已退出沉浸预览模式", "success");
@@ -417,8 +709,15 @@ const exportImage = async () => {
   try {
     isExporting.value = true;
     showToast("正在拼合超清长图，这可能需要几秒钟...", "info");
-    // Allow Vue to render the overlay
-    await new Promise(r => setTimeout(r, 100));
+    
+    // TEMPORARY FIX: Switch to PC view so Mobile Notch/Borders are not exported!
+    const wasMobile = viewMode.value === 'mobile';
+    if (wasMobile) {
+      viewMode.value = 'pc';
+    }
+    
+    // Allow Vue to render the overlay and the PC view
+    await new Promise(r => setTimeout(r, 200));
 
     const contentNode = previewContainer.value.querySelector('.preview-content') as HTMLElement;
     if (!contentNode) throw new Error("无法定位预览区域内容");
@@ -429,9 +728,19 @@ const exportImage = async () => {
       style: {
         transform: 'none',
         height: contentNode.scrollHeight + 'px',
-        width: contentNode.scrollWidth + 'px'
+        width: '850px', // Standard comfortable reading width for long images
+        padding: '40px',
+        margin: '0',
+        borderRadius: '0',
+        boxShadow: 'none',
+        border: 'none',
+        maxWidth: 'none'
       }
     });
+
+    if (wasMobile) {
+      viewMode.value = 'mobile'; // Restore the phone shell immediately after capture
+    }
 
     if (isDesktop.value) {
       const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
@@ -612,9 +921,15 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('view')">
             查看
             <div class="dropdown-menu" v-show="activeMenu === 'view'">
-              <div class="dropdown-item" @click="togglePreviewMode">{{ isPreviewMode ? '关闭预览模式' : '开启沉浸预览模式' }}</div>
+              <div class="dropdown-item" @click="viewMode = 'pc'">
+                <span class="check-icon">{{ viewMode === 'pc' ? '✅' : '　' }}</span>宽屏 PC 预览
+              </div>
+              <div class="dropdown-item" @click="viewMode = 'mobile'">
+                <span class="check-icon">{{ viewMode === 'mobile' ? '✅' : '　' }}</span>Mobile 手机预览
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" @click="togglePreviewMode">{{ isPreviewMode ? '关闭预览模式' : '开启沉浸全屏' }}</div>
               <div class="dropdown-item" @click="toggleMacCodeBlock">{{ isMacCodeBlock ? '关闭' : '开启' }} Mac代码块风格</div>
-              <div class="dropdown-item" @click="toggleFullscreen">全屏沉浸模式</div>
             </div>
           </div>
           <!-- Settings Menu -->
@@ -639,13 +954,25 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
 
       <div class="actions">
-        <!-- Title bar actions (if any) are kept extremely minimal now -->
+
+        <div class="view-toggles-pill">
+          <button class="pill-btn" :class="{active: viewMode === 'pc'}" @click="viewMode = 'pc'">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            PC 版式
+          </button>
+          <button class="pill-btn" :class="{active: viewMode === 'mobile'}" @click="viewMode = 'mobile'">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            手机壳预览
+          </button>
+        </div>
       </div>
     </header>
 
     <!-- Tier 2: Formatting Toolbar -->
     <div class="octopus-header formatting-toolbar">
       <div class="format-actions">
+        <button class="icon-btn" title="侧边大纲导航" @click="showToc = !showToc" :style="{ color: showToc ? '#38bdf8' : '', background: showToc ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+        <div class="toolbar-divider"></div>
         <button class="icon-btn" title="删除线" @click="insertFormat('~~', '~~')"><span style="text-decoration: line-through; font-weight: bold; font-family: sans-serif;">S</span></button>
         <button class="icon-btn" title="加粗" @click="insertFormat('**', '**')"><strong style="font-family: serif; font-size: 1.1rem;">B</strong></button>
         <button class="icon-btn" title="倾斜" @click="insertFormat('*', '*')"><em style="font-family: serif; font-size: 1.1rem; font-weight: bold;">I</em></button>
@@ -659,46 +986,64 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
 
       <div class="actions">
-        <!-- Direct High-Visibility Theme Controls -->
-        <select v-model="selectedCodeTheme" class="theme-select inline-select" style="margin-right: 0.5rem; max-width: 140px;">
-          <option v-for="c in codeThemes" :key="c.id" :value="c.id">代码: {{c.name}}</option>
-        </select>
-        <select v-model="selectedTheme" class="theme-select inline-select" style="margin-right: 0.5rem;">
-          <option v-for="t in themes" :key="t.id" :value="t.id">{{t.name}}</option>
-        </select>
 
-        <button class="btn btn-native" style="margin-right: 0.5rem;" @click="toggleCSS">
-          <span v-if="!isEditingTheme">⚙️ 自定义 CSS</span><span v-else>关闭自定义</span>
-        </button>
+        <div class="control-group">
+          <div class="premium-select-wrapper">
+            <select v-model="selectedCodeTheme" class="premium-select">
+              <option v-for="c in codeThemes" :key="c.id" :value="c.id">代码: {{c.name}}</option>
+            </select>
+          </div>
+          <div class="premium-select-wrapper">
+            <select v-model="selectedTheme" class="premium-select">
+              <option v-for="t in themes" :key="t.id" :value="t.id">{{t.name}}</option>
+            </select>
+          </div>
 
-        <div class="copy-group" style="margin-right: 0.5rem;">
-          <button class="btn-copy wechat" @click="copyHtml('wechat')">
-            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            微信
+          <button class="btn-icon-text" style="padding: 0 0.2rem; margin-top: 2px; color: #64748b;" @click="toggleCSS" :title="isEditingTheme ? '关闭自定义CSS' : '配置自定义CSS样式'">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           </button>
-          <button class="btn-copy zhihu" @click="copyHtml('zhihu')">知乎</button>
-          <button class="btn-copy juejin" @click="copyHtml('juejin')">掘金</button>
         </div>
 
-        <button class="btn btn-primary" @click="exportImage">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          导出图片
-        </button>
       </div>
     </div>
 
     <main class="workspace" :class="{ 'is-dragging': isDragging }">
       <div v-show="!isPreviewMode" class="editor-pane" :style="{ width: isEditingTheme ? '33.333%' : (leftWidth + '%') }">
-        <Codemirror
-          v-model="content"
-          placeholder="Start writing..."
-          :style="{ height: '100%', width: '100%', fontSize: '15px' }"
-          :autofocus="true"
-          :indent-with-tab="true"
-          :tab-size="2"
-          :extensions="extensions"
-          @ready="handleReady"
-        />
+        
+        <div v-show="showToc" class="toc-panel">
+          <div class="toc-header">
+            <span>导航目录</span>
+            <button class="icon-btn" style="width: 24px; height: 24px; font-size: 0.7rem;" @click="showToc = false">✕</button>
+          </div>
+          <div class="toc-content">
+            <div 
+              v-for="(item, idx) in tocList" 
+              :key="idx" 
+              class="toc-item" 
+              :class="'toc-level-' + item.level"
+              @click="scrollToLine(item.line)">
+              {{ item.text }}
+            </div>
+            <div v-if="tocList.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.8rem;">
+              暂无 1~2 级标题
+            </div>
+          </div>
+        </div>
+
+        <div class="cm-wrapper">
+          <Codemirror
+            v-model="content"
+            placeholder="Start writing..."
+            :style="{ height: '100%', width: '100%', fontSize: '15px' }"
+            :autofocus="true"
+            :indent-with-tab="true"
+            :tab-size="2"
+            :extensions="extensions"
+            @ready="handleReady"
+            @focus="showToc = false"
+            @change="showToc = false"
+          />
+        </div>
       </div>
 
       <!-- Draggable Splitter -->
@@ -706,9 +1051,31 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <div class="resizer-handle"></div>
       </div>
 
-      <div class="preview-pane" ref="previewContainer" :style="{ width: isPreviewMode ? '100%' : (isEditingTheme ? '33.333%' : (100 - leftWidth + '%')) }">
-        <component :is="'style'" v-if="customStyleContent" id="custom-theme">{{ customStyleContent }}</component>
+      <div class="preview-pane" :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isPreviewMode ? '100%' : (isEditingTheme ? '33.333%' : (100 - leftWidth + '%')) }">
+        <!-- Inject dynamic CSS raw strings explicitly into the DOM -->
+        <component :is="'style'" v-if="themeStyleContent && !isEditingTheme" id="markdown-theme">{{ themeStyleContent }}</component>
+        <component :is="'style'" v-if="codeThemeStyleContent" id="code-theme">{{ codeThemeStyleContent }}</component>
+        <component :is="'style'" v-if="customStyleContent && isEditingTheme" id="custom-theme">{{ customStyleContent }}</component>
+        
         <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
+        
+        <!-- Premium Floating Action Toolbar -->
+        <div class="floating-toolbar">
+          <button class="float-btn wechat" @click="copyHtml('wechat')" title="发往 微信公众号">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
+          </button>
+          <button class="float-btn zhihu" @click="copyHtml('zhihu')" title="发往 知乎平台">
+            <span style="font-size: 15px; font-weight: 800; font-family: -apple-system, sans-serif; letter-spacing: -1px; transform: scale(1.05); display: inline-block;">知</span>
+          </button>
+          <button class="float-btn juejin" @click="copyHtml('juejin')" title="发往 稀土掘金">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
+          </button>
+          <div class="float-divider"></div>
+          <button class="float-btn export" @click="exportImage" title="保存为 超清长图">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+        </div>
+
       </div>
       
       <!-- Tier 3 CSS Pane for 3-Column Layout (Moved to the Far Right) -->
@@ -750,6 +1117,18 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
       </transition>
     </main>
+
+    <!-- Tier 4: Bottom Status Bar -->
+    <footer v-show="!isPreviewMode" class="octopus-status-bar">
+      <div class="status-left">
+        <span class="status-item">字符数: <strong style="color: #f8fafc">{{ wordCount }}</strong></span>
+        <span class="status-item">行数: <strong style="color: #f8fafc">{{ lineCount }}</strong></span>
+      </div>
+      <div class="status-right">
+        <span class="status-item" style="color: #10b981" v-if="isDesktop"><svg style="vertical-align: middle; margin-right: 4px;" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>桌面原生核心加载完毕</span>
+        <span class="status-item" style="color: #f59e0b" v-else><svg style="vertical-align: middle; margin-right: 4px;" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>纯Web沙盒云模式</span>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -762,6 +1141,46 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #0f172a;
+}
+
+/* Workspace Specific Scrollbars - Dual Mode (Dark/Light) */
+/* Light Mode Scrollbar for Preview Pane */
+.preview-pane::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+.preview-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+.preview-pane::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border: 4px solid #ffffff; /* Match preview-pane background */
+  border-radius: 9999px;
+  background-clip: padding-box;
+}
+.preview-pane::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  border: 4px solid #ffffff;
+}
+
+/* Dark Mode Scrollbar for Editor/CSS Panes */
+.editor-pane-scrollbar-mixin,
+.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-track {
+  background: transparent;
+}
+.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-thumb {
+  background: #475569;
+  border: 4px solid #282c34; /* Match editor background */
+  border-radius: 9999px;
+  background-clip: padding-box;
+}
+.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+  border: 4px solid #282c34;
 }
 
 .octopus-layout {
@@ -781,29 +1200,49 @@ html, body {
   align-items: center;
   padding: 0.75rem 1.5rem;
   background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 100;
 }
 
 .system-menu-bar {
-  padding: 0.4rem 1.5rem;
+  padding: 0.5rem 1.5rem;
   background: #1e293b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: relative;
   z-index: 200;
   box-shadow: none;
+  display: flex;
+  justify-content: space-between;
+}
+
+.system-menu-bar .brand-group {
+  flex: 1;
+}
+
+.system-menu-bar .actions {
+  flex: 1;
 }
 
 .formatting-toolbar {
   padding: 0.5rem 1.5rem;
-  background: #0f172a;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
   display: flex;
+  align-items: center;
   justify-content: space-between;
   position: relative;
   z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.formatting-toolbar .actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 }
 
 .brand-group {
@@ -886,6 +1325,23 @@ html, body {
   margin-right: 0.5rem;
   width: 1rem;
   display: inline-block;
+}
+
+.octopus-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 1.2rem;
+  background: #1e293b;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.75rem;
+  color: #64748b;
+  user-select: none;
+  z-index: 100;
+}
+
+.octopus-status-bar .status-item {
+  margin-right: 1.5rem;
 }
 
 .dropdown-divider {
@@ -1051,6 +1507,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   position: relative;
+  min-height: 0; /* CRITICAL BUGFIX: Prevents flex children blowout */
 }
 
 .workspace.is-dragging {
@@ -1064,17 +1521,84 @@ html, body {
   background: #282c34;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 /* Force CodeMirror to fill bounds without stretching */
+.cm-wrapper {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
 .editor-pane ::v-deep(.cm-editor) {
   height: 100%;
-  flex: 1;
+  width: 100%;
   overflow: hidden;
 }
 .editor-pane ::v-deep(.cm-scroller) {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: auto;
+  height: 100%;
+}
+
+/* TOC Panel */
+.toc-panel {
+  width: 220px;
+  height: 100%;
+  background: #1e2329;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.toc-header {
+  height: 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.toc-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.toc-content::-webkit-scrollbar { width: 6px; }
+.toc-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+.toc-item {
+  padding: 6px 12px 6px 20px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.2s;
+  line-height: 1.4;
+}
+.toc-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #38bdf8;
+}
+.toc-level-1 {
+  font-weight: 600;
+  padding-left: 12px;
+  margin-top: 4px;
+}
+.toc-level-2 {
+  padding-left: 24px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+.toc-level-2::before {
+  content: '└ ';
+  opacity: 0.3;
 }
 
 .resizer {
@@ -1097,27 +1621,34 @@ html, body {
 
 .preview-pane {
   height: 100%;
-  background: #ffffff;  /* Edge-to-edge white */
+  background: #ffffff;  /* Edge-to-edge true white PC view */
   color: #334155;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0;
   margin: 0;
   box-sizing: border-box;
 }
 
-.preview-pane::-webkit-scrollbar {
-  width: 8px;
-}
-.preview-pane::-webkit-scrollbar-track {
-  background: transparent;
-}
 .preview-pane::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.2);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.preview-pane::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.preview-pane.is-mobile {
+  background: #0f172a;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3rem 0;
 }
 
 .preview-content {
-  padding: 2rem 3rem 0 3rem !important; /* NO padding-bottom creating fake space */
+  padding: 2.5rem 3rem 4rem 3rem !important; /* Soft bottom flow */
   width: 100% !important;
   max-width: none !important;
   margin: 0 !important;
@@ -1128,6 +1659,32 @@ html, body {
   box-shadow: none !important;
 }
 
+.preview-pane.is-mobile .preview-content {
+  width: 414px !important;
+  max-width: 414px !important;
+  min-height: 852px !important;
+  border-radius: 36px !important;
+  border: 12px solid #1e293b !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+  padding: 4.5rem 1.5rem 2.5rem 1.5rem !important;
+  margin: 0 auto !important;
+  position: relative;
+}
+
+.preview-pane.is-mobile .preview-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 30px;
+  background: #1e293b;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  z-index: 10;
+}
+
 /* Force Weiyan containers to strictly fill the pane to eliminate right-side gaps */
 ::v-deep(#nice) {
   width: 100% !important;
@@ -1136,13 +1693,37 @@ html, body {
   padding-bottom: 0 !important;
 }
 
-/* Base Typo protections ensuring the rendering area is completely standalone from app styling */
-.preview-content ::v-deep(div),
-.preview-content ::v-deep(p),
-.preview-content ::v-deep(h1),
-.preview-content ::v-deep(h2) {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+.view-toggles {
+  display: flex;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 4px;
+  border-radius: 8px;
+  margin-right: 1.5rem;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.3), 0 1px 1px rgba(255,255,255,0.05);
 }
+.view-toggles .btn-toggle {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.view-toggles .btn-toggle:hover {
+  color: #f8fafc;
+}
+.view-toggles .btn-toggle.active {
+  background: #4a8df8;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(74, 141, 248, 0.4);
+}
+
 
 /* Mac Code Block Styles */
 .mac-code-enabled ::v-deep(pre) {
@@ -1169,34 +1750,212 @@ html, body {
   opacity: 0;
 }
 
-.copy-group {
+.actions {
   display: flex;
-  background: rgba(255,255,255,0.05);
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  align-items: center;
+  gap: 1rem;
 }
-.copy-group .btn-copy {
-  background: transparent;
-  border: none;
-  border-right: 1px solid rgba(255,255,255,0.1);
-  border-radius: 0;
-  padding: 0.4rem 0.8rem;
+
+.control-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.premium-select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.premium-select {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #e2e8f0;
+  padding: 0.35rem 2.2rem 0.35rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M2%204l4%204%204-4%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  max-width: 140px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-select:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-icon-text {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 6px;
   font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-icon-text:hover {
+  color: white;
+  background: rgba(255,255,255,0.08);
+}
+
+.copy-group {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.btn-group-item {
+  background: transparent;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
   transition: all 0.2s;
 }
-.copy-group .btn-copy:last-child {
+
+.btn-group-item:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-group-item:last-child {
   border-right: none;
 }
-.copy-group .btn-copy.wechat:hover { background: #059669; color: white; }
-.copy-group .btn-copy.zhihu:hover { background: #0084ff; color: white; }
-.copy-group .btn-copy.juejin:hover { background: #1e80ff; color: white; }
+
+.btn-group-item.wechat:hover { background: #059669; }
+.btn-group-item.zhihu:hover { background: #0084ff; }
+.btn-group-item.juejin:hover { background: #1e80ff; }
+
+.btn-primary-filled {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 1rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary-filled:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.view-toggles-pill {
+  display: flex;
+  background: #0f172a; /* Match the dark nav background */
+  padding: 4px;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 1px 1px rgba(255,255,255,0.05);
+}
+
+.pill-btn {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pill-btn:hover {
+  color: white;
+}
+
+.pill-btn.active {
+  background: #498df8;
+  color: white;
+  box-shadow: 0 2px 10px rgba(73, 141, 248, 0.4);
+}
+
+.floating-toolbar {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(30, 41, 59, 0.85); /* Deep Slate Glassmorphism */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 14px 10px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.08);
+  z-index: 50;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.float-btn {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255,255,255,0.04);
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.float-btn:hover {
+  color: white;
+  transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.float-btn.wechat:hover { background: #059669; }
+.float-btn.zhihu:hover { background: #0084ff; }
+.float-btn.juejin:hover { background: #1e80ff; }
+.float-btn.export:hover { background: #6366f1; }
+
+.float-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin: 6px 0;
+}
 
 .export-overlay {
   position: fixed;
@@ -1302,5 +2061,31 @@ html, body {
   .workspace {
     overflow: visible !important;
   }
+}
+/* Mac Code Block Styles */
+.mac-code-block {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.1);
+  box-sizing: border-box;
+}
+.mac-code-block .mac-header {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: rgba(180, 180, 180, 0.15);
+  gap: 8px;
+}
+.mac-code-block .mac-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.mac-code-block pre.hljs {
+  margin: 0 !important;
+  border-radius: 0 0 8px 8px !important;
 }
 </style>

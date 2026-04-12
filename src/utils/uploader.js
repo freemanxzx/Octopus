@@ -28,7 +28,47 @@ const generateFilename = (file) => {
     const ext = file.name.split('.').pop() || 'png';
     return `${timestamp}-${randomStr}.${ext}`;
 };
-export const uploadImage = async (file, config) => {
+const compressImage = (file, quality = 0.85) => {
+    return new Promise((resolve) => {
+        // Only compress extremely large static images (> 1MB)
+        if (file.size < 1024 * 1024 || file.type === 'image/gif')
+            return resolve(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                // Bounding box constrain to standard 1080p lengths
+                if (width > 1920) {
+                    height = Math.round(1920 * height / width);
+                    width = 1920;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx)
+                    return resolve(file);
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
+                        resolve(newFile);
+                    }
+                    else {
+                        resolve(file);
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.src = e.target?.result;
+        };
+        reader.readAsDataURL(file);
+    });
+};
+export const uploadImage = async (inputFile, config) => {
+    const file = await compressImage(inputFile);
     if (config.provider === 'base64') {
         return await toBase64(file);
     }

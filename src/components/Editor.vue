@@ -1212,6 +1212,87 @@ const togglePreviewMode = () => {
   showToast(isPreviewMode.value ? "已进入沉浸预览模式" : "已退出沉浸预览模式", "success");
 };
 
+// Scroll Synchronization Logic
+let syncEditorTimeout: any;
+let syncPreviewTimeout: any;
+let isSyncingEditor = false;
+let isSyncingPreview = false;
+
+const findHeadingElementInPreview = (text: string, level: number, container: HTMLElement) => {
+  const normalized = text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const headings = container.querySelectorAll(`h1, h2, h3, h4, h5, h6`);
+  for (let i = 0; i < headings.length; i++) {
+    const el = headings[i] as HTMLElement;
+    if (level && Number(el.tagName.charAt(1)) !== level) continue;
+    const hText = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (hText === normalized || hText.includes(normalized) || normalized.includes(hText)) {
+      return el;
+    }
+  }
+  return null;
+};
+
+const executeSyncMath = (source: HTMLElement, target: HTMLElement, isSrcEditor: boolean) => {
+  const sourceScrollable = source.scrollHeight - source.clientHeight;
+  const targetScrollable = target.scrollHeight - target.clientHeight;
+  
+  if (sourceScrollable <= 0 || targetScrollable <= 0) return;
+
+  // Utilize AST Semantic Interpolation if both containers and view are ready
+  if (view.value && tocList.value.length > 0) {
+    try {
+      const anchors: { eTop: number, pTop: number }[] = [{ eTop: 0, pTop: 0 }];
+      const doc = view.value.state.doc;
+      
+      tocList.value.forEach(item => {
+        const el = findHeadingElementInPreview(item.text, item.level, isSrcEditor ? target : source);
+        if (el) {
+          try {
+            const ePos = doc.line(item.line).from;
+            const eTop = view.value.lineBlockAt(ePos).top;
+            const pTop = Math.max(0, el.offsetTop - 40); // 40px visual margin
+            anchors.push({ eTop, pTop });
+          } catch(e) {}
+        }
+      });
+      
+      anchors.push({ eTop: sourceScrollable + (isSrcEditor ? 0 : 0), pTop: targetScrollable }); // Absolute ends
+      anchors.sort((a,b) => isSrcEditor ? a.eTop - b.eTop : a.pTop - b.pTop);
+      
+      const scrollVal = source.scrollTop;
+      let prev = anchors[0];
+      let next = anchors[anchors.length - 1];
+      
+      for (let i = 0; i < anchors.length; i++) {
+        const val = isSrcEditor ? anchors[i].eTop : anchors[i].pTop;
+        if (val > scrollVal) {
+            next = anchors[i];
+            prev = i > 0 ? anchors[i-1] : anchors[0];
+            break;
+        }
+        prev = anchors[i];
+      }
+      
+      if (prev !== next) {
+        const rangeSrc = isSrcEditor ? (next.eTop - prev.eTop) : (next.pTop - prev.pTop);
+        const rangeTarget = isSrcEditor ? (next.pTop - prev.pTop) : (next.eTop - prev.eTop);
+        
+        if (rangeSrc > 0) {
+          const ratio = (scrollVal - (isSrcEditor ? prev.eTop : prev.pTop)) / rangeSrc;
+          target.scrollTop = (isSrcEditor ? prev.pTop : prev.eTop) + ratio * rangeTarget;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Interpolative scrolling skipped", e);
+    }
+  }
+  
+  // Fallback to purely proportional mapping
+  const percentage = source.scrollTop / sourceScrollable;
+  target.scrollTop = percentage * targetScrollable;
+};
+
 const exportImage = async () => {
   if (!previewContainer.value) return;
   try {
@@ -1384,15 +1465,29 @@ const handleReady = (payload: any) => {
   if (!cmScroll || !preview) return;
 
   cmScroll.addEventListener('scroll', () => {
-    // Only trigger if mouse is hovering this pane
-    if (preview.matches(':hover') || isSyncing) return;
-    syncScroll(cmScroll, preview);
+    // If the scroll was triggered programmatically by the preview pane
+    if (isSyncingPreview) return;
+    
+    // Set lock indicating Editor is actively driving the scroll
+    isSyncingEditor = true;
+    clearTimeout(syncEditorTimeout);
+    syncEditorTimeout = setTimeout(() => { isSyncingEditor = false; }, 50);
+    
+    // Process Editor -> Preview Semantic Translation
+    executeSyncMath(cmScroll, preview, true);
   });
   
   preview.addEventListener('scroll', () => {
-    // Only trigger if mouse is hovering this pane
-    if (cmScroll.matches(':hover') || isSyncing) return;
-    syncScroll(preview, cmScroll);
+    // If the scroll was triggered programmatically by the editor pane
+    if (isSyncingEditor) return;
+    
+    // Set lock indicating Preview is actively driving the scroll
+    isSyncingPreview = true;
+    clearTimeout(syncPreviewTimeout);
+    syncPreviewTimeout = setTimeout(() => { isSyncingPreview = false; }, 50);
+    
+    // Process Preview -> Editor Semantic Translation
+    executeSyncMath(preview, cmScroll, false);
   });
 };
 

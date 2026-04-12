@@ -483,8 +483,8 @@ const openT2IPanel = () => {
 };
 
 const dispatchAICall = async (sysPrompt: string, userText: string) => {
-    if (!uploadConfig.value.aiKey || !uploadConfig.value.aiEndpoint) {
-        showToast('⚠️ 未配置 AI 端点或密匙，请进入 [上传与配置] 面板尾部配置 OpenAI 标准凭证', 'error');
+    if (!uploadConfig.value.aiEndpoint) {
+        showToast('⚠️ 未配置 API Endpoint 端点，请进入 [上传与配置] 面板设置', 'error');
         isAIAssistantVisible.value = false;
         isImageConfigVisible.value = true;
         return;
@@ -492,14 +492,14 @@ const dispatchAICall = async (sysPrompt: string, userText: string) => {
     isAILoading.value = true;
     aiResponse.value = '🧠 AI模型引擎思考中...';
     try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (uploadConfig.value.aiKey) headers['Authorization'] = `Bearer ${uploadConfig.value.aiKey}`;
+        
         const res = await fetch(`${uploadConfig.value.aiEndpoint}/chat/completions`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${uploadConfig.value.aiKey}`
-            },
+            headers,
             body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
+                model: uploadConfig.value.aiModel || 'Qwen/Qwen2.5-7B-Instruct',
                 messages: [
                     { role: 'system', content: sysPrompt },
                     { role: 'user', content: userText }
@@ -517,8 +517,8 @@ const dispatchAICall = async (sysPrompt: string, userText: string) => {
 };
 
 const dispatchT2ICall = async () => {
-    if (!uploadConfig.value.aiKey || !uploadConfig.value.aiEndpoint) {
-        showToast('⚠️ 未配置 AI 端点或密匙，请进入 [上传与配置] 面板尾部配置', 'error');
+    if (!uploadConfig.value.aiEndpoint) {
+        showToast('⚠️ 未配置 API Endpoint 端点，请进入 [上传与配置] 面板设置', 'error');
         isAITextToImageVisible.value = false;
         isImageConfigVisible.value = true;
         return;
@@ -526,13 +526,14 @@ const dispatchT2ICall = async () => {
     if (!t2iPrompt.value.trim()) return;
     isT2ILoading.value = true;
     try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (uploadConfig.value.aiKey) headers['Authorization'] = `Bearer ${uploadConfig.value.aiKey}`;
+        
         const res = await fetch(`${uploadConfig.value.aiEndpoint}/images/generations`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${uploadConfig.value.aiKey}`
-            },
+            headers,
             body: JSON.stringify({
+                model: uploadConfig.value.aiImageModel || 'Kwai-Kolors/Kolors',
                 prompt: t2iPrompt.value,
                 n: 1,
                 size: '1024x1024'
@@ -597,11 +598,13 @@ const uploadConfig = ref<UploadConfig>(
     try {
       const saved = localStorage.getItem('octopus-upload-config');
       const parsed = saved ? JSON.parse(saved) : { provider: 'base64' };
-      if (!parsed.aiEndpoint) parsed.aiEndpoint = 'https://api.openai.com/v1';
+      if (!parsed.aiEndpoint) parsed.aiEndpoint = 'https://proxy-ai.doocs.org/v1';
       if (!parsed.aiKey) parsed.aiKey = '';
+      if (!parsed.aiModel) parsed.aiModel = 'Qwen/Qwen2.5-7B-Instruct';
+      if (!parsed.aiImageModel) parsed.aiImageModel = 'Kwai-Kolors/Kolors';
       return parsed;
     } catch {
-      return { provider: 'base64', aiEndpoint: 'https://api.openai.com/v1', aiKey: '' };
+      return { provider: 'base64', aiEndpoint: 'https://proxy-ai.doocs.org/v1', aiKey: '', aiModel: 'Qwen/Qwen2.5-7B-Instruct', aiImageModel: 'Kwai-Kolors/Kolors' };
     }
   })()
 );
@@ -1978,12 +1981,22 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             <h3 style="margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; color: var(--text-primary); font-size: 1rem;">🤖 AI 助手与模型凭证配置</h3>
             <div style="display: flex; flex-direction: column; gap: 0.8rem;">
               <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 主机访问地址 (如 OpenAI/通义/DeepSeek 代理源)</p>
-                <input v-model="uploadConfig.aiEndpoint" type="text" placeholder="https://api.openai.com/v1" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 主机地址 (默认提供免费代理服务器)</p>
+                <input v-model="uploadConfig.aiEndpoint" type="text" placeholder="https://proxy-ai.doocs.org/v1" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
               </div>
               <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 密匙 (Bearer Token)</p>
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 密匙 (默认源无需认证接口凭证)</p>
                 <input v-model="uploadConfig.aiKey" type="password" placeholder="sk-..." style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+              <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                   <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">对话大模型 (Model ID)</p>
+                   <input v-model="uploadConfig.aiModel" type="text" placeholder="Qwen/Qwen2.5-7B-Instruct" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                </div>
+                <div style="flex: 1;">
+                   <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">绘图大模型 (Model ID)</p>
+                   <input v-model="uploadConfig.aiImageModel" type="text" placeholder="Kwai-Kolors/Kolors" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                </div>
               </div>
             </div>
 

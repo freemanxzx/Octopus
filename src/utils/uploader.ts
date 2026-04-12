@@ -23,6 +23,8 @@ export type UploadConfig = {
   // System AI Architecture Hooks
   aiEndpoint?: string;
   aiKey?: string;
+  aiModel?: string;
+  aiImageModel?: string;
 };
 
 const toBase64 = (file: File): Promise<string> => {

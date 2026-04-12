@@ -2051,11 +2051,11 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       <!-- AI Text-To-Image Diffusion Modal -->
       <transition name="fade">
-        <div v-if="isAITextToImageVisible" class="modal-backdrop" style="z-index: 150;" @click.self="isAITextToImageVisible = false">
-          <div class="modal-content" style="max-width: 500px; width: 90%; z-index: 151;">
-             <div class="modal-header">
-               <h2>🖼️ 文生图 (AI 图像扩散重构)</h2>
-               <button class="close-btn" @click="isAITextToImageVisible = false">✕</button>
+        <div v-if="isAITextToImageVisible" class="export-overlay" style="z-index: 150;" @click.self="isAITextToImageVisible = false">
+          <div class="export-modal custom-modal" style="max-width: 500px; width: 90%; z-index: 151;">
+             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+               <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">🖼️ 文生图 (AI 图像扩散)</h3>
+               <button class="btn btn-native" style="padding: 4px 8px; font-size: 0.8rem;" @click="isAITextToImageVisible = false">✕</button>
              </div>
              <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
                 <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top:0;">请输入高度具体的描绘咒语，系统将通过通用图像大模型接口为您渲染配图，并直接自动插入至 Markdown 编辑器中。</p>
@@ -2071,11 +2071,11 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       <!-- History Timeline Modal -->
       <transition name="fade">
-        <div v-if="isHistoryVisible" class="modal-backdrop" @click.self="isHistoryVisible = false">
-          <div class="modal-content" style="max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
-            <div class="modal-header">
-              <h2>📖 本地草稿时光机</h2>
-              <button class="close-btn" @click="isHistoryVisible = false">✕</button>
+        <div v-if="isHistoryVisible" class="export-overlay" @click.self="isHistoryVisible = false">
+          <div class="export-modal custom-modal" style="max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">📖 本地草稿时光机</h3>
+              <button class="btn btn-native" style="padding: 4px 8px; font-size: 0.8rem;" @click="isHistoryVisible = false">✕</button>
             </div>
             <div class="modal-body" style="overflow-y: auto; flex: 1;">
               <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">系统每 10 秒自动为您进行容灾快照。点击按钮即可将编辑器无缝回退至当时状态。</p>

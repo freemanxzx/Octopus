@@ -2146,7 +2146,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       <!-- AI Assistant Drawer Slide Out -->
       <transition name="slide-up">
-        <div v-if="isAIAssistantVisible" class="ai-drawer-panel" style="position: absolute; right: 85px; top: 120px; width: 350px; max-height: calc(100% - 150px); background: var(--bg-panel); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid var(--border-subtle); z-index: 150; display: flex; flex-direction: column; overflow: hidden;">
+        <div v-if="isAIAssistantVisible" class="ai-drawer-panel" style="position: absolute; left: 85px; top: 120px; width: 350px; max-height: calc(100% - 150px); background: var(--bg-panel); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid var(--border-subtle); z-index: 150; display: flex; flex-direction: column; overflow: hidden;">
           <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(59, 130, 246, 0.1));">
             <div style="display: flex; align-items: center; gap: 8px;">
                <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; box-shadow: 0 0 8px #3b82f6;"></div>
@@ -3713,7 +3713,7 @@ html.dark .smart-link-palette {
 .floating-ai-sidebar {
   position: absolute;
   top: 50%;
-  right: 25px; /* Stand slightly off the right edge */
+  left: 24px; /* Move cleanly to the far-left edge */
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;

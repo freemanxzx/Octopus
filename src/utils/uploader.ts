@@ -19,6 +19,10 @@ export type UploadConfig = {
   region?: string;
   path?: string;
   domain?: string; // primarily for Qiniu
+
+  // System AI Architecture Hooks
+  aiEndpoint?: string;
+  aiKey?: string;
 };
 
 const toBase64 = (file: File): Promise<string> => {

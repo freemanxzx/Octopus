@@ -461,6 +461,102 @@ const restoreDraft = (draftContent: string) => {
   showToast("✅ 已成功回滚至历史时光机版本", "success");
 };
 
+// AI Panel State Schema
+const isAIAssistantVisible = ref(false);
+const isAITextToImageVisible = ref(false);
+const aiPrompt = ref('');
+const aiResponse = ref('');
+const isAILoading = ref(false);
+const t2iPrompt = ref('');
+const isT2ILoading = ref(false);
+
+const openAIPanel = () => {
+    isHistoryVisible.value = false;
+    isAITextToImageVisible.value = false;
+    isAIAssistantVisible.value = !isAIAssistantVisible.value;
+};
+
+const openT2IPanel = () => {
+    isHistoryVisible.value = false;
+    isAIAssistantVisible.value = false;
+    isAITextToImageVisible.value = !isAITextToImageVisible.value;
+};
+
+const dispatchAICall = async (sysPrompt: string, userText: string) => {
+    if (!uploadConfig.value.aiKey || !uploadConfig.value.aiEndpoint) {
+        showToast('⚠️ 未配置 AI 端点或密匙，请进入 [上传与配置] 面板尾部配置 OpenAI 标准凭证', 'error');
+        isAIAssistantVisible.value = false;
+        isImageConfigVisible.value = true;
+        return;
+    }
+    isAILoading.value = true;
+    aiResponse.value = '🧠 AI模型引擎思考中...';
+    try {
+        const res = await fetch(`${uploadConfig.value.aiEndpoint}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${uploadConfig.value.aiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    { role: 'system', content: sysPrompt },
+                    { role: 'user', content: userText }
+                ]
+            })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        aiResponse.value = data.choices[0].message.content;
+    } catch(e: any) {
+        aiResponse.value = `❌ 调用失败: ${e.message}`;
+    } finally {
+        isAILoading.value = false;
+    }
+};
+
+const dispatchT2ICall = async () => {
+    if (!uploadConfig.value.aiKey || !uploadConfig.value.aiEndpoint) {
+        showToast('⚠️ 未配置 AI 端点或密匙，请进入 [上传与配置] 面板尾部配置', 'error');
+        isAITextToImageVisible.value = false;
+        isImageConfigVisible.value = true;
+        return;
+    }
+    if (!t2iPrompt.value.trim()) return;
+    isT2ILoading.value = true;
+    try {
+        const res = await fetch(`${uploadConfig.value.aiEndpoint}/images/generations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${uploadConfig.value.aiKey}`
+            },
+            body: JSON.stringify({
+                prompt: t2iPrompt.value,
+                n: 1,
+                size: '1024x1024'
+            })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        
+        const imgUrl = data.data[0].url;
+        const imgSyntax = `\n![AI生成图像](${imgUrl})\n`;
+        
+        if (view.value) {
+            const pos = view.value.state.selection.main.head;
+            view.value.dispatch({ changes: { from: pos, insert: imgSyntax } });
+            showToast('✅ 图片已插入文章成功！', 'success');
+        }
+        isAITextToImageVisible.value = false;
+    } catch(e: any) {
+        showToast(`❌ 生成失败: ${e.message}`, 'error');
+    } finally {
+        isT2ILoading.value = false;
+    }
+};
+
 // Unified Toast System
 const toastState = ref({ message: '', type: 'info' as 'success'|'error'|'info', visible: false });
 let toastTimer: any = null;
@@ -482,6 +578,14 @@ const clsoeModal = (result: boolean) => {
   if (modalState.value.onResolve) modalState.value.onResolve(result);
 };
 
+// Clipboard 
+const copyToClipboard = (text: string) => {
+  if (navigator && navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+    showToast('回复内容已复制入剪切板', 'success');
+  }
+};
+
 // Replace standard alerts
 const customAlert = (msg: string) => showModal("提示", msg, false);
 const customConfirm = (msg: string) => showModal("确认操作", msg, true);
@@ -492,9 +596,12 @@ const uploadConfig = ref<UploadConfig>(
   (() => {
     try {
       const saved = localStorage.getItem('octopus-upload-config');
-      return saved ? JSON.parse(saved) : { provider: 'base64' };
+      const parsed = saved ? JSON.parse(saved) : { provider: 'base64' };
+      if (!parsed.aiEndpoint) parsed.aiEndpoint = 'https://api.openai.com/v1';
+      if (!parsed.aiKey) parsed.aiKey = '';
+      return parsed;
     } catch {
-      return { provider: 'base64' };
+      return { provider: 'base64', aiEndpoint: 'https://api.openai.com/v1', aiKey: '' };
     }
   })()
 );
@@ -1868,8 +1975,20 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             
             <p v-if="uploadConfig.provider === 'picgo'" style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">* 确保您的后台已启动 PicGo 客户端进程并默认开启了 Server 支持，即可无缝连接任意外部图床 (AliOSS/COS/SMMS)。</p>
             
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; color: var(--text-primary); font-size: 1rem;">🤖 AI 助手与模型凭证配置</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+              <div>
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 主机访问地址 (如 OpenAI/通义/DeepSeek 代理源)</p>
+                <input v-model="uploadConfig.aiEndpoint" type="text" placeholder="https://api.openai.com/v1" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+              <div>
+                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 密匙 (Bearer Token)</p>
+                <input v-model="uploadConfig.aiKey" type="password" placeholder="sk-..." style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+              </div>
+            </div>
+
             <div class="modal-actions" style="margin-top: 1.5rem;">
-              <button class="btn btn-primary" style="width: 100%; justify-content: center;" @click="isImageConfigVisible = false">保存并关闭</button>
+              <button class="btn btn-primary" style="width: 100%; justify-content: center;" @click="isImageConfigVisible = false">保存配置并关闭</button>
             </div>
           </div>
 
@@ -1880,19 +1999,75 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       <!-- MDNice Parity: Floating AI Sidebar -->
       <aside class="floating-ai-sidebar">
-        <div class="ai-tool assistant" @click="showToast('AI写作助手核心模块加载中...', 'info'); isHistoryVisible = false">
+        <div class="ai-tool assistant" @click="openAIPanel">
           <div class="ai-icon-bg blue">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="11" width="18" height="10" rx="3"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
           </div>
           <span class="ai-tool-text">助手</span>
         </div>
-        <div class="ai-tool text-to-image" @click="showToast('文生图扩散模型链路接通中...', 'info'); isHistoryVisible = false">
+        <div class="ai-tool text-to-image" @click="openT2IPanel">
           <div class="ai-icon-bg purple">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
           </div>
           <span class="ai-tool-text">文生图</span>
         </div>
       </aside>
+
+      <!-- AI Assistant Drawer Slide Out -->
+      <transition name="slide-up">
+        <div v-if="isAIAssistantVisible" class="ai-drawer-panel" style="position: absolute; right: 85px; top: 120px; width: 350px; max-height: calc(100% - 150px); background: var(--bg-panel); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid var(--border-subtle); z-index: 150; display: flex; flex-direction: column; overflow: hidden;">
+          <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(59, 130, 246, 0.1));">
+            <div style="display: flex; align-items: center; gap: 8px;">
+               <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; box-shadow: 0 0 8px #3b82f6;"></div>
+               <strong style="color: var(--text-primary); font-size: 1rem;">AI 创作助理</strong>
+            </div>
+            <button class="close-btn" @click="isAIAssistantVisible = false" style="background:transparent; border:none; color: var(--text-secondary); cursor:pointer;">✕</button>
+          </div>
+          <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">一键指令操作：</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('你是一个资深的公众号排版与润色小助手。请修正粗浅的错别字，并使用更高级、吸引人的自媒体口吻润色下文。', content)">✨ 文本润色校对</button>
+              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('你是一个文档专家。请提取下文的逻辑大纲，使用嵌套 Markdown 列表紧凑返回。', content)">📑 提取通篇大纲</button>
+              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('作为资深双语专业译者，请把提供下来的段落流利且地道地翻译成英文。', content)">🌍 原文转译外文</button>
+              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('根据内容，请帮我直接输出5个爆款且吸睛的自媒体文章标题供我备选。', content)">💡 吸睛标题生成</button>
+            </div>
+            <hr style="border:none; border-top: 1px dashed var(--border-color); margin: 8px 0;" />
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+               <label style="font-size: 0.85rem; color: var(--text-primary);">自定义灵感提问：</label>
+               <textarea v-model="aiPrompt" rows="3" placeholder="例如：帮我梳理三条关于开源生态系统的好处..." style="width: 100%; border-radius: 6px; padding: 8px; border: 1px solid var(--border-strong); background: var(--bg-app); color: var(--text-primary); resize: none; font-family: inherit; font-size: 0.9rem;"></textarea>
+               <button class="btn btn-primary" :disabled="isAILoading || !aiPrompt" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #6366f1, #3b82f6); border: none;" @click="dispatchAICall('你是一个得力的自媒体全能创作助手。', aiPrompt)">
+                  <span v-if="isAILoading">引擎调度运算中...</span>
+                  <span v-else>发送请求 🚀</span>
+               </button>
+            </div>
+            <div v-if="aiResponse" style="margin-top: 16px; padding: 12px; border-radius: 8px; background: var(--bg-app); border: 1px solid var(--border-subtle); position: relative;">
+               <p style="font-size: 0.8rem; font-weight: 600; color: #3b82f6; margin-top: 0; margin-bottom: 8px;">助手回复</p>
+               <div style="font-size: 0.85rem; color: var(--text-primary); white-space: pre-wrap; line-height: 1.5; max-height: 250px; overflow-y: auto; padding-right: 4px; user-select: text;">{{ aiResponse }}</div>
+               <button v-if="!isAILoading" class="btn btn-secondary" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 0.75rem;" @click="copyToClipboard(aiResponse)">复制</button>
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <!-- AI Text-To-Image Diffusion Modal -->
+      <transition name="fade">
+        <div v-if="isAITextToImageVisible" class="modal-backdrop" style="z-index: 150;" @click.self="isAITextToImageVisible = false">
+          <div class="modal-content" style="max-width: 500px; width: 90%; z-index: 151;">
+             <div class="modal-header">
+               <h2>🖼️ 文生图 (AI 图像扩散重构)</h2>
+               <button class="close-btn" @click="isAITextToImageVisible = false">✕</button>
+             </div>
+             <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top:0;">请输入高度具体的描绘咒语，系统将通过通用图像大模型接口为您渲染配图，并直接自动插入至 Markdown 编辑器中。</p>
+                <textarea v-model="t2iPrompt" rows="5" placeholder="例如：赛博朋克深渊背景下，一只发光的粉红色八爪鱼正在敲击漂浮的机械键盘面板..." style="width: 100%; border-radius: 6px; padding: 10px; border: 1px solid var(--border-strong); background: var(--bg-app); color: var(--text-primary); resize: none; font-family: inherit; font-size: 0.95rem;"></textarea>
+                <button class="btn btn-primary" :disabled="isT2ILoading || !t2iPrompt" style="width: 100%; justify-content: center; height: 44px; margin-top: 10px; background: linear-gradient(135deg, #a855f7, #8b5cf6); border: none; font-size: 1rem;" @click="dispatchT2ICall">
+                  <span v-if="isT2ILoading">引擎构图中 (云渲染约需 10-15 秒)...</span>
+                  <span v-else>生成图像 & 注入原文 ✨</span>
+               </button>
+             </div>
+          </div>
+        </div>
+      </transition>
 
       <!-- History Timeline Modal -->
       <transition name="fade">

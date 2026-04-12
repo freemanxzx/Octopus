@@ -1919,6 +1919,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       <div class="status-left">
         <span class="status-item">字符数: <strong style="color: var(--text-primary)">{{ wordCount }}</strong></span>
         <span class="status-item">行数: <strong style="color: var(--text-primary)">{{ lineCount }}</strong></span>
+        <span class="status-item">估算阅读耗时: <strong style="color: var(--accent-color)">约 {{ Math.max(1, Math.ceil(wordCount / 300)) }} 分钟</strong></span>
       </div>
       <div class="status-right">
         <span class="status-item" style="color: #10b981" v-if="isDesktop"><svg style="vertical-align: middle; margin-right: 4px;" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>桌面原生核心加载完毕</span>

@@ -422,7 +422,43 @@ const md = new MarkdownIt({
 .use(markdownItTableContainer)
 .use(markdownItLiReplacer)
 .use(markdownItMultiquote)
-.use(markdownItImageFlow);
+.use(markdownItImageFlow)
+// Weiyan Parity: Semantic layout shortcodes
+.use((window as any).markdownitContainer || (() => {}), 'shadow', {
+  render: function (tokens: any, idx: any) {
+    if (tokens[idx].nesting === 1) {
+      return '<div class="mdnice-shadow" style="box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">\n';
+    } else {
+      return '</div>\n';
+    }
+  }
+})
+.use((window as any).markdownitContainer || (() => {}), 'center', {
+  render: function (tokens: any, idx: any) {
+    if (tokens[idx].nesting === 1) {
+      return '<div class="mdnice-center" style="display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 1em;">\n';
+    } else {
+      return '</div>\n';
+    }
+  }
+});
+
+// History Tracking
+const savedDrafts = ref<{time: string, content: string}[]>([]);
+const isHistoryVisible = ref(false);
+
+const loadDraftsHistory = () => {
+  try {
+    savedDrafts.value = JSON.parse(localStorage.getItem('octopus_snapshots') || '[]');
+  } catch(e) {}
+  isHistoryVisible.value = true;
+  activeMenu.value = null;
+};
+const restoreDraft = (draftContent: string) => {
+  content.value = draftContent;
+  isHistoryVisible.value = false;
+  showToast("✅ 已成功回滚至历史时光机版本", "success");
+};
 
 // Unified Toast System
 const toastState = ref({ message: '', type: 'info' as 'success'|'error'|'info', visible: false });
@@ -970,16 +1006,38 @@ const importMd = async () => {
   } else {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.md, .txt';
-    input.onchange = (e: any) => {
+    input.accept = '.md, .txt, .docx';
+    input.onchange = async (e: any) => {
       const file = e.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        content.value = e.target.result;
-        showToast("✅ SaaS云通道：成功解析导入 Markdown 文档", "success");
-      };
-      reader.readAsText(file);
+      
+      if (file.name.endsWith('.docx')) {
+         if ((window as any).mammoth) {
+            try {
+              const arrayBuffer = await file.arrayBuffer();
+              const result = await (window as any).mammoth.convertToHtml({ arrayBuffer });
+              let htmlStr = result.value;
+              if ((window as any).TurndownService) {
+                  const turndownService = new (window as any).TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+                  content.value = turndownService.turndown(htmlStr);
+                  showToast("✅ 已通过 Mammoth 引擎完美解析导入 Word (.docx) 排版！", "success");
+              } else {
+                  customAlert("缺少 Turndown 解析库，无法转换 DOM。");
+              }
+            } catch(docxErr) {
+               customAlert("Word 文档解析失败: " + String(docxErr));
+            }
+         } else {
+            customAlert("缺少 Mammoth DOCX 核心模块，请刷新页面检查 CDN 网络。");
+         }
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e: any) => {
+          content.value = e.target.result;
+          showToast("✅ SaaS云通道：成功解析导入 Markdown 文档", "success");
+        };
+        reader.readAsText(file);
+      }
     };
     input.click();
   }
@@ -1290,6 +1348,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               <div class="dropdown-divider"></div>
               <div class="dropdown-item" @click="togglePreviewMode">{{ isPreviewMode ? '关闭预览模式' : '开启沉浸全屏' }}</div>
               <div class="dropdown-item" @click="toggleMacCodeBlock">{{ isMacCodeBlock ? '关闭' : '开启' }} Mac代码块风格</div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" @click="loadDraftsHistory">📖 时光机 (自动保存历史草稿)</div>
             </div>
           </div>
           <!-- Settings Menu -->
@@ -1343,6 +1403,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <button class="icon-btn" title="行内代码" @click="insertFormat('`', '`')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline><line x1="14" y1="4" x2="10" y2="20"></line></svg></button>
         <button class="icon-btn" title="链接" @click="insertFormat('[', '](https://)')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
         <button class="icon-btn" title="表格" @click="insertFormat('\n| 表头 | 表头 |\n| :--- | :--- |\n| 内容 | 内容 |\n', '')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg></button>
+        <button class="icon-btn" title="容器边框阴影块 (MDNice兼容)" @click="insertFormat('\n::: shadow\n', '\n:::\n')"><span style="font-size: 0.8rem; font-weight: bold; border: 1px dotted currentColor; border-radius: 4px; padding: 2px 4px; opacity: 0.8;">[::]</span></button>
+        <button class="icon-btn" title="文字组件居中块 (MDNice兼容)" @click="insertFormat('\n::: center\n', '\n:::\n')"><span style="font-size: 0.8rem; font-weight: bold; padding: 2px 4px; opacity: 0.8;">=|=</span></button>
         <button class="icon-btn" title="上传/插入图片" @click="triggerImageUpload"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
         <input type="file" ref="fileInput" @change="handleFileSelected" accept="image/*" style="display: none" />
         <button class="icon-btn" title="引用" @click="insertFormat('\n> ', '')" style="font-weight: 800; font-size: 1.2rem; line-height: 1; font-family: Times, serif;">"</button>
@@ -1776,6 +1838,35 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
 
           
+        </div>
+      </transition>
+
+      <!-- History Timeline Modal -->
+      <transition name="fade">
+        <div v-if="isHistoryVisible" class="modal-backdrop" @click.self="isHistoryVisible = false">
+          <div class="modal-content" style="max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+              <h2>📖 本地草稿时光机</h2>
+              <button class="close-btn" @click="isHistoryVisible = false">✕</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; flex: 1;">
+              <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">系统每 10 秒自动为您进行容灾快照。点击按钮即可将编辑器无缝回退至当时状态。</p>
+              
+              <div v-if="savedDrafts.length === 0" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                暂无历史记录缓存
+              </div>
+              
+              <div v-for="(draft, idx) in savedDrafts" :key="idx" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color);">
+                <div>
+                  <strong style="color: var(--text-primary);">{{ draft.time }}</strong>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">
+                    {{ draft.content.replace(/\n/g, ' ') }}
+                  </div>
+                </div>
+                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" @click="restoreDraft(draft.content)">回滚恢复</button>
+              </div>
+            </div>
+          </div>
         </div>
       </transition>
 

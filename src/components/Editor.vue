@@ -1451,8 +1451,16 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               <div class="dropdown-item" @click="insertFormat('*', '*')"><span class="shortcut">Ctrl I</span>斜体</div>
               <div class="dropdown-item" @click="insertFormat('~~', '~~')"><span class="shortcut">Ctrl D</span>删除线</div>
               <div class="dropdown-item" @click="insertFormat('[', '](https://)')"><span class="shortcut">Ctrl K</span>超链接</div>
+              
               <div class="dropdown-item" @click="insertFormat('`', '`')"><span class="shortcut">Ctrl E</span>行内代码</div>
+              <div class="dropdown-item" @click="insertFormat('\n```\n', '\n```\n')"><span class="shortcut">Ctrl+Alt+C</span>多行代码</div>
+              
               <div class="dropdown-item" @click="insertFormat('<span style=&quot;color: red;&quot;>', '</span>')"><span class="shortcut"></span>文字颜色</div>
+
+              <div class="dropdown-divider"></div>
+
+              <div class="dropdown-item" @click="insertFormat('\n| 表头 | 表头 |\n| :--- | :--- |\n| 内容 | 内容 |\n', '')"><span class="shortcut">Ctrl+Alt+T</span>表格</div>
+              <div class="dropdown-item" @click="insertFormat('![图片描述](', ') ')"><span class="shortcut">Ctrl+Alt+I</span>图片</div>
 
               <div class="dropdown-divider"></div>
 
@@ -1473,6 +1481,14 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               <div class="dropdown-divider"></div>
 
               <div class="dropdown-item" @click="toggleLinkFootnote"><span class="shortcut"></span>微信外链转引用</div>
+              <div class="dropdown-item" @click="toggleReferences">
+                <span class="check-icon">{{ showReferences ? '✅' : '　' }}</span>显示参考资料
+              </div>
+              <div class="dropdown-item" @click="toggleDiagrams">
+                <span class="shortcut">Ctrl+Alt+D</span><span class="check-icon">{{ showDiagrams ? '✅' : '　' }}</span>显示图解
+              </div>
+              <div class="dropdown-item" @click="formatMd"><span class="shortcut">Ctrl+Alt+F</span>格式化文档</div>
+              
               <div class="dropdown-item" @click="showModal('字数与解析估算', `当前正文包含 ${(content || '').length} 个字符数。预计阅读时间约为 ${Math.max(1, Math.ceil((content || '').length / 300))} 分钟。`, false)">
                 <span class="shortcut"></span>统计字数时间
               </div>

@@ -1878,6 +1878,22 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
       </transition>
 
+      <!-- MDNice Parity: Floating AI Sidebar -->
+      <aside class="floating-ai-sidebar">
+        <div class="ai-tool assistant" @click="showToast('AI写作助手核心模块加载中...', 'info'); isHistoryVisible = false">
+          <div class="ai-icon-bg blue">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="11" width="18" height="10" rx="3"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
+          </div>
+          <span class="ai-tool-text">助手</span>
+        </div>
+        <div class="ai-tool text-to-image" @click="showToast('文生图扩散模型链路接通中...', 'info'); isHistoryVisible = false">
+          <div class="ai-icon-bg purple">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          </div>
+          <span class="ai-tool-text">文生图</span>
+        </div>
+      </aside>
+
       <!-- History Timeline Modal -->
       <transition name="fade">
         <div v-if="isHistoryVisible" class="modal-backdrop" @click.self="isHistoryVisible = false">
@@ -3356,5 +3372,66 @@ html.dark .smart-btn-primary:hover {
   color: var(--text-primary);
   min-width: 38px;
   text-align: center;
+}
+/* MDNice Parity: Floating AI Sidebar */
+.floating-ai-sidebar {
+  position: absolute;
+  top: 50%;
+  right: 25px; /* Stand slightly off the right edge */
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 100;
+}
+
+.ai-tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ai-tool:hover {
+  transform: translateY(-4px);
+}
+
+.ai-icon-bg {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ai-tool:hover .ai-icon-bg.blue {
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+.ai-tool:hover .ai-icon-bg.purple {
+  box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
+}
+
+.ai-icon-bg.blue {
+  background: linear-gradient(135deg, #6366f1, #3b82f6);
+}
+
+.ai-icon-bg.purple {
+  background: linear-gradient(135deg, #a855f7, #8b5cf6);
+}
+
+.ai-tool-text {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: color 0.3s;
+  letter-spacing: 0.5px;
+}
+
+.ai-tool:hover .ai-tool-text {
+  color: var(--text-primary);
 }
 </style>

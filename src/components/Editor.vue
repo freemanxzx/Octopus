@@ -441,7 +441,8 @@ const md = new MarkdownIt({
       return '</div>\n';
     }
   }
-});
+})
+.use((window as any).markdownitRuby || (() => {})); // Doocs Parity: Ruby {注音}
 
 // History Tracking
 const savedDrafts = ref<{time: string, content: string}[]>([]);
@@ -1043,6 +1044,39 @@ const importMd = async () => {
   }
 };
 
+// Phase 19: Multidimensional Export Pipeline
+const exportFile = (type: 'md' | 'html' | 'json') => {
+  let output = '';
+  let filename = 'document.' + type;
+  let mimeType = 'text/plain';
+
+  if (type === 'md') {
+    output = content.value;
+  } else if (type === 'html') {
+    const rawHtml = document.getElementById('nice')?.innerHTML || '';
+    output = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Octopus Export</title><style>body { font-family: sans-serif; padding: 20px; }</style></head><body>${rawHtml}</body></html>`;
+    mimeType = 'text/html';
+  } else if (type === 'json') {
+    const rawHtml = document.getElementById('nice')?.innerHTML || '';
+    output = JSON.stringify({ 
+       title: "Octopus Export", 
+       timestamp: Date.now(),
+       content: content.value, 
+       html: rawHtml 
+    }, null, 2);
+    mimeType = 'application/json';
+  }
+
+  const blob = new Blob([output], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`✅ SaaS云通道：成功导出为 .${type}`);
+};
+
 const exportMd = async () => {
   if (isDesktop.value && (window as any).electronAPI && (window as any).electronAPI.writeFile) {
     try {
@@ -1290,9 +1324,10 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('file')">
             文件
             <div class="dropdown-menu" v-show="activeMenu === 'file'">
-              <div class="dropdown-item" @click="importMd">导入 .md 文档</div>
-              <div class="dropdown-item" @click="exportMd">下载 .md 文档</div>
-              <div class="dropdown-item" @click="exportHtmlFile">下载 .html源码</div>
+              <div class="dropdown-item" @click="importMd">📥 导入本地文档 (.md, .txt, .docx)</div>
+              <div class="dropdown-item" @click="exportFile('md')">📤 原生导出为 .md</div>
+              <div class="dropdown-item" @click="exportFile('html')">🌐 转换为 .html 源码包</div>
+              <div class="dropdown-item" @click="exportFile('json')">📦 打包为极客 .json (CMS 对接)</div>
               <div v-show="!isDesktop" class="dropdown-item" @click="printPdf">导出 PDF (打印预览)</div>
               <div class="dropdown-divider"></div>
               <div class="dropdown-item" @click="exportImage">导出长图封面</div>
@@ -1327,12 +1362,14 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             </div>
           </div>
           <!-- Theme Menu Removed to Actions Bar -->
-          <!-- Function Menu -->
+          <!-- Function/Insert Menu -->
           <div class="menu-item" @click.stop="toggleMenu('function')">
-            功能
+            功能与插入
             <div class="dropdown-menu" v-show="activeMenu === 'function'">
-              <div class="dropdown-item" @click="convertClipboardHtmlToMd">从剪贴板提取网页并转为 Markdown</div>
-              <div class="dropdown-item" @click="notImpl">保存到云端</div>
+              <div class="dropdown-item" @click="convertClipboardHtmlToMd">✨ 从剪贴板提取网页并转为 Markdown</div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" @click="insertFormat('{注音|Ruby语法}', '')">🔡 插入拼音/注音短代码 (Ruby)</div>
+              <div class="dropdown-item" @click="insertFormat('\n\n<section style=&quot;display:flex; padding:15px; border-radius:10px; background:#f8f9fa; border:1px solid #e9ecef; align-items:center; margin:20px 0;&quot;><img src=&quot;https://api.dicebear.com/7.x/bottts/svg?seed=Octopus&quot; style=&quot;width:60px; height:60px; border-radius:50%; margin-right:15px;&quot;/><div><h3 style=&quot;margin:0 0 5px 0; color:#343a40;&quot;>这里是公众号名字</h3><p style=&quot;margin:0; font-size:13px; color:#6c757d;&quot;>欢迎关注我的公众号，每天分享最前沿硬核的极客技术与排版黑魔法！</p></div></section>\n\n', '')">🧧 生成并插入定制化公众号名片</div>
             </div>
           </div>
           <!-- View Menu -->

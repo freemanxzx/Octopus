@@ -334,8 +334,8 @@
   margin: 0;
   line-height: 26px;
   color: black;
-  word-break:break-all;
-  width: calc(100%-50)
+  word-break: break-all;
+  width: calc(100% - 50px);
 }
 
 #nice sub, sup {

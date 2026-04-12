@@ -549,7 +549,7 @@ const updateHtml = () => {
          
          if (showReferences.value) {
            // Weiyan Parity: .footnote-item > p > .footnote-word
-           refsHtml += `<span id="fn${num}" class="footnote-item"><span class="footnote-num">[${num}] </span><p><span class="footnote-word">${a.textContent.replace(`[${num}]`,'')}</span>: <em>${(a as HTMLAnchorElement).href}</em></p></span>\n`;
+           refsHtml += `<section id="fn${num}" class="footnote-item"><span class="footnote-num">[${num}] </span><p><span class="footnote-word">${a.textContent.replace(`[${num}]`,'')}</span>: <em>${(a as HTMLAnchorElement).href}</em></p></section>\n`;
          }
       });
       refsHtml += '</section>';

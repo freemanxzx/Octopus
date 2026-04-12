@@ -96,16 +96,12 @@ watch(selectedCodeTheme, (val) => loadCodeTheme(val));
 onMounted(() => loadCodeTheme(selectedCodeTheme.value));
 
 const isEditingTheme = ref(false);
-const dsTab = ref<'visual' | 'native' | 'custom'>('visual');
-const customStyleContent = ref("");
+const dsTab = ref<'visual' | 'native'>('visual');
 
 const toggleCSS = () => {
   isEditingTheme.value = !isEditingTheme.value;
   if (isEditingTheme.value) {
-    customStyleContent.value = themeStyleContent.value;
-    showToast("已提取当前主题源码进入自定义编辑模式", "success");
-  } else {
-    customStyleContent.value = "";
+    showToast("已提取当前主题源码进入直接编辑模式", "success");
   }
 };
 
@@ -584,7 +580,7 @@ const toggleMenu = (menu: string) => {
 
 
 const exportHtmlFile = () => {
-  const boilerplate = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Markdown Export</title><style>${themeStyleContent.value}\n${customStyleContent.value}</style></head><body>${htmlOutput.value}</body></html>`;
+  const boilerplate = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Markdown Export</title><style>${themeStyleContent.value}</style></head><body>${htmlOutput.value}</body></html>`;
   const blob = new Blob([boilerplate], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1496,9 +1492,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
         
         <!-- Inject dynamic CSS raw strings explicitly into the DOM -->
-        <component :is="'style'" v-if="themeStyleContent && !isEditingTheme" id="markdown-theme">{{ themeStyleContent }}</component>
+        <component :is="'style'" v-if="themeStyleContent" id="markdown-theme">{{ themeStyleContent }}</component>
         <component :is="'style'" v-if="codeThemeStyleContent" id="code-theme">{{ codeThemeStyleContent }}</component>
-        <component :is="'style'" v-if="customStyleContent && isEditingTheme" id="custom-theme">{{ customStyleContent }}</component>
         
         <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
         
@@ -1506,12 +1501,11 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
       </div>
       
-      <!-- Tier 3 Designer Pane (Tabs: Visual / Native CSS / Custom CSS) -->
+      <!-- Tier 3 Designer Pane (Tabs: Visual / Native CSS) -->
       <div v-show="isEditingTheme && !isPreviewMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: var(--bg-app); min-height: 0;">
         <div class="sidebar-tabs" style="display:flex; border-bottom:1px solid var(--border-subtle); background: var(--bg-panel);">
            <button class="s-tab" :class="{active: dsTab === 'visual'}" @click="dsTab = 'visual'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;">🎛️ 可视化定制</button>
-           <button class="s-tab" :class="{active: dsTab === 'native'}" @click="dsTab = 'native'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;" title="查看并拷贝当期内置的默认主题 CSS 模版">📚 默认源码</button>
-           <button class="s-tab" :class="{active: dsTab === 'custom'}" @click="dsTab = 'custom'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;" title="向主题注入高级自定义 CSS 规则，优先级最高。">💻 附加 CSS</button>
+           <button class="s-tab" :class="{active: dsTab === 'native'}" @click="dsTab = 'native'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;" title="直接对底层主题代码进行强制覆盖编辑">💻 样式代码</button>
         </div>
         
         <div v-show="dsTab === 'visual'" style="flex:1; overflow-y: auto; padding: 20px;">
@@ -1600,10 +1594,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               </div>
         </div>
 
-        <!-- READONLY Raw Theme Layer -->
+        <!-- USER Editable Current Theme Layer -->
         <Codemirror v-show="dsTab === 'native'" v-model="themeStyleContent" :extensions="[oneDark]" style="flex: 1; overflow: auto;" />
-        <!-- USER Editable CSS Layer -->
-        <Codemirror v-show="dsTab === 'custom'" v-model="customStyleContent" :extensions="[oneDark]" style="flex: 1; overflow: auto;" />
       </div>
       <!-- Loading Overlay -->
       <transition name="fade">

@@ -688,17 +688,7 @@ const clearVisualTheme = () => {
   });
 };
 
-const copyText = () => {
-  const node = document.createElement('div');
-  node.innerHTML = htmlOutput.value;
-  const text = node.innerText || node.textContent || '';
-  navigator.clipboard.writeText(text).then(() => {
-    toastState.value.message = '✓ 已复制纯文本到剪贴板';
-    toastState.value.type = 'success';
-    toastState.value.visible = true;
-    setTimeout(() => { toastState.value.visible = false }, 2000);
-  });
-};
+
 
 const visualOverridesCss = computed(() => {
   let css = '';
@@ -1487,8 +1477,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <!-- Divider -->
           <div style="width: 20px; height: 1px; background: var(--border-strong); margin: 2px auto;"></div>
 
-          <!-- Plain Text Copy -->
-          <button class="icon-btn floating-action" title="仅复制全平台纯文本" @click="copyText()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+          <!-- Rich Text Copy -->
+          <button class="icon-btn floating-action" title="一键复制排版 (微信/知乎等富文本结构)" @click="copyHtml('wechat')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
 

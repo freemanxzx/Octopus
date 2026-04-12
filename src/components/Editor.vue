@@ -604,10 +604,52 @@ const closeMenu = (e: Event) => {
 onMounted(() => document.addEventListener('click', closeMenu));
 onUnmounted(() => document.removeEventListener('click', closeMenu));
 
-const formatMd = () => {
-  // Simple heuristic Markdown cleaner
+const formatMd = async () => {
+  if ((window as any).prettier && (window as any).prettierPlugins) {
+    try {
+      const formatted = await (window as any).prettier.format(content.value, {
+        parser: 'markdown',
+        plugins: [(window as any).prettierPlugins.markdown],
+        proseWrap: 'preserve'
+      });
+      content.value = formatted;
+      showToast("✨ Prettier AST 格式化重绘完毕！", "success");
+      return;
+    } catch (e: any) {
+      console.error(e);
+      showToast("排版解析失败，已触发兜底清理", "error");
+    }
+  }
+  // Fallback
   content.value = content.value.replace(/\n{3,}/g, '\n\n').trim();
-  showToast("✨ Markdown 内容排版已优化清理！", "success");
+  showToast("✨ Markdown 基本清理完成！", "success");
+};
+
+const convertClipboardHtmlToMd = async () => {
+  try {
+    const items = await navigator.clipboard.read();
+    let htmlContent = "";
+    for (let item of items) {
+      if (item.types.includes('text/html')) {
+        const blob = await item.getType('text/html');
+        htmlContent = await blob.text();
+        break;
+      }
+    }
+    
+    if (htmlContent && (window as any).TurndownService) {
+      const turndownService = new (window as any).TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+      const md = turndownService.turndown(htmlContent);
+      content.value = content.value ? content.value + '\n\n' + md : md;
+      showToast("✅ 已成功提取剪贴板网页富文本，转化并追加 Markdown！", "success");
+    } else if (!htmlContent) {
+      customAlert("您的剪贴板目前为空，或未包含任何网页富文本格式 (text/html)。请先去网页上高亮并复制一段图文。");
+    } else {
+      customAlert("Turndown 解析引擎未加载完成，请刷新页面。");
+    }
+  } catch (err: any) {
+    customAlert("获取操作系统剪贴板权限失败，或不支持该功能：\n" + err.message);
+  }
 };
 
 const resetEditor = async () => {
@@ -1231,7 +1273,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('function')">
             功能
             <div class="dropdown-menu" v-show="activeMenu === 'function'">
-              <div class="dropdown-item" @click="notImpl">微信文章同步</div>
+              <div class="dropdown-item" @click="convertClipboardHtmlToMd">从剪贴板提取网页并转为 Markdown</div>
               <div class="dropdown-item" @click="notImpl">保存到云端</div>
             </div>
           </div>

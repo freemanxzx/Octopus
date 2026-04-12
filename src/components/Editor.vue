@@ -1544,15 +1544,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
 
       <div class="actions">
-        <button class="pill-btn" @click="exportImage" style="gap: 4px; border: 1px solid var(--border-color); background: var(--bg-panel); color: var(--text-primary); margin-right: 8px; font-weight: 600; padding: 6px 12px;">
-          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          生成长图
-        </button>
-        <button class="pill-btn" @click="printPdf" style="gap: 4px; border: 1px solid var(--border-color); background: var(--bg-panel); color: var(--text-primary); margin-right: 16px; font-weight: 600; padding: 6px 12px;">
-          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          导出 PDF
-        </button>
-        
         <div class="view-toggles-pill">
           <button class="pill-btn" :class="{active: viewMode === 'pc'}" @click="viewMode = 'pc'">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
@@ -1693,7 +1684,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
     <main class="workspace" :class="{ 'is-dragging': isDragging }">
       <div v-show="!isPreviewMode" class="editor-pane" :style="{ width: isEditingTheme ? '33.333%' : (leftWidth + '%') }">
         
-        <div v-show="showToc" class="toc-panel" style="z-index: 99;">
+        <div v-show="showToc" class="toc-panel">
           <div class="toc-header">
             <span>导航目录</span>
             <button class="icon-btn" style="width: 24px; height: 24px; font-size: 0.7rem;" @click="showToc = false">✕</button>
@@ -1727,91 +1718,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             @change="showToc = false"
           />
         </div>
-
-      <!-- MDNice Parity: Floating AI Sidebar -->
-      <aside class="floating-ai-sidebar" style="right: 20px;">
-        <div class="ai-tool assistant" @click="openAIPanel">
-          <div class="ai-icon-bg blue">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="11" width="18" height="10" rx="3"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
-          </div>
-          <span class="ai-tool-text">助手</span>
-        </div>
-        <div class="ai-tool text-to-image" @click="openT2IPanel">
-          <div class="ai-icon-bg purple">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          </div>
-          <span class="ai-tool-text">文生图</span>
-        </div>
-      </aside>
-
-      <!-- AI Assistant Drawer Slide Out -->
-      <transition name="slide-up">
-        <div v-if="isAIAssistantVisible" class="ai-drawer-panel" style="position: absolute; right: 85px; top: 120px; width: 350px; max-height: calc(100% - 150px); background: var(--bg-panel); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid var(--border-subtle); z-index: 150; display: flex; flex-direction: column; overflow: hidden;">
-          <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(59, 130, 246, 0.1));">
-            <div style="display: flex; align-items: center; gap: 8px;">
-               <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; box-shadow: 0 0 8px #3b82f6;"></div>
-               <strong style="color: var(--text-primary); font-size: 1rem;">AI 创作助理</strong>
-            </div>
-            <button class="close-btn" @click="isAIAssistantVisible = false" style="background:transparent; border:none; color: var(--text-secondary); cursor:pointer;">✕</button>
-          </div>
-          <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">一键指令操作：</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('你是一个资深的公众号排版与润色小助手。请修正粗浅的错别字，并使用更高级、吸引人的自媒体口吻润色下文。', content)">✨ 文本润色校对</button>
-              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('你是一个文档专家。请提取下文的逻辑大纲，使用嵌套 Markdown 列表紧凑返回。', content)">📑 提取通篇大纲</button>
-              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('作为资深双语专业译者，请把提供下来的段落流利且地道地翻译成英文。', content)">🌍 原文转译外文</button>
-              <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px;" @click="dispatchAICall('根据内容，请帮我直接输出5个爆款且吸睛的自媒体文章标题供我备选。', content)">💡 吸睛标题生成</button>
-            </div>
-            <hr style="border:none; border-top: 1px dashed var(--border-color); margin: 8px 0;" />
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-               <label style="font-size: 0.85rem; color: var(--text-primary);">自定义灵感提问：</label>
-               <textarea v-model="aiPrompt" rows="3" placeholder="例如：帮我梳理三条关于开源生态系统的好处..." style="width: 100%; border-radius: 6px; padding: 8px; border: 1px solid var(--border-strong); background: var(--bg-app); color: var(--text-primary); resize: none; font-family: inherit; font-size: 0.9rem;"></textarea>
-               <button class="btn btn-primary" :disabled="isAILoading || !aiPrompt" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #6366f1, #3b82f6); border: none;" @click="dispatchAICall('你是一个得力的自媒体全能创作助手。', aiPrompt)">
-                  <span v-if="isAILoading">引擎调度运算中...</span>
-                  <span v-else>发送请求 🚀</span>
-               </button>
-            </div>
-            <div v-if="aiResponse" style="margin-top: 16px; padding: 12px; border-radius: 8px; background: var(--bg-app); border: 1px solid var(--border-subtle); position: relative;">
-               <p style="font-size: 0.8rem; font-weight: 600; color: #3b82f6; margin-top: 0; margin-bottom: 8px;">助手回复</p>
-               <div style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;" v-html="aiResponse"></div>
-               <button class="btn btn-primary" style="position: absolute; bottom: 12px; right: 12px; font-size: 0.75rem; padding: 4px 8px;" @click="injectAIResponse">应用到正文最底部</button>
-            </div>
-          </div>
-        </div>
-      </transition>
-
-      <!-- Advanced Diffusion Image Generator Drawer -->
-      <transition name="slide-up">
-        <div v-if="isT2IModalVisible" class="ai-drawer-panel" style="position: absolute; right: 85px; bottom: 40px; width: 320px; background: var(--bg-panel); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid var(--border-subtle); z-index: 150; display: flex; flex-direction: column; overflow: hidden;">
-          <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.1));">
-            <div style="display: flex; align-items: center; gap: 8px;">
-               <div style="width: 8px; height: 8px; background: #a855f7; border-radius: 50%; box-shadow: 0 0 8px #a855f7;"></div>
-               <strong style="color: var(--text-primary); font-size: 1rem;">智能文生图引擎</strong>
-            </div>
-            <button class="close-btn" @click="isT2IModalVisible = false" style="background:transparent; border:none; color: var(--text-secondary); cursor:pointer;">✕</button>
-          </div>
-          <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-             <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">调用最强中文扩散模型 <strong>{{ uploadConfig.aiImageModel }}</strong>。提取文字转为高清博客封面排版插画。</p>
-             <textarea v-model="t2iPrompt" rows="3" placeholder="描述您的画面，例如：一只赛博朋克风格的赛博猫咪，在充满霓虹灯光的未来城市屋顶上，4k 超清，极高的细节..." style="width: 100%; border-radius: 6px; padding: 8px; border: 1px solid var(--border-strong); background: var(--bg-app); color: var(--text-primary); resize: none; font-family: inherit; font-size: 0.9rem;"></textarea>
-             
-             <div style="margin-top: 4px;">
-               <label style="font-size: 0.8rem; color: var(--text-primary);">宽高尺寸匹配模式：</label>
-               <select v-model="t2iSize" class="setting-input" style="width: 100%; margin-top: 6px; padding: 6px; font-size: 0.85rem; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-panel); color: var(--text-primary);">
-                  <option value="1024x1024">正方形 (1024x1024)</option>
-                  <option value="1280x720">文章封面 / 16:9 (1280x720)</option>
-                  <option value="720x1280">手机横幅 / 9:16 (720x1280)</option>
-               </select>
-             </div>
-
-             <div style="margin-top: 12px;">
-               <button class="btn btn-primary" :disabled="isT2ILoading || !t2iPrompt" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #a855f7, #8b5cf6); border: none; padding: 10px;" @click="dispatchT2ICall">
-                  <span v-if="isT2ILoading">引擎构图中 (云渲染约需 10-15 秒)...</span>
-                  <span v-else>生成图像 & 注入原文 ✨</span>
-               </button>
-             </div>
-          </div>
-        </div>
-      </transition>
       </div>
 
       <!-- Draggable Splitter -->
@@ -3468,19 +3374,18 @@ html.dark .view-toggles-pill .pill-btn.active {
   color: #ffffff;
 }
 
-/* WX Link Auto Detection Banner */
+/* WX Link Auto Detection Banner (Redesigned to Bottom-Left) */
 .smart-link-palette {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 560px;
   max-width: 90vw;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0,0,0,0.06);
   z-index: 2000;
   display: flex;
   flex-direction: column;
@@ -3493,8 +3398,8 @@ html.dark .smart-link-palette {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--bg-app);
+  padding: 12px 16px;
+  background: var(--bg-panel);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -3503,7 +3408,7 @@ html.dark .smart-link-palette {
   align-items: center;
   gap: 10px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--text-primary);
 }
 
@@ -3516,15 +3421,19 @@ html.dark .smart-link-palette {
   border-radius: 6px;
   color: #fff;
   background: #f59e0b;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
 }
 
 .smart-badge {
-  font-size: 0.7rem;
-  padding: 2px 10px;
+  font-size: 0.75rem;
+  padding: 4px 12px;
   border-radius: 99px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: all 0.2s;
+}
+.smart-badge:hover {
+  background: rgba(245, 158, 11, 0.25);
 }
 .badge-warn {
   background: rgba(245, 158, 11, 0.15);
@@ -3535,36 +3444,26 @@ html.dark .smart-link-palette {
 .smart-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .smart-btn-primary {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(to bottom, #fff, #f8fafc);
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
   padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 .smart-btn-primary:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-html.dark .smart-btn-primary {
-  background: linear-gradient(to bottom, #334155, #1e293b);
-  border-color: #475569;
-  color: #f8fafc;
-}
-html.dark .smart-btn-primary:hover {
-  background: #475569;
-  border-color: #64748b;
+  background: var(--bg-active);
+  border-color: var(--border-color);
 }
 
 .smart-btn-icon {
@@ -3587,22 +3486,21 @@ html.dark .smart-btn-primary:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 12px 16px;
-  padding: 10px 14px;
-  background: rgba(245, 158, 11, 0.05);
-  border: 1px dashed rgba(245, 158, 11, 0.4);
-  border-radius: 8px;
+  margin: 16px;
+  padding: 16px;
+  background: rgba(245, 158, 11, 0.03);
+  border: 1px dashed rgba(245, 158, 11, 0.3);
+  border-radius: 10px;
   transition: all 0.2s;
 }
 .smart-locator-glass:hover {
-  background: rgba(245, 158, 11, 0.1);
-  border-style: solid;
+  background: rgba(245, 158, 11, 0.08);
 }
 
 .locator-info-block {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   max-width: 75%;
   cursor: pointer;
 }
@@ -3610,29 +3508,29 @@ html.dark .smart-btn-primary:hover {
 .locator-top-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .locator-line-tag {
   background: #f59e0b;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
   color: #fff;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
 }
 
 .locator-anchor-text {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: var(--text-primary);
 }
 
 .locator-url-track {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
   text-decoration: underline dashed;
   text-underline-offset: 3px;
@@ -3640,6 +3538,44 @@ html.dark .smart-btn-primary:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0.8;
+}
+
+/* Nav Controls within Locator Block */
+.locator-nav-controls {
+  display: flex;
+  align-items: center;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.locator-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.locator-nav-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.locator-counter-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0 12px;
+  min-width: 40px;
+  text-align: center;
 }
 
 .locator-nav-controls {

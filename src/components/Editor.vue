@@ -136,7 +136,10 @@ function initializeOctopus(config) {
 | **超清截图生成** | 支持 | 支持 | 100%覆盖 |
 
 ## 4. 外链智能探测 (Smart URI Scanner)
-您可以测试下智能探测器的效果：[点击测试外部链接扫描引擎 (会自动触发红框警报)](https://github.com/)
+本应用通过精确的 AST (抽象语法树) 解析系统来搜捕并高亮任何可能导致平台封禁的外部链接。您可以测试下底下的智能探测器：
+1. [外链测试链接 一号 (GitHub)](https://github.com/)
+2. [外链测试链接 二号 (Vue 官方文档)](https://vuejs.org/)
+3. [外链测试链接 三号 (Google)](https://google.com/)
 
 这里放入一张高清水印配图：
 ![Octopus 架构流引擎](https://images.unsplash.com/photo-1542831371-29b0f74f9713?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80 "程序员工作空间模拟") 
@@ -196,7 +199,8 @@ interface ExtLinkItem {
 const externalLinks = ref<ExtLinkItem[]>([]);
 const hasExternalLinks = computed(() => externalLinks.value.length > 0);
 const activeExtLinkIdx = ref(0);
-const showLinkWarning = ref(false);
+const showLinkWarning = ref(true);
+const isLinkRadarExpanded = ref(false);
 let linkCheckDebounce: number | null = null;
 
 const jumpToExtLine = (direction: 'next' | 'prev' | 'current') => {
@@ -1368,27 +1372,29 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
     </div>
 
+    <transition name="slide-up">
     <div v-if="hasExternalLinks && showLinkWarning" class="smart-link-palette">
-      <div class="smart-link-header">
+      <div class="smart-link-header" @click="isLinkRadarExpanded = !isLinkRadarExpanded" style="cursor: pointer; user-select: none;">
         <div class="smart-title">
           <div class="smart-icon-box pulse-warning">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
           </div>
           <span>外链探测雷达</span>
-          <span class="smart-badge badge-warn">{{ externalLinks.length }} 个发现</span>
+          <span class="smart-badge badge-warn">{{ externalLinks.length }} 个发现 (点击{{ isLinkRadarExpanded ? '收起' : '展开详情' }})</span>
         </div>
         <div class="smart-actions">
-          <button class="smart-btn-primary" @click="toggleLinkFootnote(); showLinkWarning = false">
+          <button class="smart-btn-primary" @click.stop="toggleLinkFootnote(); showLinkWarning = false">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
             一键转为脚注
           </button>
-          <button class="smart-btn-icon" @click="showLinkWarning = false" title="忽略警告">
+          <button class="smart-btn-icon" @click.stop="showLinkWarning = false" title="忽略警告">
             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
       </div>
       
-      <div v-if="externalLinks.length > 0" class="smart-locator-glass">
+      <transition name="slide-up">
+      <div v-show="isLinkRadarExpanded" v-if="externalLinks.length > 0" class="smart-locator-glass">
         <div class="locator-info-block" @click="jumpToExtLine('current')" title="点击传送至源码处">
            <div class="locator-top-meta">
              <span class="locator-line-tag">Line {{ externalLinks[activeExtLinkIdx].line }}</span>
@@ -1407,7 +1413,9 @@ const insertFormat = (prefix: string, suffix: string = '') => {
            </button>
         </div>
       </div>
+      </transition>
     </div>
+    </transition>
 
     <main class="workspace" :class="{ 'is-dragging': isDragging }">
       <div v-show="!isPreviewMode" class="editor-pane" :style="{ width: isEditingTheme ? '33.333%' : (leftWidth + '%') }">
@@ -2980,19 +2988,23 @@ html.dark .view-toggles-pill .pill-btn.active {
 
 /* WX Link Auto Detection Banner */
 .smart-link-palette {
-  margin: 0 20px 10px 20px;
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  max-width: 90vw;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  animation: appEntry 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  z-index: 50;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  z-index: 2000;
   display: flex;
   flex-direction: column;
 }
 html.dark .smart-link-palette {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .smart-link-header {

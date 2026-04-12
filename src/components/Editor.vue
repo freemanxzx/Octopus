@@ -2313,6 +2313,7 @@ html, body {
 
 .preview-pane {
   height: 100%;
+  position: relative;
   background: var(--bg-preview);  /* Edge-to-edge true white PC view */
   color: var(--text-primary);
   overflow-y: auto;

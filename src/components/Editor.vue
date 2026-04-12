@@ -1447,28 +1447,35 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('format')">
             格式
             <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'format'">
-              <div class="dropdown-item" @click="insertFormat('~~', '~~')"><span class="shortcut">Ctrl+U</span>删除线</div>
-              <div class="dropdown-item" @click="insertFormat('**', '**')"><span class="shortcut">Ctrl+B</span>加粗</div>
-              <div class="dropdown-item" @click="insertFormat('*', '*')"><span class="shortcut">Ctrl+I</span>倾斜</div>
-              <div class="dropdown-item" @click="insertFormat('\n```\n', '\n```\n')"><span class="shortcut">Ctrl+Alt+C</span>代码</div>
-              <div class="dropdown-item" @click="insertFormat('`', '`')"><span class="shortcut">Ctrl+Alt+V</span>行内代码</div>
-              
-              <div class="dropdown-divider"></div>
-              
-              <div class="dropdown-item" @click="insertFormat('[', '](https://)')"><span class="shortcut">Ctrl+K</span>链接</div>
-              <div class="dropdown-item" @click="insertFormat('\n| 表头 | 表头 |\n| :--- | :--- |\n| 内容 | 内容 |\n', '')"><span class="shortcut">Ctrl+Alt+T</span>表格</div>
-              <div class="dropdown-item" @click="insertFormat('![图片描述](', ') ')"><span class="shortcut">Ctrl+Alt+I</span>图片</div>
+              <div class="dropdown-item" @click="insertFormat('**', '**')"><span class="shortcut">Ctrl B</span>加粗</div>
+              <div class="dropdown-item" @click="insertFormat('*', '*')"><span class="shortcut">Ctrl I</span>斜体</div>
+              <div class="dropdown-item" @click="insertFormat('~~', '~~')"><span class="shortcut">Ctrl D</span>删除线</div>
+              <div class="dropdown-item" @click="insertFormat('[', '](https://)')"><span class="shortcut">Ctrl K</span>超链接</div>
+              <div class="dropdown-item" @click="insertFormat('`', '`')"><span class="shortcut">Ctrl E</span>行内代码</div>
+              <div class="dropdown-item" @click="insertFormat('<span style=&quot;color: red;&quot;>', '</span>')"><span class="shortcut"></span>文字颜色</div>
 
               <div class="dropdown-divider"></div>
 
-              <div class="dropdown-item" @click="toggleLinkFootnote"><span class="shortcut">Ctrl+Alt+L</span>微信外链转脚注</div>
-              <div class="dropdown-item" @click="toggleReferences">
-                <span class="check-icon">{{ showReferences ? '✅' : '　' }}</span>显示参考资料
+              <div class="dropdown-item has-submenu">
+                <span class="shortcut" style="font-weight: 800; opacity: 1;">›</span><span style="font-family: serif; font-weight: 900; margin-right: 8px;">H₁</span>标题
+                <div class="submenu">
+                  <div class="dropdown-item" @click="insertFormat('# ', '')">H1 一级标题</div>
+                  <div class="dropdown-item" @click="insertFormat('## ', '')">H2 二级标题</div>
+                  <div class="dropdown-item" @click="insertFormat('### ', '')">H3 三级标题</div>
+                  <div class="dropdown-item" @click="insertFormat('#### ', '')">H4 四级标题</div>
+                  <div class="dropdown-item" @click="insertFormat('##### ', '')">H5 五级标题</div>
+                  <div class="dropdown-item" @click="insertFormat('###### ', '')">H6 六级标题</div>
+                </div>
               </div>
-              <div class="dropdown-item" @click="toggleDiagrams">
-                <span class="shortcut">Ctrl+Alt+D</span><span class="check-icon">{{ showDiagrams ? '✅' : '　' }}</span>显示图解
+              <div class="dropdown-item" @click="insertFormat('- ', '')"><span class="shortcut">Ctrl U</span>无序列表</div>
+              <div class="dropdown-item" @click="insertFormat('1. ', '')"><span class="shortcut">Ctrl O</span>有序列表</div>
+
+              <div class="dropdown-divider"></div>
+
+              <div class="dropdown-item" @click="toggleLinkFootnote"><span class="shortcut"></span>微信外链转引用</div>
+              <div class="dropdown-item" @click="showModal('字数与解析估算', `当前正文包含 ${(content || '').length} 个字符数。预计阅读时间约为 ${Math.max(1, Math.ceil((content || '').length / 300))} 分钟。`, false)">
+                <span class="shortcut"></span>统计字数时间
               </div>
-              <div class="dropdown-item" @click="formatMd"><span class="shortcut">Ctrl+Alt+F</span>格式化文档</div>
             </div>
           </div>
           <!-- Theme Menu Removed to Actions Bar -->
@@ -3621,5 +3628,32 @@ html.dark .smart-btn-primary:hover {
 
 .ai-tool:hover .ai-tool-text {
   color: var(--text-primary);
+}
+
+/* Format Submenu Styles */
+.has-submenu {
+  position: relative;
+}
+.has-submenu .submenu {
+  display: block;
+  position: absolute;
+  left: 100%;
+  top: -4px;
+  min-width: 140px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-glass);
+  padding: 6px;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 105;
+}
+.has-submenu:hover .submenu {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(0);
 }
 </style>

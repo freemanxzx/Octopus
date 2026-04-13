@@ -1821,8 +1821,18 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>
 
       <div class="preview-pane" :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isPreviewMode ? '100%' : (isEditingTheme ? '33.333%' : (100 - leftWidth + '%')) }">
-        <!-- Floating Quick Actions Restored -->
-        <div class="floating-toolbar" style="position: absolute; top: 16px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px;">
+        
+        <!-- Inject dynamic CSS raw strings explicitly into the DOM -->
+        <component :is="'style'" v-if="themeStyleContent" id="markdown-theme">{{ themeStyleContent }}</component>
+        <component :is="'style'" v-if="codeThemeStyleContent" id="code-theme">{{ codeThemeStyleContent }}</component>
+        
+        <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
+        
+      </div>
+      
+      <!-- Anchored Global Floating Toolbar -->
+      <transition name="fade">
+        <div v-show="!isEditingTheme" class="floating-toolbar" style="position: absolute; top: 50%; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; transform: translateY(-50%);">
           <!-- WeChat Sync -->
           <button class="icon-btn floating-action" title="一键同步微信公众号" @click="syncToPlatform('wechat')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #10b981; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
@@ -1856,11 +1866,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <button class="icon-btn floating-action" title="全屏沉浸预览 (Zen Mode)" @click="togglePreviewMode()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
           </button>
-        </div>
-        
-        <!-- Inject dynamic CSS raw strings explicitly into the DOM -->
-        <component :is="'style'" v-if="themeStyleContent" id="markdown-theme">{{ themeStyleContent }}</component>
-        <component :is="'style'" v-if="codeThemeStyleContent" id="code-theme">{{ codeThemeStyleContent }}</component>
         
         <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
         

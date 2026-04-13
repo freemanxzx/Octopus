@@ -91,6 +91,35 @@ watch(selectedCodeTheme, (val) => loadCodeTheme(val));
 onMounted(() => loadCodeTheme(selectedCodeTheme.value));
 const isEditingTheme = ref(false);
 const dsTab = ref('visual');
+// Immersive Zen Mode State
+const isZenMode = ref(false);
+const isZenToolbarExpanded = ref(true);
+const isZenToolbarPinned = ref(false);
+const zenX = ref(window.innerWidth / 2 - 250);
+const zenY = ref(16);
+let isZenDragging = false;
+let startMouseX = 0, startMouseY = 0;
+let startZenX = 0, startZenY = 0;
+const startZenDrag = (e) => {
+    isZenDragging = true;
+    startMouseX = e.clientX;
+    startMouseY = e.clientY;
+    startZenX = zenX.value;
+    startZenY = zenY.value;
+    document.addEventListener('mousemove', onZenDrag);
+    document.addEventListener('mouseup', endZenDrag);
+};
+const onZenDrag = (e) => {
+    if (!isZenDragging)
+        return;
+    zenX.value = startZenX + (e.clientX - startMouseX);
+    zenY.value = startZenY + (e.clientY - startMouseY);
+};
+const endZenDrag = () => {
+    isZenDragging = false;
+    document.removeEventListener('mousemove', onZenDrag);
+    document.removeEventListener('mouseup', endZenDrag);
+};
 const toggleCSS = () => {
     isEditingTheme.value = !isEditingTheme.value;
     if (isEditingTheme.value) {
@@ -1039,7 +1068,6 @@ onMounted(() => {
 const printPdf = () => {
     window.setTimeout(() => window.print(), 100);
 };
-const isPreviewMode = ref(false);
 const viewMode = ref('mobile');
 const importMd = async () => {
     if (isDesktop.value && window.electronAPI && window.electronAPI.readFile) {
@@ -1152,8 +1180,84 @@ const exportMd = async () => {
     }
 };
 const togglePreviewMode = () => {
-    isPreviewMode.value = !isPreviewMode.value;
-    showToast(isPreviewMode.value ? "已进入沉浸预览模式" : "已退出沉浸预览模式", "success");
+    isZenMode.value = !isZenMode.value;
+    showToast(isZenMode.value ? "已进入全屏沉浸编辑模式" : "已退出全屏模式", "success");
+    if (isZenMode.value && viewMode.value === 'mobile') {
+        viewMode.value = 'pc';
+    }
+};
+// Scroll Synchronization Logic
+let syncEditorTimeout;
+let syncPreviewTimeout;
+let isSyncingEditor = false;
+let isSyncingPreview = false;
+const findHeadingElementInPreview = (text, level, container) => {
+    const normalized = text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    const headings = container.querySelectorAll(`h1, h2, h3, h4, h5, h6`);
+    for (let i = 0; i < headings.length; i++) {
+        const el = headings[i];
+        if (level && Number(el.tagName.charAt(1)) !== level)
+            continue;
+        const hText = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (hText === normalized || hText.includes(normalized) || normalized.includes(hText)) {
+            return el;
+        }
+    }
+    return null;
+};
+const executeSyncMath = (source, target, isSrcEditor) => {
+    const sourceScrollable = source.scrollHeight - source.clientHeight;
+    const targetScrollable = target.scrollHeight - target.clientHeight;
+    if (sourceScrollable <= 0 || targetScrollable <= 0)
+        return;
+    // Utilize AST Semantic Interpolation if both containers and view are ready
+    if (view.value && tocList.value.length > 0) {
+        try {
+            const anchors = [{ eTop: 0, pTop: 0 }];
+            const doc = view.value.state.doc;
+            tocList.value.forEach(item => {
+                const el = findHeadingElementInPreview(item.text, item.level, isSrcEditor ? target : source);
+                if (el) {
+                    try {
+                        const ePos = doc.line(item.line).from;
+                        const eTop = view.value.lineBlockAt(ePos).top;
+                        const pTop = Math.max(0, el.offsetTop - 40); // 40px visual margin
+                        anchors.push({ eTop, pTop });
+                    }
+                    catch (e) { }
+                }
+            });
+            anchors.push({ eTop: sourceScrollable + (isSrcEditor ? 0 : 0), pTop: targetScrollable }); // Absolute ends
+            anchors.sort((a, b) => isSrcEditor ? a.eTop - b.eTop : a.pTop - b.pTop);
+            const scrollVal = source.scrollTop;
+            let prev = anchors[0];
+            let next = anchors[anchors.length - 1];
+            for (let i = 0; i < anchors.length; i++) {
+                const val = isSrcEditor ? anchors[i].eTop : anchors[i].pTop;
+                if (val > scrollVal) {
+                    next = anchors[i];
+                    prev = i > 0 ? anchors[i - 1] : anchors[0];
+                    break;
+                }
+                prev = anchors[i];
+            }
+            if (prev !== next) {
+                const rangeSrc = isSrcEditor ? (next.eTop - prev.eTop) : (next.pTop - prev.pTop);
+                const rangeTarget = isSrcEditor ? (next.pTop - prev.pTop) : (next.eTop - prev.eTop);
+                if (rangeSrc > 0) {
+                    const ratio = (scrollVal - (isSrcEditor ? prev.eTop : prev.pTop)) / rangeSrc;
+                    target.scrollTop = (isSrcEditor ? prev.pTop : prev.eTop) + ratio * rangeTarget;
+                    return;
+                }
+            }
+        }
+        catch (e) {
+            console.warn("Interpolative scrolling skipped", e);
+        }
+    }
+    // Fallback to purely proportional mapping
+    const percentage = source.scrollTop / sourceScrollable;
+    target.scrollTop = percentage * targetScrollable;
 };
 const exportImage = async () => {
     if (!previewContainer.value)
@@ -1312,16 +1416,26 @@ const handleReady = (payload) => {
     if (!cmScroll || !preview)
         return;
     cmScroll.addEventListener('scroll', () => {
-        // Only trigger if mouse is hovering this pane
-        if (preview.matches(':hover') || isSyncing)
+        // If the scroll was triggered programmatically by the preview pane
+        if (isSyncingPreview)
             return;
-        syncScroll(cmScroll, preview);
+        // Set lock indicating Editor is actively driving the scroll
+        isSyncingEditor = true;
+        clearTimeout(syncEditorTimeout);
+        syncEditorTimeout = setTimeout(() => { isSyncingEditor = false; }, 50);
+        // Process Editor -> Preview Semantic Translation
+        executeSyncMath(cmScroll, preview, true);
     });
     preview.addEventListener('scroll', () => {
-        // Only trigger if mouse is hovering this pane
-        if (cmScroll.matches(':hover') || isSyncing)
+        // If the scroll was triggered programmatically by the editor pane
+        if (isSyncingEditor)
             return;
-        syncScroll(preview, cmScroll);
+        // Set lock indicating Preview is actively driving the scroll
+        isSyncingPreview = true;
+        clearTimeout(syncPreviewTimeout);
+        syncPreviewTimeout = setTimeout(() => { isSyncingPreview = false; }, 50);
+        // Process Preview -> Editor Semantic Translation
+        executeSyncMath(preview, cmScroll, false);
     });
 };
 // Formatting Toolbar Logic
@@ -1470,14 +1584,15 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['active']} */ ;
 /** @type {__VLS_StyleScopedClasses['dark']} */ ;
 /** @type {__VLS_StyleScopedClasses['smart-link-palette']} */ ;
-/** @type {__VLS_StyleScopedClasses['smart-btn-primary']} */ ;
-/** @type {__VLS_StyleScopedClasses['dark']} */ ;
-/** @type {__VLS_StyleScopedClasses['smart-btn-primary']} */ ;
-/** @type {__VLS_StyleScopedClasses['dark']} */ ;
+/** @type {__VLS_StyleScopedClasses['smart-badge']} */ ;
 /** @type {__VLS_StyleScopedClasses['smart-btn-primary']} */ ;
 /** @type {__VLS_StyleScopedClasses['smart-btn-icon']} */ ;
 /** @type {__VLS_StyleScopedClasses['smart-locator-glass']} */ ;
 /** @type {__VLS_StyleScopedClasses['locator-nav-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['locator-nav-controls']} */ ;
+/** @type {__VLS_StyleScopedClasses['locator-nav-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['locator-nav-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['locator-counter-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['ai-tool']} */ ;
 /** @type {__VLS_StyleScopedClasses['ai-tool']} */ ;
 /** @type {__VLS_StyleScopedClasses['ai-icon-bg']} */ ;
@@ -1544,6 +1659,7 @@ if (__VLS_ctx.visualOverridesCss) {
 __VLS_asFunctionalElement1(__VLS_intrinsics.header, __VLS_intrinsics.header)({
     ...{ class: "octopus-header system-menu-bar" },
 });
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isZenMode) }, null, null);
 /** @type {__VLS_StyleScopedClasses['octopus-header']} */ ;
 /** @type {__VLS_StyleScopedClasses['system-menu-bar']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
@@ -1569,7 +1685,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.toggleMenu('file');
             // @ts-ignore
-            [toggleMenu,];
+            [isZenMode, toggleMenu,];
         } },
     ...{ class: "menu-item" },
 });
@@ -2014,7 +2130,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "dropdown-item" },
 });
 /** @type {__VLS_StyleScopedClasses['dropdown-item']} */ ;
-(__VLS_ctx.isPreviewMode ? '关闭预览模式' : '开启沉浸全屏');
+(__VLS_ctx.isZenMode ? '退出沉浸编辑' : '开启沉浸全屏');
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ onClick: (__VLS_ctx.toggleMacCodeBlock) },
     ...{ class: "dropdown-item" },
@@ -2034,7 +2150,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.toggleMenu('settings');
             // @ts-ignore
-            [toggleMenu, viewMode, togglePreviewMode, isPreviewMode, toggleMacCodeBlock, isMacCodeBlock, loadDraftsHistory,];
+            [isZenMode, toggleMenu, viewMode, togglePreviewMode, toggleMacCodeBlock, isMacCodeBlock, loadDraftsHistory,];
         } },
     ...{ class: "menu-item" },
 });
@@ -2197,19 +2313,120 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
     d: "M21 2l-2 22-7-6.2-4 4V13L21 2zm-8.8 9.3l-8.6 4.3 18.6-11.6z",
 });
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ onMousedown: (...[$event]) => {
+            __VLS_ctx.isZenMode && !__VLS_ctx.isZenToolbarPinned ? __VLS_ctx.startZenDrag($event) : null;
+            // @ts-ignore
+            [isZenMode, isZenToolbarPinned, startZenDrag,];
+        } },
     ...{ class: "octopus-header formatting-toolbar" },
+    ...{ class: ({ 'is-zen-floating': __VLS_ctx.isZenMode && !__VLS_ctx.isZenToolbarPinned }) },
+    ...{ style: (__VLS_ctx.isZenMode && !__VLS_ctx.isZenToolbarPinned ? { left: __VLS_ctx.zenX + 'px', top: __VLS_ctx.zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : (__VLS_ctx.isZenMode && __VLS_ctx.isZenToolbarPinned ? { position: 'static', width: '100%', margin: 0, borderRadius: 0, padding: 0, boxShadow: 'var(--shadow-subtle)', background: 'var(--bg-panel)' } : {})) },
 });
 /** @type {__VLS_StyleScopedClasses['octopus-header']} */ ;
 /** @type {__VLS_StyleScopedClasses['formatting-toolbar']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-zen-floating']} */ ;
+if (__VLS_ctx.isZenMode) {
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "zen-toolbar-handle" },
+        ...{ style: {} },
+        ...{ style: (__VLS_ctx.isZenToolbarPinned ? { cursor: 'default' } : {}) },
+    });
+    /** @type {__VLS_StyleScopedClasses['zen-toolbar-handle']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ style: {} },
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+        viewBox: "0 0 24 24",
+        width: "14",
+        height: "14",
+        stroke: "currentColor",
+        'stroke-width': "2",
+        fill: "none",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+        cx: "9",
+        cy: "12",
+        r: "1",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+        cx: "9",
+        cy: "5",
+        r: "1",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+        cx: "9",
+        cy: "19",
+        r: "1",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+        cx: "15",
+        cy: "12",
+        r: "1",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+        cx: "15",
+        cy: "5",
+        r: "1",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle, __VLS_intrinsics.circle)({
+        cx: "15",
+        cy: "19",
+        r: "1",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ style: {} },
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ style: {} },
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(__VLS_ctx.isZenMode))
+                    return;
+                __VLS_ctx.isZenToolbarPinned = !__VLS_ctx.isZenToolbarPinned;
+                // @ts-ignore
+                [isZenMode, isZenMode, isZenMode, isZenMode, isZenToolbarPinned, isZenToolbarPinned, isZenToolbarPinned, isZenToolbarPinned, isZenToolbarPinned, isZenToolbarPinned, zenX, zenY,];
+            } },
+        ...{ class: "icon-btn" },
+        ...{ style: {} },
+        title: (__VLS_ctx.isZenToolbarPinned ? '取消固定并允许悬浮' : '钉在网页顶部'),
+    });
+    /** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
+    (__VLS_ctx.isZenToolbarPinned ? '📌' : '📍');
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(__VLS_ctx.isZenMode))
+                    return;
+                __VLS_ctx.isZenToolbarExpanded = !__VLS_ctx.isZenToolbarExpanded;
+                // @ts-ignore
+                [isZenToolbarPinned, isZenToolbarPinned, isZenToolbarExpanded, isZenToolbarExpanded,];
+            } },
+        ...{ class: "icon-btn" },
+        ...{ style: {} },
+        title: "折叠/展开",
+    });
+    /** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
+    (__VLS_ctx.isZenToolbarExpanded ? '一' : '＋');
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+        ...{ onClick: (__VLS_ctx.togglePreviewMode) },
+        ...{ class: "icon-btn" },
+        ...{ style: {} },
+        title: "退出全屏",
+    });
+    /** @type {__VLS_StyleScopedClasses['icon-btn']} */ ;
+}
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ onMousedown: () => { } },
     ...{ class: "format-actions" },
+    ...{ style: (__VLS_ctx.isZenMode ? { padding: '10px 16px', gap: '8px', cursor: 'default' } : {}) },
 });
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isZenMode || __VLS_ctx.isZenToolbarExpanded) }, null, null);
 /** @type {__VLS_StyleScopedClasses['format-actions']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.showToc = !__VLS_ctx.showToc;
             // @ts-ignore
-            [showToc, showToc,];
+            [isZenMode, isZenMode, togglePreviewMode, isZenToolbarExpanded, isZenToolbarExpanded, showToc, showToc,];
         } },
     ...{ class: "icon-btn" },
     title: "侧边大纲导航",
@@ -2635,6 +2852,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "actions" },
     ...{ style: {} },
 });
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isZenMode) }, null, null);
 /** @type {__VLS_StyleScopedClasses['actions']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "theme-select-group" },
@@ -2744,7 +2962,7 @@ for (const [c] of __VLS_vFor((__VLS_ctx.codeThemes))) {
     });
     (c.name);
     // @ts-ignore
-    [toggleLinkFootnote, toggleMacCodeBlock, isMacCodeBlock, isMacCodeBlock, isMacCodeBlock, documentFontFamily, selectedCodeTheme, codeThemes,];
+    [isZenMode, toggleLinkFootnote, toggleMacCodeBlock, isMacCodeBlock, isMacCodeBlock, isMacCodeBlock, documentFontFamily, selectedCodeTheme, codeThemes,];
 }
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "theme-select-group" },
@@ -3063,6 +3281,7 @@ var __VLS_21;
 __VLS_asFunctionalElement1(__VLS_intrinsics.main, __VLS_intrinsics.main)({
     ...{ class: "workspace" },
     ...{ class: ({ 'is-dragging': __VLS_ctx.isDragging }) },
+    ...{ style: (__VLS_ctx.isZenMode && !__VLS_ctx.isZenToolbarPinned ? { height: '100vh', paddingTop: '0' } : {}) },
 });
 /** @type {__VLS_StyleScopedClasses['workspace']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-dragging']} */ ;
@@ -3070,7 +3289,6 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "editor-pane" },
     ...{ style: ({ width: __VLS_ctx.isEditingTheme ? '33.333%' : (__VLS_ctx.leftWidth + '%') }) },
 });
-__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isPreviewMode) }, null, null);
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "toc-panel" },
@@ -3086,7 +3304,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.showToc = false;
             // @ts-ignore
-            [isPreviewMode, showToc, showToc, isEditingTheme, isDragging, leftWidth,];
+            [isZenMode, isZenToolbarPinned, showToc, showToc, isEditingTheme, isDragging, leftWidth,];
         } },
     ...{ class: "icon-btn" },
     ...{ style: {} },
@@ -3170,7 +3388,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ onMousedown: (__VLS_ctx.startDrag) },
     ...{ class: "resizer" },
 });
-__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isPreviewMode && !__VLS_ctx.isEditingTheme) }, null, null);
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isEditingTheme) }, null, null);
 /** @type {__VLS_StyleScopedClasses['resizer']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "resizer-handle" },
@@ -3180,20 +3398,68 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "preview-pane" },
     ...{ class: ({ 'is-mobile': __VLS_ctx.viewMode === 'mobile' }) },
     ref: "previewContainer",
-    ...{ style: ({ width: __VLS_ctx.isPreviewMode ? '100%' : (__VLS_ctx.isEditingTheme ? '33.333%' : (100 - __VLS_ctx.leftWidth + '%')) }) },
+    ...{ style: ({ width: __VLS_ctx.isEditingTheme ? '33.333%' : (100 - __VLS_ctx.leftWidth + '%') }) },
 });
 /** @type {__VLS_StyleScopedClasses['preview-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-mobile']} */ ;
+if (__VLS_ctx.themeStyleContent) {
+    const __VLS_39 = ('style');
+    // @ts-ignore
+    const __VLS_40 = __VLS_asFunctionalComponent1(__VLS_39, new __VLS_39({
+        id: "markdown-theme",
+    }));
+    const __VLS_41 = __VLS_40({
+        id: "markdown-theme",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_40));
+    const { default: __VLS_44 } = __VLS_42.slots;
+    (__VLS_ctx.themeStyleContent);
+    // @ts-ignore
+    [themeStyleContent, themeStyleContent, viewMode, isEditingTheme, isEditingTheme, leftWidth, startDrag,];
+    var __VLS_42;
+}
+if (__VLS_ctx.codeThemeStyleContent) {
+    const __VLS_45 = ('style');
+    // @ts-ignore
+    const __VLS_46 = __VLS_asFunctionalComponent1(__VLS_45, new __VLS_45({
+        id: "code-theme",
+    }));
+    const __VLS_47 = __VLS_46({
+        id: "code-theme",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_46));
+    const { default: __VLS_50 } = __VLS_48.slots;
+    (__VLS_ctx.codeThemeStyleContent);
+    // @ts-ignore
+    [codeThemeStyleContent, codeThemeStyleContent,];
+    var __VLS_48;
+}
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ class: "preview-content" },
+    ...{ class: (__VLS_ctx.extraCssClass) },
+});
+__VLS_asFunctionalDirective(__VLS_directives.vHtml, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.htmlOutput) }, null, null);
+/** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
+let __VLS_51;
+/** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
+transition;
+// @ts-ignore
+const __VLS_52 = __VLS_asFunctionalComponent1(__VLS_51, new __VLS_51({
+    name: "fade",
+}));
+const __VLS_53 = __VLS_52({
+    name: "fade",
+}, ...__VLS_functionalComponentArgsRest(__VLS_52));
+const { default: __VLS_56 } = __VLS_54.slots;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "floating-toolbar" },
     ...{ style: {} },
 });
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isEditingTheme) }, null, null);
 /** @type {__VLS_StyleScopedClasses['floating-toolbar']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.syncToPlatform('wechat');
             // @ts-ignore
-            [viewMode, isPreviewMode, isPreviewMode, isEditingTheme, isEditingTheme, leftWidth, startDrag, syncToPlatform,];
+            [isEditingTheme, extraCssClass, htmlOutput, syncToPlatform,];
         } },
     ...{ class: "icon-btn floating-action" },
     title: "一键同步微信公众号",
@@ -3325,47 +3591,14 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
 __VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
     d: "M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3",
 });
-if (__VLS_ctx.themeStyleContent) {
-    const __VLS_39 = ('style');
-    // @ts-ignore
-    const __VLS_40 = __VLS_asFunctionalComponent1(__VLS_39, new __VLS_39({
-        id: "markdown-theme",
-    }));
-    const __VLS_41 = __VLS_40({
-        id: "markdown-theme",
-    }, ...__VLS_functionalComponentArgsRest(__VLS_40));
-    const { default: __VLS_44 } = __VLS_42.slots;
-    (__VLS_ctx.themeStyleContent);
-    // @ts-ignore
-    [themeStyleContent, themeStyleContent,];
-    var __VLS_42;
-}
-if (__VLS_ctx.codeThemeStyleContent) {
-    const __VLS_45 = ('style');
-    // @ts-ignore
-    const __VLS_46 = __VLS_asFunctionalComponent1(__VLS_45, new __VLS_45({
-        id: "code-theme",
-    }));
-    const __VLS_47 = __VLS_46({
-        id: "code-theme",
-    }, ...__VLS_functionalComponentArgsRest(__VLS_46));
-    const { default: __VLS_50 } = __VLS_48.slots;
-    (__VLS_ctx.codeThemeStyleContent);
-    // @ts-ignore
-    [codeThemeStyleContent, codeThemeStyleContent,];
-    var __VLS_48;
-}
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "preview-content" },
-    ...{ class: (__VLS_ctx.extraCssClass) },
-});
-__VLS_asFunctionalDirective(__VLS_directives.vHtml, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.htmlOutput) }, null, null);
-/** @type {__VLS_StyleScopedClasses['preview-content']} */ ;
+// @ts-ignore
+[];
+var __VLS_54;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "editor-pane css-pane" },
     ...{ style: {} },
 });
-__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.isEditingTheme && !__VLS_ctx.isPreviewMode) }, null, null);
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.isEditingTheme && !__VLS_ctx.isZenMode) }, null, null);
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['css-pane']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
@@ -3377,7 +3610,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.dsTab = 'visual';
             // @ts-ignore
-            [isPreviewMode, isEditingTheme, extraCssClass, htmlOutput, dsTab,];
+            [isZenMode, isEditingTheme, dsTab,];
         } },
     ...{ class: "s-tab" },
     ...{ class: ({ active: __VLS_ctx.dsTab === 'visual' }) },
@@ -3649,32 +3882,32 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     onmouseout: "this.style.background='rgba(239, 68, 68, 0.1)'",
 });
 /** @type {__VLS_StyleScopedClasses['btn']} */ ;
-let __VLS_51;
+let __VLS_57;
 /** @ts-ignore @type {typeof __VLS_components.Codemirror} */
 Codemirror;
 // @ts-ignore
-const __VLS_52 = __VLS_asFunctionalComponent1(__VLS_51, new __VLS_51({
+const __VLS_58 = __VLS_asFunctionalComponent1(__VLS_57, new __VLS_57({
     modelValue: (__VLS_ctx.themeStyleContent),
     extensions: ([__VLS_ctx.oneDark]),
     ...{ style: {} },
 }));
-const __VLS_53 = __VLS_52({
+const __VLS_59 = __VLS_58({
     modelValue: (__VLS_ctx.themeStyleContent),
     extensions: ([__VLS_ctx.oneDark]),
     ...{ style: {} },
-}, ...__VLS_functionalComponentArgsRest(__VLS_52));
+}, ...__VLS_functionalComponentArgsRest(__VLS_58));
 __VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (__VLS_ctx.dsTab === 'native') }, null, null);
-let __VLS_56;
+let __VLS_62;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_57 = __VLS_asFunctionalComponent1(__VLS_56, new __VLS_56({
+const __VLS_63 = __VLS_asFunctionalComponent1(__VLS_62, new __VLS_62({
     name: "fade",
 }));
-const __VLS_58 = __VLS_57({
+const __VLS_64 = __VLS_63({
     name: "fade",
-}, ...__VLS_functionalComponentArgsRest(__VLS_57));
-const { default: __VLS_61 } = __VLS_59.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_63));
+const { default: __VLS_67 } = __VLS_65.slots;
 if (__VLS_ctx.isExporting) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "export-overlay" },
@@ -3694,18 +3927,18 @@ if (__VLS_ctx.isExporting) {
 }
 // @ts-ignore
 [themeStyleContent, dsTab, dsTab, dsTab, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, visualTheme, clearVisualTheme, oneDark, isExporting,];
-var __VLS_59;
-let __VLS_62;
+var __VLS_65;
+let __VLS_68;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_63 = __VLS_asFunctionalComponent1(__VLS_62, new __VLS_62({
+const __VLS_69 = __VLS_asFunctionalComponent1(__VLS_68, new __VLS_68({
     name: "fade",
 }));
-const __VLS_64 = __VLS_63({
+const __VLS_70 = __VLS_69({
     name: "fade",
-}, ...__VLS_functionalComponentArgsRest(__VLS_63));
-const { default: __VLS_67 } = __VLS_65.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_69));
+const { default: __VLS_73 } = __VLS_71.slots;
 if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.isSyncModalVisible || __VLS_ctx.isVisualConfigVisible) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ onClick: (...[$event]) => {
@@ -4220,7 +4453,7 @@ if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.
 }
 // @ts-ignore
 [];
-var __VLS_65;
+var __VLS_71;
 __VLS_asFunctionalElement1(__VLS_intrinsics.aside, __VLS_intrinsics.aside)({
     ...{ class: "floating-ai-sidebar" },
 });
@@ -4314,17 +4547,17 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
     ...{ class: "ai-tool-text" },
 });
 /** @type {__VLS_StyleScopedClasses['ai-tool-text']} */ ;
-let __VLS_68;
+let __VLS_74;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_69 = __VLS_asFunctionalComponent1(__VLS_68, new __VLS_68({
+const __VLS_75 = __VLS_asFunctionalComponent1(__VLS_74, new __VLS_74({
     name: "slide-up",
 }));
-const __VLS_70 = __VLS_69({
+const __VLS_76 = __VLS_75({
     name: "slide-up",
-}, ...__VLS_functionalComponentArgsRest(__VLS_69));
-const { default: __VLS_73 } = __VLS_71.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_75));
+const { default: __VLS_79 } = __VLS_77.slots;
 if (__VLS_ctx.isAIAssistantVisible) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "ai-drawer-panel" },
@@ -4485,18 +4718,18 @@ if (__VLS_ctx.isAIAssistantVisible) {
 }
 // @ts-ignore
 [];
-var __VLS_71;
-let __VLS_74;
+var __VLS_77;
+let __VLS_80;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_75 = __VLS_asFunctionalComponent1(__VLS_74, new __VLS_74({
+const __VLS_81 = __VLS_asFunctionalComponent1(__VLS_80, new __VLS_80({
     name: "fade",
 }));
-const __VLS_76 = __VLS_75({
+const __VLS_82 = __VLS_81({
     name: "fade",
-}, ...__VLS_functionalComponentArgsRest(__VLS_75));
-const { default: __VLS_79 } = __VLS_77.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_81));
+const { default: __VLS_85 } = __VLS_83.slots;
 if (__VLS_ctx.isAITextToImageVisible) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ onClick: (...[$event]) => {
@@ -4568,18 +4801,18 @@ if (__VLS_ctx.isAITextToImageVisible) {
 }
 // @ts-ignore
 [t2iPrompt, t2iPrompt, dispatchT2ICall, isT2ILoading, isT2ILoading,];
-var __VLS_77;
-let __VLS_80;
+var __VLS_83;
+let __VLS_86;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_81 = __VLS_asFunctionalComponent1(__VLS_80, new __VLS_80({
+const __VLS_87 = __VLS_asFunctionalComponent1(__VLS_86, new __VLS_86({
     name: "fade",
 }));
-const __VLS_82 = __VLS_81({
+const __VLS_88 = __VLS_87({
     name: "fade",
-}, ...__VLS_functionalComponentArgsRest(__VLS_81));
-const { default: __VLS_85 } = __VLS_83.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_87));
+const { default: __VLS_91 } = __VLS_89.slots;
 if (__VLS_ctx.isHistoryVisible) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ onClick: (...[$event]) => {
@@ -4665,18 +4898,18 @@ if (__VLS_ctx.isHistoryVisible) {
 }
 // @ts-ignore
 [];
-var __VLS_83;
-let __VLS_86;
+var __VLS_89;
+let __VLS_92;
 /** @ts-ignore @type {typeof __VLS_components.transition | typeof __VLS_components.Transition | typeof __VLS_components.transition | typeof __VLS_components.Transition} */
 transition;
 // @ts-ignore
-const __VLS_87 = __VLS_asFunctionalComponent1(__VLS_86, new __VLS_86({
+const __VLS_93 = __VLS_asFunctionalComponent1(__VLS_92, new __VLS_92({
     name: "slide-up",
 }));
-const __VLS_88 = __VLS_87({
+const __VLS_94 = __VLS_93({
     name: "slide-up",
-}, ...__VLS_functionalComponentArgsRest(__VLS_87));
-const { default: __VLS_91 } = __VLS_89.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_93));
+const { default: __VLS_97 } = __VLS_95.slots;
 if (__VLS_ctx.toastState.visible) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "toast-container" },
@@ -4687,11 +4920,11 @@ if (__VLS_ctx.toastState.visible) {
 }
 // @ts-ignore
 [toastState, toastState, toastState,];
-var __VLS_89;
+var __VLS_95;
 __VLS_asFunctionalElement1(__VLS_intrinsics.footer, __VLS_intrinsics.footer)({
     ...{ class: "octopus-status-bar" },
 });
-__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isPreviewMode) }, null, null);
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isZenMode) }, null, null);
 /** @type {__VLS_StyleScopedClasses['octopus-status-bar']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "status-left" },
@@ -4781,6 +5014,6 @@ else {
     });
 }
 // @ts-ignore
-[isDesktop, isPreviewMode, wordCount, wordCount, lineCount,];
+[isZenMode, isDesktop, wordCount, wordCount, lineCount,];
 const __VLS_export = (await import('vue')).defineComponent({});
 export default {};

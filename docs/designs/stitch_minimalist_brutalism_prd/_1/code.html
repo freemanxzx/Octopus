@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Octopus MD - 主编辑空间</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@400;500;700&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#00f0ff",
+          "secondary": "#b535f6",
+          "background-dark": "#0f111a",
+          "surface": "rgba(26, 29, 41, 0.65)",
+          "border-color": "rgba(255, 255, 255, 0.08)",
+          "text-main": "#f8fafc",
+          "muted": "#64748b",
+          "accent": "#10b981",
+        },
+        fontFamily: {
+          "display": ["Space Grotesk", "Noto Sans SC", "sans-serif"],
+          "ui": ["Noto Sans SC", "Space Grotesk", "sans-serif"],
+          "mono": ["JetBrains Mono", "monospace"],
+        },
+        borderRadius: {
+          "sm": "8px",
+          "md": "16px",
+          "lg": "24px",
+          "full": "9999px"
+        },
+        boxShadow: {
+          "glow": "0 0 20px rgba(0, 240, 255, 0.2)",
+          "float": "0 10px 30px rgba(0, 0, 0, 0.5)",
+        }
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #0f111a;
+    color: #f8fafc;
+    background-image: radial-gradient(circle at top right, rgba(181, 53, 246, 0.15), transparent 400px);
+    background-attachment: fixed;
+  }
+  .glass-panel {
+    background-color: rgba(26, 29, 41, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .editor-textarea {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    line-height: 1.8;
+    resize: none;
+  }
+  .preview-content h1, .preview-content h2, .preview-content h3 {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 700;
+  }
+  .preview-content blockquote {
+    border-left: 4px solid #00f0ff;
+    padding-left: 1rem;
+    color: #cbd5e1;
+    font-style: italic;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.5);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.8);
+  }
+</style>
+</head>
+<body class="h-screen w-full flex flex-col overflow-hidden font-ui">
+<header class="glass-panel h-[56px] w-full flex items-center justify-between px-6 z-10 shrink-0">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-text-main">
+<span class="material-symbols-outlined text-primary">edit_document</span>
+<span class="font-display font-bold tracking-tight text-lg">Octopus MD</span>
+</div>
+<div class="h-6 w-px bg-border-color mx-2"></div>
+<nav class="flex items-center gap-6 text-sm font-medium text-muted mr-4">
+<button class="hover:text-primary transition-colors">文件</button>
+<button class="hover:text-primary transition-colors">素材</button>
+<button class="hover:text-primary transition-colors">发布</button>
+<button class="hover:text-primary transition-colors">数据统计</button>
+</nav>
+<div class="h-6 w-px bg-border-color mx-2"></div>
+<div class="flex gap-1">
+<button class="p-2 text-muted hover:text-primary transition-colors rounded-md hover:bg-white/5 group relative" title="加粗">
+<span class="material-symbols-outlined text-[20px]">format_bold</span>
+</button>
+<button class="p-2 text-muted hover:text-primary transition-colors rounded-md hover:bg-white/5 group relative" title="斜体">
+<span class="material-symbols-outlined text-[20px]">format_italic</span>
+</button>
+<button class="p-2 text-muted hover:text-primary transition-colors rounded-md hover:bg-white/5 group relative" title="链接">
+<span class="material-symbols-outlined text-[20px]">link</span>
+</button>
+<button class="p-2 text-muted hover:text-primary transition-colors rounded-md hover:bg-white/5 group relative" title="图片">
+<span class="material-symbols-outlined text-[20px]">image</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-4 text-sm text-muted">
+<span>字数: 842</span>
+<span>已保存</span>
+<div class="h-8 w-8 rounded-full bg-surface border border-border-color bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDtxO68YZyeGuBVZCfRCot4itz2WcTFnawCUnxlavjMiTDTHtBA0uVypfr50o15q2gA7e_sCeLF3cCI9VN9b1uoBIFgS9W1HjbRgwmFZUANzKs9Qb57ipjMPkTexozTP-KK2G9UkkRSrpr5p1ixmrYaHTslmKg1iq4PsmPJ30eOGgo8E4mR0CucrJFsWJWTBSQEZT6pz1F3q5WnZx5uizfyfnUMpIQKZMjuVHy4kt48pu8nyzxe3FxmoBAnQxE0_eoAIL6nWA7GGiQ');"></div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden relative">
+<section class="w-1/2 h-full flex flex-col border-r border-border-color relative">
+<div class="flex-1 flex overflow-hidden">
+<div class="w-12 py-6 flex flex-col items-end pr-3 font-mono text-sm text-muted select-none bg-surface/30">
+<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
+</div>
+<textarea class="editor-textarea flex-1 bg-transparent border-none text-text-main p-6 focus:ring-0 focus:outline-none placeholder:text-muted/30 w-full" placeholder="// 开始写作..."># SaaS 设计的未来：从工具到生态的演变
+
+在云端时代，SaaS 产品的核心价值正在经历一场深刻的重塑。
+
+&gt; 优秀的设计不仅仅是视觉的传达，更是对工作流的极致优化。
+
+随着 AI 技术的爆发，未来的 SaaS 界面将不再是静态的表单堆砌，而是具备自适应能力的智能交互系统。
+
+## 关键趋势
+1. **生成式 UI**：根据用户意图动态调整组件布局。
+2. **零阻力协作**：打破团队间的信息孤岛。
+3. **数据驱动的体验**：实时洞察，预测用户需求。</textarea>
+</div>
+</section>
+<section class="w-1/2 h-full bg-surface/10 overflow-y-auto p-10">
+<div class="preview-content max-w-3xl mx-auto space-y-6 text-text-main/90 font-ui text-[15px] leading-[1.8]">
+<h1 class="text-3xl font-display font-bold text-text-main mb-6">SaaS 设计的未来：从工具到生态的演变</h1>
+<p>在云端时代，SaaS 产品的核心价值正在经历一场深刻的重塑。我们不再仅仅关注功能点的堆叠，而是开始思考如何通过设计赋能用户，提升生产力上限。</p>
+<blockquote class="my-6">
+<p>优秀的设计不仅仅是视觉的传达，更是对工作流的极致优化。</p>
+</blockquote>
+<p>随着 AI 技术的爆发，未来的 SaaS 界面将不再是静态的表单堆砌，而是具备自适应能力的智能交互系统。这意味着设计师的角色将从“像素推手”转向“系统构建者”。</p>
+<h2 class="text-xl font-bold text-primary mt-8 mb-4">关键趋势</h2>
+<ul class="list-disc list-inside space-y-2 text-muted">
+<li><strong class="text-text-main">生成式 UI</strong>：根据用户意图动态调整组件布局。</li>
+<li><strong class="text-text-main">零阻力协作</strong>：打破团队间的信息孤岛，实现真正的无缝流转。</li>
+<li><strong class="text-text-main">数据驱动的体验</strong>：利用实时洞察预测用户需求。</li>
+</ul>
+</div>
+</section>
+<!-- Vertical Sidebar / Action Rail -->
+<div class="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-20">
+<button class="w-10 h-10 rounded-lg glass-panel flex items-center justify-center text-secondary hover:text-white hover:bg-secondary/20 transition-all group relative">
+<span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+<span class="absolute right-12 px-2 py-1 bg-background-dark text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">AI 助手</span>
+</button>
+<button class="w-10 h-10 rounded-lg glass-panel flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 transition-all group relative">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+<span class="absolute right-12 px-2 py-1 bg-background-dark text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">预览</span>
+</button>
+<button class="w-10 h-10 rounded-lg glass-panel flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 transition-all group relative">
+<span class="material-symbols-outlined text-[20px]">sync</span>
+<span class="absolute right-12 px-2 py-1 bg-background-dark text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">同步</span>
+</button>
+<button class="w-10 h-10 rounded-lg glass-panel flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 transition-all group relative">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="absolute right-12 px-2 py-1 bg-background-dark text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">设置</span>
+</button>
+</div>
+<!-- Floating Distribution Group -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 glass-panel px-6 py-3 rounded-full flex items-center gap-6 shadow-float border border-white/10 z-30">
+<div class="flex items-center gap-4">
+<button class="text-xs font-medium text-muted hover:text-white transition-colors">微信</button>
+<button class="text-xs font-medium text-muted hover:text-white transition-colors">知乎</button>
+<button class="text-xs font-medium text-muted hover:text-white transition-colors">掘金</button>
+<button class="text-xs font-medium text-muted hover:text-white transition-colors">CSDN</button>
+</div>
+<div class="h-4 w-px bg-border-color"></div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-1 text-xs text-primary hover:underline">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>复制
+</button>
+<button class="flex items-center gap-1 text-xs text-primary hover:underline">
+<span class="material-symbols-outlined text-[16px]">fullscreen</span>全屏
+</button>
+</div>
+</div>
+</main>
+</body></html>

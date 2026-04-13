@@ -101,6 +101,7 @@ const dsTab = ref<'visual' | 'native'>('visual');
 // Immersive Zen Mode State
 const isZenMode = ref(false);
 const isZenToolbarExpanded = ref(true);
+const isZenToolbarPinned = ref(false);
 const zenX = ref(window.innerWidth / 2 - 250);
 const zenY = ref(16);
 let isZenDragging = false;
@@ -1687,17 +1688,18 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
       </div>    </header>
 
-    <!-- Tier 2: Formatting Toolbar (Floats dynamically in Zen Mode) -->
-    <div class="octopus-header formatting-toolbar" :class="{ 'is-zen-floating': isZenMode }" :style="isZenMode ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : {}" @mousedown.prevent="isZenMode ? startZenDrag($event) : null">
+    <!-- Tier 2: Formatting Toolbar (Floats dynamically or Pins in Zen Mode) -->
+    <div class="octopus-header formatting-toolbar" :class="{ 'is-zen-floating': isZenMode && !isZenToolbarPinned }" :style="isZenMode && !isZenToolbarPinned ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : (isZenMode && isZenToolbarPinned ? { position: 'static', width: '100%', margin: 0, borderRadius: 0, padding: 0, boxShadow: 'var(--shadow-subtle)', background: 'var(--bg-panel)' } : {})" @mousedown.prevent="isZenMode && !isZenToolbarPinned ? startZenDrag($event) : null">
       
       <!-- Zen Mode Drag Handle -->
-      <div v-if="isZenMode" class="zen-toolbar-handle" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-bottom: 1px solid var(--border-subtle); border-radius: 12px 12px 0 0;">
+      <div v-if="isZenMode" class="zen-toolbar-handle" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-bottom: 1px solid var(--border-subtle); border-radius: 12px 12px 0 0;" :style="isZenToolbarPinned ? { cursor: 'default' } : {}">
         <div style="display: flex; align-items: center; gap: 8px;">
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
           <span style="font-size: 0.85rem; font-weight: bold; color: var(--text-primary); letter-spacing: 0.5px;">排版工具列</span>
         </div>
         <div style="display: flex; gap: 6px;">
-           <button class="icon-btn" @click.stop="isZenToolbarExpanded = !isZenToolbarExpanded" style="width: 24px; height: 24px; border-radius: 4px; padding: 0;">{{ isZenToolbarExpanded ? '一' : '＋' }}</button>
+           <button class="icon-btn" @click.stop="isZenToolbarPinned = !isZenToolbarPinned" style="width: 24px; height: 24px; border-radius: 4px; padding: 0; font-size: 0.9rem;" :title="isZenToolbarPinned ? '取消固定并允许悬浮' : '钉在网页顶部'">{{ isZenToolbarPinned ? '📌' : '📍' }}</button>
+           <button class="icon-btn" @click.stop="isZenToolbarExpanded = !isZenToolbarExpanded" style="width: 24px; height: 24px; border-radius: 4px; padding: 0;" title="折叠/展开">{{ isZenToolbarExpanded ? '一' : '＋' }}</button>
            <button class="icon-btn" @click.stop="togglePreviewMode" style="width: 24px; height: 24px; border-radius: 4px; padding: 0; color: #ef4444;" title="退出全屏">✕</button>
         </div>
       </div>
@@ -1819,7 +1821,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
     </div>
     </transition>
 
-    <main class="workspace" :class="{ 'is-dragging': isDragging }" :style="isZenMode ? { height: '100vh', paddingTop: '0' } : {}">
+    <main class="workspace" :class="{ 'is-dragging': isDragging }" :style="isZenMode && !isZenToolbarPinned ? { height: '100vh', paddingTop: '0' } : {}">
       <div class="editor-pane" :style="{ width: isEditingTheme ? '33.333%' : (leftWidth + '%') }">
         
         <div v-show="showToc" class="toc-panel">

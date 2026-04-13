@@ -1128,7 +1128,6 @@ const printPdf = () => {
   window.setTimeout(() => window.print(), 100);
 };
 
-const isPreviewMode = ref(false);
 const viewMode = ref<'pc' | 'mobile'>('mobile');
 
 const importMd = async () => {
@@ -1237,8 +1236,11 @@ const exportMd = async () => {
 };
 
 const togglePreviewMode = () => {
-  isPreviewMode.value = !isPreviewMode.value;
-  showToast(isPreviewMode.value ? "已进入沉浸预览模式" : "已退出沉浸预览模式", "success");
+  isZenMode.value = !isZenMode.value;
+  showToast(isZenMode.value ? "已进入全屏沉浸编辑模式" : "已退出全屏模式", "success");
+  if (isZenMode.value && viewMode.value === 'mobile') {
+    viewMode.value = 'pc';
+  }
 };
 
 // Scroll Synchronization Logic
@@ -1686,22 +1688,23 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </div>    </header>
 
     <!-- Tier 2: Formatting Toolbar (Floats dynamically in Zen Mode) -->
-    <div class="octopus-header formatting-toolbar" :class="{ 'is-zen-floating': isZenMode }" :style="isZenMode ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : {}" @mousedown.prevent="isZenMode ? startZenDrag($event) : null">
+    <div class="octopus-header formatting-toolbar" :class="{ 'is-zen-floating': isZenMode }" :style="isZenMode ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 12px 48px rgba(0,0,0,0.12)', cursor: 'move', userSelect: 'none', borderRadius: '16px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)', border: '1px solid var(--border-subtle)' } : {}" @mousedown.prevent="isZenMode ? startZenDrag($event) : null">
       
-      <!-- Zen Mode Drag Handle -->
-      <div v-if="isZenMode" class="zen-toolbar-handle" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-bottom: 1px solid var(--border-subtle); border-radius: 12px 12px 0 0;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
-          <span style="font-size: 0.85rem; font-weight: bold; color: var(--text-primary); letter-spacing: 0.5px;">排版工具列</span>
-        </div>
-        <div style="display: flex; gap: 6px;">
-           <button class="icon-btn" @click.stop="isZenToolbarExpanded = !isZenToolbarExpanded" style="width: 24px; height: 24px; border-radius: 4px; padding: 0;">{{ isZenToolbarExpanded ? '一' : '＋' }}</button>
-           <button class="icon-btn" @click.stop="togglePreviewMode" style="width: 24px; height: 24px; border-radius: 4px; padding: 0; color: #ef4444;" title="退出全屏">✕</button>
+      <!-- Zen Mode Drag Handle (Matches UX Mockup) -->
+      <div v-if="isZenMode" class="zen-toolbar-handle" @dblclick="isZenToolbarExpanded = !isZenToolbarExpanded" style="display: flex; align-items: center; justify-content: center; padding: 8px 0 2px 0; border-radius: 16px 16px 0 0; position: relative;">
+        <!-- Center Pill -->
+        <div style="display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: rgba(59, 130, 246, 0.08); border-radius: 20px; cursor: pointer; transition: all 0.2s;" @click.stop="isZenToolbarExpanded = !isZenToolbarExpanded" title="点击或双击收起/展开工具面板">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="9" cy="12" r="1.5"></circle><circle cx="9" cy="5" r="1.5"></circle><circle cx="9" cy="19" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="15" cy="5" r="1.5"></circle><circle cx="15" cy="19" r="1.5"></circle></svg>
+          <span style="font-size: 0.85rem; font-weight: bold; color: var(--text-primary); letter-spacing: 0.5px;">排版工具列一</span>
+          <span style="color: #ef4444; display: flex; align-items: center; justify-content: center; margin-left: 8px;" @click.stop="togglePreviewMode" title="退出沉浸编辑">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </span>
         </div>
       </div>
 
-      <div class="format-actions" v-show="!isZenMode || isZenToolbarExpanded" @mousedown.stop :style="isZenMode ? { padding: '10px 16px', gap: '8px', cursor: 'default' } : {}">
-        <button class="icon-btn" title="侧边大纲导航" @click="showToc = !showToc" :style="{ color: showToc ? 'var(--accent-color)' : '', background: showToc ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+      <div v-show="!isZenMode || isZenToolbarExpanded" style="display: flex; flex-direction: column;">
+        <div class="format-actions" @mousedown.stop :style="isZenMode ? { padding: '12px 20px 8px 20px', gap: '8px', cursor: 'default' } : {}">
+          <button class="icon-btn" title="侧边大纲导航" @click="showToc = !showToc" :style="{ color: showToc ? 'var(--accent-color)' : '', background: showToc ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
         <div class="toolbar-divider"></div>
         <button class="icon-btn" title="删除线" @click="insertFormat('~~', '~~')"><span style="text-decoration: line-through; font-weight: bold; font-family: sans-serif;">S</span></button>
         <button class="icon-btn" title="加粗" @click="insertFormat('**', '**')"><strong style="font-family: serif; font-size: 1.1rem;">B</strong></button>
@@ -1723,7 +1726,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <button class="icon-btn" title="MAC 风格代码块" :class="{ active: isMacCodeBlock }" @click="toggleMacCodeBlock" :style="{ color: isMacCodeBlock ? 'var(--accent-color)' : '', background: isMacCodeBlock ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><circle cx="6" cy="7" r="1.5"></circle><circle cx="12" cy="7" r="1.5"></circle></svg></button>
       </div>
 
-      <div class="actions" style="display: flex; gap: 12px; align-items: center;">
+      <div class="actions" @mousedown.stop style="display: flex; gap: 12px; align-items: center;" :style="isZenMode ? { padding: '0 20px 16px 20px', cursor: 'default', alignSelf: 'flex-start' } : {}">
 
         <div class="theme-select-group">
           <span class="modern-label"><span style="font-weight:900;margin-right:2px;font-family:serif;">Aa</span>正文字体</span>
@@ -1771,6 +1774,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </button>
 
       </div>
+      </div> <!-- End v-show collapse wrapper -->
     </div>
 
     <transition name="slide-up">
@@ -1911,7 +1915,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
       </transition>
       <!-- Tier 3 Designer Pane (Tabs: Visual / Native CSS) -->
-      <div v-show="isEditingTheme && !isPreviewMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: var(--bg-app); min-height: 0;">
+      <div v-show="isEditingTheme && !isZenMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: var(--bg-app); min-height: 0;">
         <div class="sidebar-tabs" style="display:flex; border-bottom:1px solid var(--border-subtle); background: var(--bg-panel);">
            <button class="s-tab" :class="{active: dsTab === 'visual'}" @click="dsTab = 'visual'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;">🎛️ 可视化定制</button>
            <button class="s-tab" :class="{active: dsTab === 'native'}" @click="dsTab = 'native'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;" title="直接对底层主题代码进行强制覆盖编辑">💻 样式代码</button>
@@ -2279,7 +2283,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       </transition>
     <!-- Note: removed isolated </main> that trapped modals -->
     <!-- Tier 4: Bottom Status Bar -->
-    <footer v-show="!isPreviewMode" class="octopus-status-bar">
+    <footer v-show="!isZenMode" class="octopus-status-bar">
       <div class="status-left">
         <span class="status-item">字符数: <strong style="color: var(--text-primary)">{{ wordCount }}</strong></span>
         <span class="status-item">行数: <strong style="color: var(--text-primary)">{{ lineCount }}</strong></span>

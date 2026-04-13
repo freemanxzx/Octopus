@@ -1866,13 +1866,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <button class="icon-btn floating-action" title="全屏沉浸预览 (Zen Mode)" @click="togglePreviewMode()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
           </button>
-        
-        <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
-        
-
-
-      </div>
-      
+        </div>
+      </transition>
       <!-- Tier 3 Designer Pane (Tabs: Visual / Native CSS) -->
       <div v-show="isEditingTheme && !isPreviewMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: var(--bg-app); min-height: 0;">
         <div class="sidebar-tabs" style="display:flex; border-bottom:1px solid var(--border-subtle); background: var(--bg-panel);">

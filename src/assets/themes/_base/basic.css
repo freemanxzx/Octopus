@@ -11,7 +11,7 @@
   word-break: break-word;
   word-wrap: break-word;
   text-align: left;
-  font-family: Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+  font-family: 'Lora', 'Newsreader', Optima-Regular, Optima, serif;
   /* margin-top: -10px; 解决开头空隙过大问题*/
 }
 
@@ -39,6 +39,9 @@
   padding: 0px;
   font-weight: bold;
   color: black;
+  font-family: 'Playfair Display', 'Noto Serif', serif;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 #nice h1 {
   font-size: 24px;
@@ -211,7 +214,7 @@
 }
 #nice pre code {
   display: block;
-  font-family: Operator Mono, Consolas, Monaco, Menlo, monospace;
+  font-family: 'JetBrains Mono', Operator Mono, Consolas, Monaco, monospace;
   border-radius: 0px;
   font-size: 13px;
   -webkit-overflow-scrolling: touch;
@@ -229,11 +232,11 @@
   font-size: 14px;
   word-wrap: break-word;
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: 0px;
   margin: 0 2px;
   color: #1e6bb8;
   background-color: rgba(27,31,35,.05);
-  font-family: Operator Mono, Consolas, Monaco, Menlo, monospace;
+  font-family: 'JetBrains Mono', Operator Mono, Consolas, Monaco, monospace;
   word-break: break-all;
 }
 

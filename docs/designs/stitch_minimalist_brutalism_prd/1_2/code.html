@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>手机预览模式 - Octopus MD</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&amp;family=JetBrains+Mono:wght@400&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#8B5A2B",
+          "background-light": "#f8fafc",
+          "surface": "rgba(255, 255, 255, 0.9)",
+          "muted": "#64748b",
+          "border-color": "rgba(0, 0, 0, 0.08)",
+        },
+        fontFamily: {
+          "display": ["Noto Serif SC", "serif"],
+          "mono": ["JetBrains Mono", "monospace"],
+          "serif": ["Noto Serif SC", "serif"],
+        },
+        borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        boxShadow: {
+          'glow': '0 0 20px rgba(139, 90, 43, 0.15)',
+          'float': '0 10px 30px rgba(0, 0, 0, 0.05)',
+        }
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #f8fafc;
+    color: #1a1a1a;
+  }
+  .glass-panel {
+    background: var(--color-surface, rgba(255, 255, 255, 0.9));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  }
+  .ambient-glow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle at top right, rgba(139, 90, 43, 0.05), transparent 400px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  /* iPhone Frame Specifics */
+  .iphone-frame {
+    width: 390px;
+    height: 844px;
+    border-radius: 54px;
+    background-color: #1c1c1c;
+    padding: 12px;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 2px #444;
+  }
+  .iphone-notch {
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 35px;
+    background-color: #000;
+    border-radius: 20px;
+    z-index: 20;
+  }
+  .iphone-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 42px;
+    background-color: #ffffff;
+    overflow: hidden;
+    position: relative;
+  }
+  .iphone-reflection {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(139, 90, 43, 0.1);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 90, 43, 0.2);
+  }
+</style>
+</head>
+<body class="min-h-screen flex flex-col font-display overflow-hidden relative">
+<!-- Ambient Background Glow -->
+<div class="ambient-glow"></div>
+<!-- Shared ToolBar -->
+<div class="relative flex w-full flex-col bg-white/80 backdrop-blur-md border-b border-border-color z-10">
+<div class="layout-container flex h-14 items-center justify-between px-6">
+<div class="flex items-center gap-2">
+<button class="p-2 text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">arrow_back</span>
+</button>
+<span class="text-sm font-medium text-muted ml-2">手机预览</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-1 border-r border-border-color pr-4">
+<button class="p-2 text-gray-600 hover:text-primary transition-colors">
+<div class="hover:text-primary" data-icon="TextB" data-size="20px" data-weight="regular">
+<svg fill="currentColor" height="20px" viewbox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
+<path d="M170.48,115.7A44,44,0,0,0,140,40H72a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8h80a48,48,0,0,0,18.48-92.3ZM80,56h60a28,28,0,0,1,0,56H80Zm72,136H80V128h72a32,32,0,0,1,0,64Z"></path>
+</svg>
+</div>
+</button>
+<button class="p-2 text-gray-600 hover:text-primary transition-colors">
+<div class="hover:text-primary" data-icon="TextItalic" data-size="20px" data-weight="regular">
+<svg fill="currentColor" height="20px" viewbox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
+<path d="M200,56a8,8,0,0,1-8,8H157.77L115.1,192H144a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16H98.23L140.9,64H112a8,8,0,0,1,0-16h80A8,8,0,0,1,200,56Z"></path>
+</svg>
+</div>
+</button>
+<button class="p-2 text-gray-600 hover:text-primary transition-colors">
+<div class="hover:text-primary" data-icon="Link" data-size="20px" data-weight="regular">
+<svg fill="currentColor" height="20px" viewbox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
+<path d="M137.54,186.36a8,8,0,0,1,0,11.31l-9.94,10A56,56,0,0,1,48.38,128.4L72.5,104.28A56,56,0,0,1,149.31,102a8,8,0,1,1-10.64,12,40,40,0,0,0-54.85,1.63L59.7,139.72a40,40,0,0,0,56.58,56.58l9.94-9.94A8,8,0,0,1,137.54,186.36Zm70.08-138a56.08,56.08,0,0,0-79.22,0l-9.94,9.95a8,8,0,0,0,11.32,11.31l9.94-9.94a40,40,0,0,1,56.58,56.58L172.18,140.4A40,40,0,0,1,117.33,142,8,8,0,1,0,106.69,154a56,56,0,0,0,76.81-2.26l24.12-24.12A56.08,56.08,0,0,0,207.62,48.38Z"></path>
+</svg>
+</div>
+</button>
+<button class="p-2 text-gray-600 hover:text-primary transition-colors">
+<div class="hover:text-primary" data-icon="Image" data-size="20px" data-weight="regular">
+<svg fill="currentColor" height="20px" viewbox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
+<path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
+</svg>
+</div>
+</button>
+</div>
+<button class="flex items-center gap-2 px-4 py-1.5 bg-primary/10 border border-primary/30 text-primary rounded-md text-sm font-medium hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>已保存</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Dual-Pane Layout -->
+<main class="flex flex-1 overflow-hidden z-10 relative">
+<!-- Left Pane: Markdown Editor (60%) -->
+<div class="w-[60%] border-r border-border-color bg-white flex flex-col relative">
+<div class="flex-1 overflow-y-auto p-8 font-mono text-[15px] leading-relaxed text-gray-700 flex">
+<!-- Line Numbers -->
+<div class="w-12 text-right pr-4 text-muted select-none pt-1">
+          1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16
+        </div>
+<!-- Raw Text Area -->
+<textarea class="w-full bg-transparent border-none outline-none resize-none overflow-hidden min-h-full text-gray-800 placeholder-muted/50 focus:ring-0 p-0 pt-1" placeholder="开始输入内容..."># SaaS 设计的未来
+
+在软件服务化（SaaS）迅速发展的今天，生产力工具的美学正在经历一场深刻的变革。我们正从单调的纯功能界面转向能够激发创造力的沉浸式环境。
+
+## 拥抱星云美学
+
+“星云流光”概念将深邃的暗黑模式与细微的氛围灯效相结合。这不仅是为了视觉上的炫酷，更是为了在减少用眼疲劳的同时，为用户操作提供清晰且灵动的视觉焦点。
+
+&gt; “设计不仅仅是外观 and 感觉。设计是它的工作方式。”
+
+通过在深色画布上集成毛玻璃面板，我们创造了深度感和层次感，而无需依赖生硬的边框或沉重的阴影。
+
+* 深空蓝黑背景 (#0f111a)
+* 磨砂玻璃质感 (rgba(26, 29, 41, 0.65))
+* 赛博青色点缀 (#0de3f2)</textarea>
+</div>
+<!-- Footer for Editor Stats -->
+<div class="h-8 border-t border-border-color bg-[#f8fafc] flex items-center px-4 justify-end">
+<span class="text-[11px] text-muted font-mono uppercase tracking-wider">字数: 420</span>
+</div>
+</div>
+<!-- Right Pane: Mobile Preview (40%) -->
+<div class="w-[40%] bg-[#f1f5f9] flex items-center justify-center relative overflow-hidden">
+<!-- Mobile Platform Toggle -->
+<div class="absolute top-8 w-full flex justify-center z-30">
+<div class="flex h-10 w-[320px] items-center justify-center rounded-lg bg-white/90 backdrop-blur-sm p-1 border border-border-color shadow-float">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-primary has-[:checked]:shadow-glow has-[:checked]:text-white text-muted text-sm font-medium transition-all">
+<span class="truncate">微信</span>
+<input checked="" class="invisible w-0" name="platform_toggle" type="radio" value="WeChat"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-primary has-[:checked]:shadow-glow has-[:checked]:text-white text-muted text-sm font-medium transition-all">
+<span class="truncate">X (推特)</span>
+<input class="invisible w-0" name="platform_toggle" type="radio" value="X"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-primary has-[:checked]:shadow-glow has-[:checked]:text-white text-muted text-sm font-medium transition-all">
+<span class="truncate">Medium</span>
+<input class="invisible w-0" name="platform_toggle" type="radio" value="Medium"/>
+</label>
+</div>
+</div>
+<!-- Realistic iPhone Frame -->
+<div class="iphone-frame mt-12 scale-[0.85] 2xl:scale-95 transform-gpu transition-transform">
+<div class="iphone-notch"></div>
+<div class="iphone-screen">
+<div class="iphone-reflection"></div>
+<!-- Rendered Content Area -->
+<div class="w-full h-full overflow-y-auto pt-20 pb-12 px-8 font-serif text-[#1a1a1a]">
+<h1 class="text-[26px] font-bold leading-tight mb-6 text-black tracking-tight">SaaS 设计的未来</h1>
+<p class="text-[17px] leading-[1.8] mb-6 text-gray-700">在软件服务化（SaaS）迅速发展的今天，生产力工具的美学正在经历一场深刻的变革。我们正从单调的纯功能界面转向能够激发创造力的沉浸式环境。</p>
+<h2 class="text-[20px] font-bold mt-10 mb-4 text-black border-l-4 border-primary pl-4">拥抱星云美学</h2>
+<p class="text-[17px] leading-[1.8] mb-6 text-gray-700">“星云流光”概念将深邃的暗黑模式与细微的氛围灯效相结合。这不仅是为了视觉上的炫酷，更是为了在减少用眼疲劳的同时，为用户操作提供清晰且灵动的视觉焦点。</p>
+<blockquote class="my-8 pl-5 border-l-2 border-primary/40 italic text-[16px] text-[#8B5A2B] bg-[#8B5A2B]/5 py-5 pr-5 rounded-r-lg">
+              “设计不仅仅是外观和感觉。设计是它的工作方式。”
+            </blockquote>
+<p class="text-[17px] leading-[1.8] mb-6 text-gray-700">通过在深色画布上集成毛玻璃面板，我们创造了深度感和层次感，而无需依赖生硬的边框或沉重的阴影。</p>
+<ul class="list-disc pl-6 mb-6 text-[16px] leading-[1.8] space-y-3 text-gray-700">
+<li>深空蓝黑背景 (#0f111a)</li>
+<li>磨砂玻璃质感 (rgba(26, 29, 41, 0.65))</li>
+<li>赛博青色点缀 (#0de3f2)</li>
+</ul>
+<!-- Decorative Image placeholder inside article -->
+<div class="w-full h-48 bg-[#fdfaf6] border border-primary/10 rounded-xl my-8 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-primary/30 text-5xl">image</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Action Buttons -->
+<div class="absolute bottom-8 right-8 flex flex-col gap-4 z-40">
+<button class="w-12 h-12 rounded-full bg-white border border-border-color flex items-center justify-center text-primary hover:bg-primary/5 hover:shadow-glow transition-all shadow-float group relative">
+<span class="material-symbols-outlined text-[24px]">auto_awesome</span>
+<div class="absolute right-14 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-md text-sm text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-border-color pointer-events-none shadow-sm">AI 助手</div>
+</button>
+<button class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white hover:bg-[#7a4e25] hover:shadow-glow transition-all shadow-float group relative">
+<span class="material-symbols-outlined text-[24px] font-medium">sync</span>
+<div class="absolute right-14 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-md text-sm text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-border-color pointer-events-none shadow-sm">同步中心</div>
+</button>
+</div>
+</main>
+</body></html>

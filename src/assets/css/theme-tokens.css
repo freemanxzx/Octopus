@@ -1,85 +1,81 @@
 :root {
-  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* The Modern Archivist Typography System */
+  --font-display: 'Playfair Display', 'Noto Serif SC', serif;
+  --font-body: 'Lora', 'Newsreader', serif;
+  --font-ui: 'Work Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Global Transitions */
   --transition-speed: 0.3s;
   --transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
-}
 
-/* Light Theme (Premium SaaS Aesthetic) */
-:root {
-  --bg-app: #f8fafc;
-  --bg-glass: rgba(255, 255, 255, 0.85);
+  /* Structure & Border Radius (v1.2 Rounded) */
+  --radius-none: 0px;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-full: 9999px;
+
+  /* The "Paper" Color Palette - v1.2 Update */
+  --bg-app: #f8fafc;               /* Background Light */
+  --bg-editor: #ffffff;            /* Editor (Left Pane) */
+  --bg-customizer: #ffffff;        /* Sidebar */
+  --bg-modal: #ffffff;             /* Floats */
+  
+  --bg-glass: rgba(255, 255, 255, 0.9); /* surface with high opacity */
   --bg-panel: #ffffff;
-  --bg-toolbar: #ffffff;
-  --bg-hover: rgba(15, 23, 42, 0.05);
-  --bg-active: rgba(15, 23, 42, 0.1);
-  --bg-preview: #ffffff;
-  --bg-dropdown: #ffffff;
+  --bg-toolbar: rgba(255, 255, 255, 0.8);
+  --bg-hover: rgba(139, 90, 43, 0.05); /* hover primary */
+  --bg-active: rgba(139, 90, 43, 0.1);
 
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-strong: rgba(15, 23, 42, 0.15);
+  /* Ghost Borders */
+  --border-subtle: rgba(0, 0, 0, 0.08); /* v1.2 border-color */
+  --border-strong: rgba(0, 0, 0, 0.15);
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  /* Typography Colors */
+  --text-primary: #1a1c1b;         /* on_surface */
+  --text-secondary: #4e4d4b;       /* tertiary */
+  --text-muted: #837469;           /* outline */
+  --text-inverse: #ffffff;         /* on_primary */
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-glass: 0 4px 20px rgba(0, 0, 0, 0.05);
-  
-  --shadow-preview-device: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  
-  --ambient-glow: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
-  
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-gradient: linear-gradient(135deg, #3b82f6, #6366f1);
-  
+  /* Shadows - Tonal Layering */
+  --shadow-sm: 0 1px 2px rgba(46, 21, 0, 0.04);
+  --shadow-ambient: 0 10px 32px rgba(46, 21, 0, 0.06); /* Warm natural glow */
+  --shadow-glass: var(--shadow-ambient);
+  --shadow-float: var(--shadow-ambient);
+  --ambient-glow: none; /* Removed neon glow */
+
+  /* Branding / Accent - Ink & Leather */
+  --primary: #8B5A2B;
+  --primary-container: #7a4e25;
+  --accent-color: var(--primary);
+  --accent-hover: var(--primary-container);
+  --accent-gradient: linear-gradient(135deg, var(--primary), var(--primary-container));
+  --accent-light: rgba(139, 90, 43, 0.1);
+  --success-color: #4a5c40; /* Muted olive success */
+
   /* Scrollbar */
   --scrollbar-track: transparent;
-  --scrollbar-thumb: #cbd5e1;
-  --scrollbar-thumb-hover: #94a3b8;
+  --scrollbar-thumb: rgba(139, 90, 43, 0.1);
+  --scrollbar-thumb-hover: rgba(139, 90, 43, 0.2);
+
+  /* Preview pane background */
+  --bg-preview: #f1f5f9;         /* Slate-50 */
+  --shadow-preview-device: 0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 2px #444;
 }
 
-/* Dark Theme (Premium Geek Aesthetic) */
+/* Fallback for components looking for specific names */
 html.dark {
-  --bg-app: #0f111a;
-  --bg-glass: rgba(15, 17, 26, 0.75);
-  --bg-panel: #161b22;
-  --bg-toolbar: rgba(15, 17, 26, 0.95);
-  --bg-hover: rgba(255, 255, 255, 0.08);
-  --bg-active: rgba(255, 255, 255, 0.12);
-  --bg-preview: #f8fafc; /* Content area remains white for Wechat parity previews */
-  --bg-dropdown: #1e293b;
-
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-strong: rgba(255, 255, 255, 0.15);
-
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
-  --shadow-glass: 0 4px 20px rgba(0, 0, 0, 0.4);
-  
-  --shadow-preview-device: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-  
-  --ambient-glow: radial-gradient(circle, rgba(129, 140, 248, 0.15) 0%, rgba(15, 17, 26, 0) 70%);
-  
-  --accent-color: #38bdf8;
-  --accent-hover: #0ea5e9;
-  --accent-gradient: linear-gradient(135deg, #38bdf8, #818cf8);
-  
-  /* Scrollbar */
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: #475569;
-  --scrollbar-thumb-hover: #64748b;
+  /* Forced back to paper, we reject dark mode for printing press feel */
+  --bg-app: #f8fafc;
+  --bg-preview: #f1f5f9;
+  --text-primary: #1a1a1a;
 }
 
 body {
   background-color: var(--bg-app);
+  background-image: var(--ambient-glow);
+  background-attachment: fixed;
   color: var(--text-primary);
   transition: background-color var(--transition-speed) var(--transition-timing), color var(--transition-speed) var(--transition-timing);
 }
@@ -90,17 +86,15 @@ body {
 
 /* Base custom scrollbar */
 ::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border: 4px solid var(--bg-panel);
-  border-radius: 9999px;
-  background-clip: padding-box;
+  border-radius: var(--radius-md);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);

@@ -96,10 +96,11 @@ watch(selectedCodeTheme, (val) => loadCodeTheme(val));
 onMounted(() => loadCodeTheme(selectedCodeTheme.value));
 
 const isEditingTheme = ref(false);
-const dsTab = ref<'visual' | 'native'>('visual');
+const dsTab = ref<'core' | 'visual' | 'native'>('core');
 
 // Immersive Zen Mode State
 const isZenMode = ref(false);
+const isAiMenuOpen = ref(false);
 const isZenToolbarExpanded = ref(true);
 const isZenToolbarPinned = ref(false);
 const zenX = ref(window.innerWidth / 2 - 250);
@@ -219,7 +220,7 @@ interface TocItem {
   line: number;
 }
 const tocList = ref<TocItem[]>([]);
-const showToc = ref(true);
+const showToc = ref(true); console.log('showToc init to:', showToc.value);
 
 interface ExtLinkItem {
   text: string;
@@ -698,7 +699,7 @@ const updateHtml = () => {
   // Deep Parity: Mac Code Block Styling
   if (isMacCodeBlock.value) {
     rawHtml = rawHtml.replace(/<pre class="custom hljs">/g, (match) => {
-      return `<div class="mac-code-block"><div class="mac-header"><span class="mac-dot" style="background:#ff5f56"></span><span class="mac-dot" style="background:#ffbd2e"></span><span class="mac-dot" style="background:#27c93f"></span></div>` + match;
+      return `<div class="mac-code-block">` + match;
     }).replace(/<\/pre>/g, '</pre></div>');
   }
 
@@ -761,7 +762,8 @@ const toggleMenu = (menu: string) => {
 
 
 const exportHtmlFile = () => {
-  const boilerplate = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Markdown Export</title><style>${themeStyleContent.value}</style></head><body>${htmlOutput.value}</body></html>`;
+  const boilerplate = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Markdown Export</title><style>${themeStyleContent.value}
+</head><body>${htmlOutput.value}</body></html>`;
   const blob = new Blob([boilerplate], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1116,6 +1118,11 @@ const isExporting = ref(false);
 const isCoseInstalled = ref(false);
 
 onMounted(() => {
+
+  document.addEventListener('click', (e) => {
+    isAiMenuOpen.value = false;
+  });
+
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
     if (event.data && event.data.type === 'OCTOPUS_COSE_INSTALLED') {
@@ -1129,8 +1136,12 @@ const printPdf = () => {
   window.setTimeout(() => window.print(), 100);
 };
 
-const viewMode = ref<'pc' | 'mobile'>('mobile');
+const viewMode = ref<'pc' | 'mobile'>('pc');
 
+const setViewMode = (mode: 'pc' | 'mobile') => {
+  viewMode.value = mode;
+  leftWidth.value = mode === 'mobile' ? 60 : 50;
+};
 const importMd = async () => {
   if (isDesktop.value && (window as any).electronAPI && (window as any).electronAPI.readFile) {
     try {
@@ -1240,7 +1251,7 @@ const togglePreviewMode = () => {
   isZenMode.value = !isZenMode.value;
   showToast(isZenMode.value ? "已进入全屏沉浸编辑模式" : "已退出全屏模式", "success");
   if (isZenMode.value && viewMode.value === 'mobile') {
-    viewMode.value = 'pc';
+    setViewMode('pc');
   }
 };
 
@@ -1507,6 +1518,15 @@ const handleReady = (payload: any) => {
     
     // Process Editor -> Preview Semantic Translation
     executeSyncMath(cmScroll, preview, true);
+    
+    // Mobile Preview Scroll Sync: sync iPhone frame's inner wrapper
+    if (viewMode.value === 'mobile') {
+      const mobileWrapper = preview.querySelector('.preview-content-wrapper') as HTMLElement;
+      if (mobileWrapper) {
+        const srcPct = cmScroll.scrollTop / Math.max(1, cmScroll.scrollHeight - cmScroll.clientHeight);
+        mobileWrapper.scrollTop = srcPct * (mobileWrapper.scrollHeight - mobileWrapper.clientHeight);
+      }
+    }
   });
   
   preview.addEventListener('scroll', () => {
@@ -1544,30 +1564,39 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
 <template>
   <div class="octopus-layout">
+    <!-- Ambient Background Glow -->
+    <div class="ambient-glow" style="position: absolute; top: 0; right: 0; width: 600px; height: 600px; background: radial-gradient(circle at top right, rgba(139, 90, 43, 0.05), transparent 400px); pointer-events: none; z-index: 0;"></div>
+    
     <component :is="'style'" v-if="themeStyleContent" id="dynamic-theme">{{ themeStyleContent }}</component>
     <component :is="'style'" v-if="codeThemeStyleContent" id="dynamic-code-theme">{{ codeThemeStyleContent }}</component>
     <component :is="'style'" v-if="visualOverridesCss" id="dynamic-visual-theme">{{ visualOverridesCss }}</component>
     
     <!-- Tier 1: System Menu Bar (Hidden in Zen Mode) -->
-    <header class="octopus-header system-menu-bar" v-show="!isZenMode">
-      <div class="brand-group">
-        <div class="brand">
-          <span class="logo">🐙</span>
-          <h1 style="margin-right: 1.5rem; white-space: nowrap;">Octopus MD</h1>
+    <header class="octopus-header v1-2-header flex w-full items-center justify-between" v-show="!isZenMode" :style="{
+      height: '56px', 
+      background: '#ffffff',
+      borderBottom: '1px solid var(--border-subtle)', 
+      zIndex: 100, 
+      padding: '0 16px'
+    }">
+      <div class="brand-group" style="display: flex; align-items: center; gap: 16px;">
+        <div class="brand" style="display: flex; align-items: center; gap: 8px;">
+          <span class="material-symbols-outlined" style="color: var(--primary); font-size: 1.5rem;">edit_document</span>
+          <h1 style="color: var(--text-primary); font-family: var(--font-display); font-size: 1rem; font-weight: bold; margin: 0; white-space: nowrap;">Octopus MD</h1>
         </div>
         
-        <nav class="classic-menus">
+        <nav class="classic-menus" style="display: flex; gap: 4px; margin-left: 16px;">
           <!-- File Menu -->
           <div class="menu-item" @click.stop="toggleMenu('file')">
             文件
-            <div class="dropdown-menu" v-show="activeMenu === 'file'">
-              <div class="dropdown-item" @click="importMd">📥 导入本地文档 (.md, .txt, .docx)</div>
-              <div class="dropdown-item" @click="exportFile('md')">📤 原生导出为 .md</div>
-              <div class="dropdown-item" @click="exportFile('html')">🌐 转换为 .html 源码包</div>
-              <div class="dropdown-item" @click="exportFile('json')">📦 打包为极客 .json (CMS 对接)</div>
-              <div v-show="!isDesktop" class="dropdown-item" @click="printPdf">导出 PDF (打印预览)</div>
+            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'file'">
+              <div class="dropdown-item" @click="importMd"><span class="shortcut">IMPORT</span>导入本地文档 (.md, .txt)</div>
+              <div class="dropdown-item" @click="exportFile('md')"><span class="shortcut">.MD</span>原生导出 Markdown</div>
+              <div class="dropdown-item" @click="exportFile('html')"><span class="shortcut">.HTML</span>打包为 Web 源码包</div>
+              <div class="dropdown-item" @click="exportFile('json')"><span class="shortcut">.JSON</span>打包为 CMS 数据格式</div>
+              <div v-show="!isDesktop" class="dropdown-item" @click="printPdf"><span class="shortcut">PDF</span>导出长页面为打印格式</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="exportImage">导出长图封面</div>
+              <div class="dropdown-item" @click="exportImage"><span class="shortcut">CANVAS</span>光栅化引擎导出高清长图</div>
             </div>
           </div>
           <!-- Format Menu -->
@@ -1621,75 +1650,113 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               </div>
             </div>
           </div>
-          <!-- Theme Menu Removed to Actions Bar -->
           <!-- Function/Insert Menu -->
           <div class="menu-item" @click.stop="toggleMenu('function')">
             功能与插入
-            <div class="dropdown-menu" v-show="activeMenu === 'function'">
-              <div class="dropdown-item" @click="convertClipboardHtmlToMd">✨ 从剪贴板提取网页并转为 Markdown</div>
+            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'function'">
+              <div class="dropdown-item" @click="convertClipboardHtmlToMd"><span class="shortcut">DOM Extract</span>从富剪贴板提取网页并转为 MD</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="insertFormat('{注音|Ruby语法}', '')">🔡 插入拼音/注音短代码 (Ruby)</div>
-              <div class="dropdown-item" @click="insertFormat('\n\n<section style=&quot;display:flex; padding:15px; border-radius:10px; background:#f8f9fa; border:1px solid #e9ecef; align-items:center; margin:20px 0;&quot;><img src=&quot;https://api.dicebear.com/7.x/bottts/svg?seed=Octopus&quot; style=&quot;width:60px; height:60px; border-radius:50%; margin-right:15px;&quot;/><div><h3 style=&quot;margin:0 0 5px 0; color:#343a40;&quot;>这里是公众号名字</h3><p style=&quot;margin:0; font-size:13px; color:#6c757d;&quot;>欢迎关注我的公众号，每天分享最前沿硬核的极客技术与排版黑魔法！</p></div></section>\n\n', '')">🧧 生成并插入定制化公众号名片</div>
+              <div class="dropdown-item" @click="insertFormat('{注音|Ruby语法}', '')"><span class="shortcut">Ruby</span>注入拼音/注音短代码封装格式</div>
+              <div class="dropdown-item" @click="insertFormat('\n\n<section style=&quot;display:flex; padding:15px; border-radius:10px; background:#f8f9fa; border:1px solid #e9ecef; align-items:center; margin:20px 0;&quot;><img src=&quot;https://api.dicebear.com/7.x/bottts/svg?seed=Octopus&quot; style=&quot;width:60px; height:60px; border-radius:50%; margin-right:15px;&quot;/><div><h3 style=&quot;margin:0 0 5px 0; color:#343a40;&quot;>这里是公众号名字</h3><p style=&quot;margin:0; font-size:13px; color:#6c757d;&quot;>欢迎关注我的公众号，每天分享最前沿硬核的极客技术与排版黑魔法！</p></div></section>\n\n', '')"><span class="shortcut">Widget</span>生成并注入定制化极客号名片结构</div>
             </div>
           </div>
           <!-- View Menu -->
           <div class="menu-item" @click.stop="toggleMenu('view')">
             查看
-            <div class="dropdown-menu" v-show="activeMenu === 'view'">
+            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'view'">
               <div class="dropdown-item" @click="viewMode = 'pc'">
-                <span class="check-icon">{{ viewMode === 'pc' ? '✅' : '　' }}</span>宽屏 PC 预览
+                <span class="shortcut">宽屏 PC 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'pc' ? '■' : '　' }}</span>激活 PC 视口端渲染效果
               </div>
               <div class="dropdown-item" @click="viewMode = 'mobile'">
-                <span class="check-icon">{{ viewMode === 'mobile' ? '✅' : '　' }}</span>Mobile 手机预览
+                <span class="shortcut">iPhone 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'mobile' ? '■' : '　' }}</span>激活移动端流式布局效果
               </div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="togglePreviewMode">{{ isZenMode ? '退出沉浸编辑' : '开启沉浸全屏' }}</div>
-              <div class="dropdown-item" @click="toggleMacCodeBlock">{{ isMacCodeBlock ? '关闭' : '开启' }} Mac代码块风格</div>
+              <div class="dropdown-item" @click="togglePreviewMode"><span class="shortcut">F11 ZEN</span>{{ isZenMode ? '退出沉浸式防弹编辑屏' : '开启沉浸式防弹编辑屏' }}</div>
+              <div class="dropdown-item" @click="toggleMacCodeBlock"><span class="shortcut">CODE.MAC</span>{{ isMacCodeBlock ? '卸载' : '部署' }} Mac 原生红绿灯代码块装饰</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="loadDraftsHistory">📖 时光机 (自动保存历史草稿)</div>
+              <div class="dropdown-item" @click="loadDraftsHistory"><span class="shortcut">VCS.TIME</span>开启本地时光机与草稿管理线</div>
             </div>
           </div>
           <!-- Settings Menu -->
           <div class="menu-item" @click.stop="toggleMenu('settings')">
             设置
-            <div class="dropdown-menu" v-show="activeMenu === 'settings'">
-              <div class="dropdown-item" @click="isImageConfigVisible = true; activeMenu = null">配置图床 (Image Host)</div>
+            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'settings'">
+              <div class="dropdown-item" @click="isImageConfigVisible = true; activeMenu = null"><span class="shortcut">HOST</span>配置全局高速分布式图床服务</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="resetEditor">重置编辑器内容</div>
+              <div class="dropdown-item" @click="resetEditor"><span class="shortcut">DANGER</span>初始化并完全重置底层编辑器容器</div>
             </div>
           </div>
           <!-- Help Menu -->
           <div class="menu-item" @click.stop="toggleMenu('help')">
             帮助
-            <div class="dropdown-menu" v-show="activeMenu === 'help'">
-              <div class="dropdown-item" @click="notImpl">更新日志</div>
-              <div class="dropdown-item" @click="notImpl">快捷键一览</div>
-              <div class="dropdown-item" @click="showAbout">关于 Octopus MD</div>
+            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'help'">
+              <div class="dropdown-item" @click="notImpl"><span class="shortcut">CHANGELOG</span>查阅底层更新与迭代流水日志</div>
+              <div class="dropdown-item" @click="notImpl"><span class="shortcut">KEYMAPS</span>编辑器全局预定义高敏快捷键字典</div>
+              <div class="dropdown-item" @click="showAbout"><span class="shortcut">INTERNAL</span>关于核心与平台运行进程栈信息</div>
             </div>
           </div>
         </nav>
       </div>
 
-      <div class="actions">
-        <div class="view-toggles-pill">
-          <button class="pill-btn" :class="{active: viewMode === 'pc'}" @click="viewMode = 'pc'">
-            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-            PC 版式
-          </button>
-          <button class="pill-btn" :class="{active: viewMode === 'mobile'}" @click="viewMode = 'mobile'">
-            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-            手机壳预览
-          </button>
+      <!-- Hidden file input for image uploads (used by Action Rail) -->
+      <input type="file" ref="fileInput" @change="handleFileSelected" accept="image/*" style="display: none" />
+
+      <div class="actions" style="display: flex; align-items: center; gap: 16px;">
+        <div class="view-toggles-pill" style="display: flex; background: rgba(0,0,0,0.04); padding: 4px; border-radius: var(--radius-md);">
+            <button class="pill-btn" :class="{active: viewMode === 'pc'}" @click="setViewMode('pc')" style="background: transparent; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; padding: 4px 12px; display: flex; align-items: center; gap: 4px; transition: all 0.2s; color: var(--text-secondary);">
+              PC版式
+            </button>
+            <button class="pill-btn" :class="{active: viewMode === 'mobile'}" @click="setViewMode('mobile')" style="background: transparent; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; padding: 4px 12px; display: flex; align-items: center; gap: 4px; transition: all 0.2s; color: var(--text-secondary);">
+              手机预览
+            </button>
         </div>
 
-        <!-- NEW CTA: Article Distribution Platform -->
-        <div class="publish-action">
-           <button class="publish-btn" @click="isSyncModalVisible = true"><svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 2l-2 22-7-6.2-4 4V13L21 2zm-8.8 9.3l-8.6 4.3 18.6-11.6z"></path></svg> 跨平台同步中心 (COSE)</button>
+        <div style="position: relative;" @click.stop="toggleMenu('publish')">
+          <button style="display: flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: var(--radius-md); background: var(--primary); color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: none; box-shadow: 0 4px 12px rgba(139, 90, 43, 0.2);">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M21 2l-2 22-7-6.2-4 4V13L21 2zm-8.8 9.3l-8.6 4.3 18.6-11.6z"></path></svg>
+            <span>一键分发</span>
+          </button>
+          
+          <div class="dropdown-menu" style="right: 0; left: auto; width: 340px; padding: 16px; margin-top: 14px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: top right;" v-show="activeMenu === 'publish'" @click.stop>
+            <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (COSE)</h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+              <button class="brutalist-sync-btn" @click="syncToPlatform('wechat'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 12px; background: rgba(16, 185, 129, 0.05); color: #059669; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
+                同步微信
+              </button>
+              
+              <button class="brutalist-sync-btn" @click="syncToPlatform('zhihu'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 12px; background: rgba(59, 130, 246, 0.05); color: #2563eb; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">知</span>
+                同步知乎
+              </button>
+
+              <button class="brutalist-sync-btn" @click="syncToPlatform('juejin'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(79, 70, 229, 0.3); border-radius: 12px; background: rgba(79, 70, 229, 0.05); color: #4338ca; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
+                同步掘金
+              </button>
+
+              <button class="brutalist-sync-btn" @click="syncToPlatform('csdn'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(220, 38, 38, 0.3); border-radius: 12px; background: rgba(220, 38, 38, 0.05); color: #b91c1c; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <span style="font-size: 20px; font-weight: 900; font-family: monospace; letter-spacing: -2px; line-height: 1.2;">C</span>
+                同步 CSDN
+              </button>
+            </div>
+            
+            <button class="html-copy-btn" @click="copyHtml('wechat'); toggleMenu(null)" style="width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: #1a1a1a; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+               万能发文：复制完整富文本
+            </button>
+          </div>
         </div>
-      </div>    </header>
+
+        <button @click="isEditingTheme = !isEditingTheme; activeMenu = null" style="display: flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: var(--radius-md); background: rgba(139, 90, 43, 0.1); border: 1px solid rgba(139, 90, 43, 0.3); color: var(--primary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+          <span class="material-symbols-outlined" style="font-size: 18px;">code_blocks</span>
+          <span>排版中心</span>
+        </button>
+      </div>
+    </header>
 
     <!-- Tier 2: Formatting Toolbar (Floats dynamically or Pins in Zen Mode) -->
-    <div class="octopus-header formatting-toolbar" :class="{ 'is-zen-floating': isZenMode && !isZenToolbarPinned }" :style="isZenMode && !isZenToolbarPinned ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : (isZenMode && isZenToolbarPinned ? { position: 'static', width: '100%', margin: 0, borderRadius: 0, padding: 0, boxShadow: 'var(--shadow-subtle)', background: 'var(--bg-panel)' } : {})" @mousedown.prevent="isZenMode && !isZenToolbarPinned ? startZenDrag($event) : null">
+    <div class="octopus-header formatting-toolbar" :class="{ 'is-zen-floating': isZenMode && !isZenToolbarPinned }" :style="isZenMode && !isZenToolbarPinned ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : (isZenMode && isZenToolbarPinned ? { position: 'static', width: '100%', margin: 0, borderRadius: 0, padding: 0, boxShadow: 'var(--shadow-subtle)', background: 'var(--bg-panel)' } : { padding: 0, height: 'auto', background: 'var(--bg-panel)' })" @mousedown.prevent="isZenMode && !isZenToolbarPinned ? startZenDrag($event) : null">
       
       <!-- Zen Mode Drag Handle -->
       <div v-if="isZenMode" class="zen-toolbar-handle" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-bottom: 1px solid var(--border-subtle); border-radius: 12px 12px 0 0;" :style="isZenToolbarPinned ? { cursor: 'default' } : {}">
@@ -1700,7 +1767,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <div style="display: flex; gap: 6px;">
            <button class="icon-btn" @click.stop="isZenToolbarPinned = !isZenToolbarPinned" style="width: 24px; height: 24px; border-radius: 4px; padding: 0; font-size: 0.9rem;" :title="isZenToolbarPinned ? '取消固定并允许悬浮' : '钉在网页顶部'">{{ isZenToolbarPinned ? '📌' : '📍' }}</button>
            <button class="icon-btn" @click.stop="isZenToolbarExpanded = !isZenToolbarExpanded" style="width: 24px; height: 24px; border-radius: 4px; padding: 0;" title="折叠/展开">{{ isZenToolbarExpanded ? '一' : '＋' }}</button>
-           <button class="icon-btn" @click.stop="togglePreviewMode" style="width: 24px; height: 24px; border-radius: 4px; padding: 0; color: #ef4444;" title="退出全屏">✕</button>
+           <button class="icon-btn" @click.stop="togglePreviewMode" style="width: 24px; height: 24px; border-radius: 4px; padding: 0; color: #ef4444;" title="退出全屏">✖</button>
         </div>
       </div>
 
@@ -1714,67 +1781,16 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <button class="icon-btn" title="行内代码" @click="insertFormat('`', '`')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline><line x1="14" y1="4" x2="10" y2="20"></line></svg></button>
         <button class="icon-btn" title="链接" @click="insertFormat('[', '](https://)')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
         <button class="icon-btn" title="表格" @click="insertFormat('\n| 表头 | 表头 |\n| :--- | :--- |\n| 内容 | 内容 |\n', '')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg></button>
-        <button class="icon-btn" title="容器边框阴影块 (MDNice兼容)" @click="insertFormat('\n::: shadow\n', '\n:::\n')"><span style="font-size: 0.8rem; font-weight: bold; border: 1px dotted currentColor; border-radius: 4px; padding: 2px 4px; opacity: 0.8;">[::]</span></button>
-        <button class="icon-btn" title="文字组件居中块 (MDNice兼容)" @click="insertFormat('\n::: center\n', '\n:::\n')"><span style="font-size: 0.8rem; font-weight: bold; padding: 2px 4px; opacity: 0.8;">=|=</span></button>
         <button class="icon-btn" title="上传/插入图片" @click="triggerImageUpload"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
-        <input type="file" ref="fileInput" @change="handleFileSelected" accept="image/*" style="display: none" />
         <button class="icon-btn" title="引用" @click="insertFormat('\n> ', '')" style="font-weight: 800; font-size: 1.2rem; line-height: 1; font-family: Times, serif;">"</button>
         <button class="icon-btn" title="格式化排版" @click="formatMd"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="6.5"></line></svg></button>
-
+        
         <div class="toolbar-divider"></div>
         <button class="icon-btn" title="配置服务器或图床" @click="isImageConfigVisible = true; activeMenu = null"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
-        <button class="icon-btn" title="转微信脚注 / 外部链接转换" @click="toggleLinkFootnote"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">WX</span></button>
-        <button class="icon-btn" title="MAC 风格代码块" :class="{ active: isMacCodeBlock }" @click="toggleMacCodeBlock" :style="{ color: isMacCodeBlock ? 'var(--accent-color)' : '', background: isMacCodeBlock ? 'rgba(56, 189, 248, 0.1)' : '' }"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><circle cx="6" cy="7" r="1.5"></circle><circle cx="12" cy="7" r="1.5"></circle></svg></button>
-      </div>
-      <div class="actions" v-show="!isZenMode" style="display: flex; gap: 12px; align-items: center;">
-
-        <div class="theme-select-group">
-          <span class="modern-label"><span style="font-weight:900;margin-right:2px;font-family:serif;">Aa</span>正文字体</span>
-          <select v-model="documentFontFamily" class="modern-select" style="min-width: 155px;">
-            <optgroup label="开源免授权区域">
-              <option value="system-sans">无衬线体 (原生黑体)</option>
-              <option value="system-serif">经典衬线 (原生宋明)</option>
-              <option value="notosans">思源黑体 (Noto Sans)</option>
-              <option value="notoserif">思源宋体 (Noto Serif)</option>
-              <option value="lxgw">霞鹜文楷 (手写黑板报)</option>
-              <option value="smiley">得意黑 (Smiley Sans)</option>
-              <option value="zcool">站酷小薇 (文艺优雅)</option>
-              <option value="zcool_huangyou">站酷黄油体</option>
-              <option value="mashanzheng">马善政毛笔体</option>
-              <option value="zhimangxing">志莽行书</option>
-              <option value="longcang">龙藏草书</option>
-              <option value="fira">Fira Code (编程等宽)</option>
-              <option value="jetbrains">JetBrains Mono</option>
-            </optgroup>
-            <optgroup label="⚠️ 商业版权/风险区">
-              <option value="pingfang">PingFang (⚠️ 商用禁忌)</option>
-              <option value="yahei">微软雅黑 (⚠️ 极高风险)</option>
-              <option value="helvetica">Helvetica (⚠️ 国际版权)</option>
-              <option value="times">Times New Roman</option>
-            </optgroup>
-          </select>
-        </div>
-
-        <div class="theme-select-group">
-          <span class="modern-label"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>代码块</span>
-          <select v-model="selectedCodeTheme" class="modern-select">
-            <option v-for="c in codeThemes" :key="c.id" :value="c.id">{{c.name}}</option>
-          </select>
-        </div>
-
-        <div class="theme-select-group">
-          <span class="modern-label"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>排版主题</span>
-          <select v-model="selectedTheme" class="modern-select">
-            <option v-for="t in themes" :key="t.id" :value="t.id">{{t.name}}</option>
-          </select>
-        </div>
-
-        <button class="theme-config-btn" :class="{ 'btn-is-active': isEditingTheme }" @click="isEditingTheme = !isEditingTheme; activeMenu = null" style="padding: 6px 16px; font-size: 0.9rem; font-weight: 600; border: none; border-radius: 8px; color: white; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); background: linear-gradient(135deg, var(--accent-light, #38bdf8), var(--accent-color, #0ea5e9)); box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
-           🎨 视觉与交互工作台
-        </button>
-
+        <button class="icon-btn" title="微信外链转引用" @click="toggleLinkFootnote"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span style="position: absolute; font-size: 9px; right: -2px; bottom: -2px; font-weight: bold; background: var(--bg-hover); border-radius: 4px; padding: 0 3px;">WX</span></button>
       </div>
     </div>
+
 
     <transition name="slide-up">
     <div v-if="hasExternalLinks && showLinkWarning" class="smart-link-palette">
@@ -1823,6 +1839,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
     <main class="workspace" :class="{ 'is-dragging': isDragging }" :style="isZenMode && !isZenToolbarPinned ? { height: '100vh', paddingTop: '0' } : {}">
       <div class="editor-pane" :style="{ width: isEditingTheme ? '33.333%' : (leftWidth + '%') }">
+        <div class="editor-main-area" style="display: flex; flex: 1; flex-direction: row; min-height: 0; min-width: 0; width: 100%;">
         
         <div v-show="showToc" class="toc-panel">
           <div class="toc-header">
@@ -1844,7 +1861,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           </div>
         </div>
 
-        <div class="cm-wrapper">
+        <div class="cm-wrapper" style="flex: 1; min-width: 0;">
           <Codemirror
             v-model="content"
             placeholder="Start writing..."
@@ -1854,9 +1871,18 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             :tab-size="2"
             :extensions="extensions"
             @ready="handleReady"
-            @focus="showToc = false"
-            @change="showToc = false"
+
+
           />
+        </div>
+        <!-- v1.2 Editor Footer Bar -->
+        </div>
+        <div style="height: 32px; border-top: 1px solid var(--border-subtle); background: #f8fafc; display: flex; align-items: center; padding: 0 16px; justify-content: flex-end; flex-shrink: 0;">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <span style="font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em;">字符数: {{ content.length }}</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em;">行数: {{ content.split('\n').length }}</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em;">估算阅读耗时: 约 {{ Math.max(1, Math.ceil(content.length / 300)) }} 分钟</span>
+          </div>
         </div>
       </div>
 
@@ -1865,97 +1891,210 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <div class="resizer-handle"></div>
       </div>
 
-      <div class="preview-pane" :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isEditingTheme ? '33.333%' : (100 - leftWidth + '%') }">
+      <div class="preview-pane" :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isEditingTheme ? '33.333%' : (100 - leftWidth + '%'), position: 'relative' }">
         
         <!-- Inject dynamic CSS raw strings explicitly into the DOM -->
         <component :is="'style'" v-if="themeStyleContent" id="markdown-theme">{{ themeStyleContent }}</component>
         <component :is="'style'" v-if="codeThemeStyleContent" id="code-theme">{{ codeThemeStyleContent }}</component>
-        
-        <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
+
+        <!-- Mobile Layout Wrapper: Design Reference Parity -->
+        <div v-if="viewMode === 'mobile'" class="mobile-preview-pane">
+          <!-- Ambient Glow -->
+          <div class="ambient-glow"></div>
+          <!-- Centered iPhone (design ref: 390×844, radius 54, padding 12) -->
+          <div class="iphone-scale-wrapper staggered-2">
+            <div class="iphone-frame">
+              <div class="iphone-screen">
+                <div class="preview-content-wrapper" style="width: 100%; height: 100%; overflow-y: auto; padding: 14px 16px; box-sizing: border-box; font-family: 'Noto Serif SC', serif; color: #1a1a1a;">
+                  <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Standard wrapper for PC View -->
+        <div v-else class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
         
       </div>
-      
-      <!-- Anchored Global Floating Toolbar -->
-      <transition name="fade">
-        <div v-show="!isEditingTheme" class="floating-toolbar" style="position: absolute; top: 50%; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; transform: translateY(-50%);">
-          <!-- WeChat Sync -->
-          <button class="icon-btn floating-action" title="一键同步微信公众号" @click="syncToPlatform('wechat')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #10b981; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
-             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
-          </button>
+
+      <!-- Action Rail removed: all functions available via Header menus + Distribution Pill -->
+
+      <!-- Floating Action Buttons (v1.2 Design: FAB Rotary Menu) -->
+      <div v-show="!isZenMode && !isEditingTheme" style="position: absolute; bottom: 32px; right: 32px; display: flex; flex-direction: column; gap: 16px; z-index: 1000;" class="fab-wrapper">
+        
+        <!-- Rotary AI Menu Container -->
+        <div class="fab-container" :class="{ 'is-open': isAiMenuOpen }" @click.stop>
           
-          <!-- Zhihu Sync -->
-          <button class="icon-btn floating-action" title="一键同步知乎" @click="syncToPlatform('zhihu')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #3b82f6; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
-             <span style="font-size: 18px; font-weight: 900; font-family: -apple-system, sans-serif;">知</span>
-          </button>
-          
-          <!-- Juejin Sync -->
-          <button class="icon-btn floating-action" title="一键同步掘金" @click="syncToPlatform('juejin')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #4f46e5; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
-             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
-          </button>
+          <div class="fab-menu">
+            <button class="fab-item" @click.stop="isAiMenuOpen = false; openT2IPanel()">
+              <span class="fab-label">文生图</span>
+              <div class="fab-icon-wrapper pic-gen">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+              </div>
+            </button>
+            <button class="fab-item" @click.stop="isAiMenuOpen = false; openAIPanel()">
+              <span class="fab-label">助手</span>
+              <div class="fab-icon-wrapper assistant">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>
+                </svg>
+              </div>
+            </button>
+          </div>
 
-          <!-- CSDN Sync -->
-          <button class="icon-btn floating-action" title="一键同步CSDN" @click="syncToPlatform('csdn')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: #dc2626; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
-             <span style="font-size: 18px; font-weight: bold; font-family: Courier New, monospace; letter-spacing: -1px; line-height: 1;">C</span>
-          </button>
-
-          <!-- Divider -->
-          <div style="width: 20px; height: 1px; background: var(--border-strong); margin: 2px auto;"></div>
-
-          <!-- Rich Text Copy -->
-          <button class="icon-btn floating-action" title="一键复制排版 (微信/知乎等富文本结构)" @click="copyHtml('wechat')" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
-             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-          </button>
-
-          <!-- Zen Mode Toggle -->
-          <div style="width: 20px; height: 1px; background: var(--border-strong); margin: 2px auto;"></div>
-          <button class="icon-btn floating-action" title="全屏沉浸预览 (Zen Mode)" @click="togglePreviewMode()" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); box-shadow: var(--shadow-glass); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px); border: 1px solid var(--border-color); color: var(--text-primary); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
-             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          <button class="fab-btn ai-rotary-btn" @click.stop="isAiMenuOpen = !isAiMenuOpen" style="width: 48px; height: 48px; border-radius: 9999px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; color: var(--primary); cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative; z-index: 1002; outline: none;">
+            <span class="action-icon material-symbols-outlined" style="font-size: 24px;">auto_awesome</span>
+            <div class="ai-tooltip" style="position: absolute; right: 56px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); padding: 6px 12px; border-radius: var(--radius-md); font-size: 13px; color: #1a1a1a; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">AI 功能集合</div>
           </button>
         </div>
-      </transition>
+
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center;" @click.stop="toggleMenu('fabPublish')">
+          <div class="dropdown-menu" style="top: auto !important; bottom: calc(100% + 16px); right: 0; left: auto; width: 340px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: bottom right;" v-show="activeMenu === 'fabPublish'" @click.stop>
+            <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (COSE)</h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+              <button class="brutalist-sync-btn" @click="syncToPlatform('wechat'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 12px; background: rgba(16, 185, 129, 0.05); color: #059669; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
+                同步微信
+              </button>
+              
+              <button class="brutalist-sync-btn" @click="syncToPlatform('zhihu'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 12px; background: rgba(59, 130, 246, 0.05); color: #2563eb; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">知</span>
+                同步知乎
+              </button>
+
+              <button class="brutalist-sync-btn" @click="syncToPlatform('juejin'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(79, 70, 229, 0.3); border-radius: 12px; background: rgba(79, 70, 229, 0.05); color: #4338ca; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
+                同步掘金
+              </button>
+
+              <button class="brutalist-sync-btn" @click="syncToPlatform('csdn'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(220, 38, 38, 0.3); border-radius: 12px; background: rgba(220, 38, 38, 0.05); color: #b91c1c; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <span style="font-size: 20px; font-weight: 900; font-family: monospace; letter-spacing: -2px; line-height: 1.2;">C</span>
+                同步 CSDN
+              </button>
+            </div>
+            
+            <button class="html-copy-btn" @click="copyHtml('wechat'); toggleMenu(null)" style="width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: #1a1a1a; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+               万能发文：复制完整富文本
+            </button>
+          </div>
+          
+          <button class="fab-btn" :class="{ 'is-active': activeMenu === 'fabPublish' }" style="width: 48px; height: 48px; border-radius: 9999px; background: var(--primary); border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <span class="material-symbols-outlined" style="font-size: 24px;">sync</span>
+            <div style="position: absolute; right: 56px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); padding: 6px 12px; border-radius: var(--radius-md); font-size: 13px; color: #1a1a1a; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">一键分发中心</div>
+          </button>
+        </div>
+      </div>
+      
       <!-- Tier 3 Designer Pane (Tabs: Visual / Native CSS) -->
-      <div v-show="isEditingTheme && !isZenMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: var(--bg-app); min-height: 0;">
-        <div class="sidebar-tabs" style="display:flex; border-bottom:1px solid var(--border-subtle); background: var(--bg-panel);">
-           <button class="s-tab" :class="{active: dsTab === 'visual'}" @click="dsTab = 'visual'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;">🎛️ 可视化定制</button>
-           <button class="s-tab" :class="{active: dsTab === 'native'}" @click="dsTab = 'native'" style="flex:1; padding:10px 0; border:none; background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.9rem;" title="直接对底层主题代码进行强制覆盖编辑">💻 样式代码</button>
+      <div v-show="isEditingTheme && !isZenMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: #faf9f7; min-height: 0; box-shadow: -10px 0 30px rgba(0,0,0,0.04); z-index: 50;">
+        <!-- Panel Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid rgba(139,90,43,0.08);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 3px; height: 18px; background: var(--primary); border-radius: 2px;"></div>
+            <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.02em;">排版中心</span>
+          </div>
+          <button @click="isEditingTheme = false" style="width: 28px; height: 28px; border: none; background: rgba(0,0,0,0.04); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.15s; font-size: 14px;" onmouseover="this.style.background='rgba(0,0,0,0.08)'" onmouseout="this.style.background='rgba(0,0,0,0.04)'">✕</button>
+        </div>
+        <div class="sidebar-tabs" style="display:flex; padding: 4px 16px; gap: 4px; background: transparent;">
+           <button class="s-tab" :class="{active: dsTab === 'core'}" @click="dsTab = 'core'" style="flex:1; padding:8px 0; border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-weight:600; font-size: 12px; letter-spacing: 0.06em; border-radius: 6px; transition: all 0.2s;">主题排版</button>
+           <button class="s-tab" :class="{active: dsTab === 'visual'}" @click="dsTab = 'visual'" style="flex:1; padding:8px 0; border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-weight:600; font-size: 12px; letter-spacing: 0.06em; border-radius: 6px; transition: all 0.2s;">视觉定制</button>
+           <button class="s-tab" :class="{active: dsTab === 'native'}" @click="dsTab = 'native'" style="flex:1; padding:8px 0; border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-weight:600; font-size: 12px; letter-spacing: 0.06em; border-radius: 6px; transition: all 0.2s;" title="底层强制覆盖编辑">样式代码</button>
         </div>
         
-        <div v-show="dsTab === 'visual'" style="flex:1; overflow-y: auto; padding: 20px;">
+        <!-- CORE: Heritage Features & Publishing Center -->
+        <div v-show="dsTab === 'core'" style="flex:1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 24px;">
+          
+          <!-- Themes & Code Block Styles -->
+          <div class="brutalist-config-group">
+            <h3 style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.1em;">全局排版主题</h3>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+               <button v-for="(t, idx) in themes" :key="t.id" 
+                       @click="selectedTheme = t.id"
+                       class="theme-list-item"
+                       :class="{ 'is-active': selectedTheme === t.id }"
+                       style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: none; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; transition: all 0.15s; position: relative; color: var(--text-primary); width: 100%; font-family: inherit;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); width: 20px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums;" :style="{ color: selectedTheme === t.id ? 'var(--primary)' : '' }">{{ String(idx + 1).padStart(2, '0') }}</span>
+                  <div style="width: 1px; height: 16px; background: rgba(0,0,0,0.06); flex-shrink: 0;"></div>
+                  <span style="font-weight: 500; font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" :style="{ fontWeight: selectedTheme === t.id ? '700' : '500', color: selectedTheme === t.id ? 'var(--primary)' : '' }">{{ t.name }}</span>
+                  <svg v-if="selectedTheme === t.id" viewBox="0 0 24 24" width="14" height="14" stroke="var(--primary)" fill="none" stroke-width="3" style="flex-shrink: 0; opacity: 0.8;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+               </button>
+            </div>
+          </div>
+
+          <div class="brutalist-config-group">
+            <h3 style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.1em;">代码高亮风格</h3>
+            <select v-model="selectedCodeTheme" class="panel-select" style="width: 100%; padding: 10px 14px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; background: #fff; font-size: 13px; font-weight: 500; color: var(--text-primary); cursor: pointer; outline: none; transition: border-color 0.2s; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat: no-repeat; background-position: right 12px center;">
+              <option v-for="c in codeThemes" :key="c.id" :value="c.id">{{c.name}}</option>
+            </select>
+          </div>
+
+          <div class="brutalist-config-group">
+            <h3 style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.1em;">正文字体</h3>
+            <select v-model="documentFontFamily" class="panel-select" style="width: 100%; padding: 10px 14px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; background: #fff; font-size: 13px; font-weight: 500; color: var(--text-primary); cursor: pointer; outline: none; transition: border-color 0.2s; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat: no-repeat; background-position: right 12px center;">
+              <optgroup label="开源免授权区域">
+                <option value="system-sans">无衬线体 (原生黑体)</option>
+                <option value="system-serif">经典衬线 (原生宋明)</option>
+                <option value="notosans">思源黑体 (Noto Sans)</option>
+                <option value="notoserif">思源宋体 (Noto Serif)</option>
+                <option value="lxgw">霞鹜文楷 (手写黑板报)</option>
+                <option value="smiley">得意黑 (Smiley Sans)</option>
+                <option value="zcool">站酷小薇 (文艺优雅)</option>
+                <option value="zcool_huangyou">站酷黄油体</option>
+                <option value="mashanzheng">马善政毛笔体</option>
+                <option value="zhimangxing">志莽行书</option>
+                <option value="longcang">龙藏草书</option>
+                <option value="fira">Fira Code (编程等宽)</option>
+                <option value="jetbrains">JetBrains Mono</option>
+              </optgroup>
+              <optgroup label="⚠️ 商业版权/风险区">
+                <option value="pingfang">PingFang (⚠️ 商用禁忌)</option>
+                <option value="yahei">微软雅黑 (⚠️ 极高风险)</option>
+                <option value="helvetica">Helvetica (⚠️ 国际版权)</option>
+                <option value="times">Times New Roman</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        
+        <div v-show="dsTab === 'visual'" style="flex:1; overflow-y: auto; padding: 16px 20px;">
               <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0; margin-bottom: 20px; line-height: 1.5; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">无需敲击代码。在此调整以下数值即可“傻瓜式”快速覆盖底层排版系统的主流风格。（留空则维持原貌）</p>
 
               <!-- 视觉定制区块提取自原 Modal -->
               <div class="visual-section" style="margin-bottom: 24px;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0ea5e9; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">🟢 整体观感 (Typography & Base)</h4>
+                <h4 style="margin: 0 0 14px 0; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.06);">整体观感</h4>
                 <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
                   <div class="setting-item">
-                    <label style="font-weight:600; font-size:13px; color:var(--text-primary);">核心主色 (Primary Color)</label>
+                    <label style="font-weight: 600; font-size: 12px; color: var(--text-secondary);">核心主色 (Primary Color)</label>
                     <div style="display: flex; gap: 8px; margin-top:6px;">
-                      <input type="color" v-model="visualTheme.primaryColor" style="flex: 0 0 40px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
-                      <input type="text" v-model="visualTheme.primaryColor" placeholder="#ff0080" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                      <input type="color" v-model="visualTheme.primaryColor" style="flex: 0 0 36px; height: 34px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; padding: 2px; cursor: pointer;" />
+                      <input type="text" v-model="visualTheme.primaryColor" placeholder="#ff0080" class="setting-input" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                     </div>
                   </div>
                   <div class="setting-item">
-                    <label style="font-weight:600; font-size:13px; color:var(--text-primary);">正文基础字号 & 行高</label>
+                    <label style="font-weight: 600; font-size: 12px; color: var(--text-secondary);">正文基础字号 & 行高</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top:6px;">
-                      <input type="number" v-model="visualTheme.baseFontSize" placeholder="字号(px) 如 15" class="setting-input" style="padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
-                      <input type="number" v-model="visualTheme.lineHeight" placeholder="行高 如 1.8" step="0.1" class="setting-input" style="padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                      <input type="number" v-model="visualTheme.baseFontSize" placeholder="字号(px) 如 15" class="setting-input" style="padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
+                      <input type="number" v-model="visualTheme.lineHeight" placeholder="行高 如 1.8" step="0.1" class="setting-input" style="padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                     </div>
                   </div>
                   <div class="setting-item">
-                    <label style="font-weight:600; font-size:13px; color:var(--text-primary);">正文文字颜色</label>
+                    <label style="font-weight: 600; font-size: 12px; color: var(--text-secondary);">正文文字颜色</label>
                     <div style="display: flex; gap: 8px; margin-top:6px;">
-                      <input type="color" v-model="visualTheme.baseColor" style="flex: 0 0 32px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
-                      <input type="text" v-model="visualTheme.baseColor" placeholder="#333333" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                      <input type="color" v-model="visualTheme.baseColor" style="flex: 0 0 34px; height: 34px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; padding: 2px; cursor: pointer;" />
+                      <input type="text" v-model="visualTheme.baseColor" placeholder="#333333" class="setting-input" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                     </div>
                   </div>
                 </div>
               </div>
               
               <div class="visual-section" style="margin-bottom: 24px;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0ea5e9; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">🔵 标题结构 (Headings)</h4>
+                <h4 style="margin: 0 0 14px 0; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.06);">标题结构</h4>
                 <div style="margin-bottom: 12px;">
-                     <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">全局标题对齐</label>
-                     <select v-model="visualTheme.headingAlign" class="setting-input" style="width:100%; padding:6px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);">
+                     <label style="font-weight: 600; font-size: 12px; color: var(--text-secondary); display:block; margin-bottom: 6px;">全局标题对齐</label>
+                     <select v-model="visualTheme.headingAlign" class="panel-select" style="width: 100%; padding: 10px 14px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; background: #fff; color: var(--text-primary); font-size: 13px; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat: no-repeat; background-position: right 12px center;">
                        <option value="">默认由主题控制</option>
                        <option value="left">左对齐 (Left)</option>
                        <option value="center">居中 (Center)</option>
@@ -1963,46 +2102,46 @@ const insertFormat = (prefix: string, suffix: string = '') => {
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                   <div class="setting-item">
-                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">H1(px)</label>
-                    <input type="number" v-model="visualTheme.h1Size" placeholder="24" class="setting-input" style="width:100%; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display:block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em;">H1(px)</label>
+                    <input type="number" v-model="visualTheme.h1Size" placeholder="24" class="setting-input" style="width: 100%; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                   </div>
                   <div class="setting-item">
-                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">H2(px)</label>
-                    <input type="number" v-model="visualTheme.h2Size" placeholder="20" class="setting-input" style="width:100%; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display:block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em;">H2(px)</label>
+                    <input type="number" v-model="visualTheme.h2Size" placeholder="20" class="setting-input" style="width: 100%; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                   </div>
                   <div class="setting-item">
-                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">H3(px)</label>
-                    <input type="number" v-model="visualTheme.h3Size" placeholder="18" class="setting-input" style="width:100%; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display:block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em;">H3(px)</label>
+                    <input type="number" v-model="visualTheme.h3Size" placeholder="18" class="setting-input" style="width: 100%; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                   </div>
                 </div>
               </div>
               
               <div class="visual-section" style="margin-bottom: 24px;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0ea5e9; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">📐 细节小部件 (Blocks)</h4>
+                <h4 style="margin: 0 0 14px 0; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.06);">细节组件</h4>
                 <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
                   <div class="setting-item">
-                    <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">段落上下外边距 (px)</label>
-                    <input type="number" v-model="visualTheme.paragraphMargin" placeholder="例如: 16" class="setting-input" style="width:100%; padding:6px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                    <label style="font-weight: 600; font-size: 12px; color: var(--text-secondary); display:block; margin-bottom: 6px;">段落上下外边距 (px)</label>
+                    <input type="number" v-model="visualTheme.paragraphMargin" placeholder="例如: 16" class="setting-input" style="width:100%; padding:6px 8px; border:none; border-radius:0; background:var(--bg-editor); color:var(--text-primary); border-bottom: 2px solid transparent;" />
                   </div>
                   <div class="setting-item">
-                    <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">引用块左竖线颜色</label>
+                    <label style="font-weight: 600; font-size: 12px; color: var(--text-secondary); display:block; margin-bottom: 6px;">引用块左竖线颜色</label>
                     <div style="display: flex; gap: 4px;">
-                       <input type="color" v-model="visualTheme.blockquoteColor" style="flex: 0 0 32px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
-                       <input type="text" v-model="visualTheme.blockquoteColor" placeholder="#cccccc" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                       <input type="color" v-model="visualTheme.blockquoteColor" style="flex: 0 0 34px; height: 34px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; padding: 2px; cursor: pointer;" />
+                       <input type="text" v-model="visualTheme.blockquoteColor" placeholder="#cccccc" class="setting-input" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                     </div>
                   </div>
                   <div class="setting-item">
-                    <label style="font-weight:600; font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">引用块主体背景色</label>
+                    <label style="font-weight: 600; font-size: 12px; color: var(--text-secondary); display:block; margin-bottom: 6px;">引用块主体背景色</label>
                     <div style="display: flex; gap: 4px;">
-                       <input type="color" v-model="visualTheme.blockquoteBg" style="flex: 0 0 32px; height: 32px; border:none; border-radius:4px; padding:0; cursor:pointer;" />
-                       <input type="text" v-model="visualTheme.blockquoteBg" placeholder="如 rgba(0,0,0,0.05)" class="setting-input" style="flex: 1; padding:4px 8px; border:1px solid var(--border-strong); border-radius:4px; background:var(--bg-panel); color:var(--text-primary);" />
+                       <input type="color" v-model="visualTheme.blockquoteBg" style="flex: 0 0 34px; height: 34px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; padding: 2px; cursor: pointer;" />
+                       <input type="text" v-model="visualTheme.blockquoteBg" placeholder="如 rgba(0,0,0,0.05)" class="setting-input" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s;" />
                     </div>
                   </div>
                 </div>
               </div>
               
               <div style="text-align: right; margin-top: 10px;">
-                <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size:0.85rem; width: 100%; transition: all 0.2s;" @click="clearVisualTheme" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">🗑️ 重置定制状态 (还原为主题默认值)</button>
+                <button style="background: transparent; color: var(--text-muted); border: 1px solid rgba(0,0,0,0.08); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 500; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;" @click="clearVisualTheme" onmouseover="this.style.borderColor='rgba(239,68,68,0.3)';this.style.color='#ef4444'" onmouseout="this.style.borderColor='rgba(0,0,0,0.08)';this.style.color='var(--text-muted)'"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>重置为主题默认值</button>
               </div>
         </div>
 
@@ -2173,21 +2312,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
       </transition>
 
-      <!-- MDNice Parity: Floating AI Sidebar -->
-      <aside class="floating-ai-sidebar">
-        <div class="ai-tool assistant" @click="openAIPanel">
-          <div class="ai-icon-bg blue">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="11" width="18" height="10" rx="3"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
-          </div>
-          <span class="ai-tool-text">助手</span>
-        </div>
-        <div class="ai-tool text-to-image" @click="openT2IPanel">
-          <div class="ai-icon-bg purple">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          </div>
-          <span class="ai-tool-text">文生图</span>
-        </div>
-      </aside>
+      
 
       <!-- AI Assistant Drawer Slide Out -->
       <transition name="slide-up">
@@ -2281,23 +2406,13 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
       </transition>
     <!-- Note: removed isolated </main> that trapped modals -->
-    <!-- Tier 4: Bottom Status Bar -->
-    <footer v-show="!isZenMode" class="octopus-status-bar">
-      <div class="status-left">
-        <span class="status-item">字符数: <strong style="color: var(--text-primary)">{{ wordCount }}</strong></span>
-        <span class="status-item">行数: <strong style="color: var(--text-primary)">{{ lineCount }}</strong></span>
-        <span class="status-item">估算阅读耗时: <strong style="color: var(--accent-color)">约 {{ Math.max(1, Math.ceil(wordCount / 300)) }} 分钟</strong></span>
-      </div>
-      <div class="status-right">
-        <span class="status-item" style="color: #10b981" v-if="isDesktop"><svg style="vertical-align: middle; margin-right: 4px;" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>桌面原生核心加载完毕</span>
-        <span class="status-item" style="color: #f59e0b" v-else><svg style="vertical-align: middle; margin-right: 4px;" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>纯Web沙盒云模式</span>
-      </div>
-    </footer>
+    <!-- Tier 4: Bottom Status Bar — Removed in v1.2 (stats now in editor-pane footer) -->
   </div>
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 html, body {
   margin: 0; padding: 0;
@@ -2305,46 +2420,27 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: var(--bg-app);
+  font-family: var(--font-ui);
 }
 
-/* Workspace Specific Scrollbars - Dual Mode (Dark/Light) */
-/* Light Mode Scrollbar for Preview Pane */
-.preview-pane::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
+/* Scrollbars — thin, minimal */
+.preview-pane::-webkit-scrollbar,
+.editor-pane :deep(.cm-scroller)::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
-.preview-pane::-webkit-scrollbar-track {
+.preview-pane::-webkit-scrollbar-track,
+.editor-pane :deep(.cm-scroller)::-webkit-scrollbar-track {
   background: transparent;
 }
-.preview-pane::-webkit-scrollbar-thumb {
-  background: var(--text-primary);
-  border: 4px solid var(--bg-preview); /* Match preview-pane background */
-  border-radius: 9999px;
-  background-clip: padding-box;
+.preview-pane::-webkit-scrollbar-thumb,
+.editor-pane :deep(.cm-scroller)::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 0 !important;
 }
-.preview-pane::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-  border: 4px solid var(--bg-preview);
-}
-
-/* Dark Mode Scrollbar for Editor/CSS Panes */
-.editor-pane-scrollbar-mixin,
-.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
-}
-.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-track {
-  background: transparent;
-}
-.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-thumb {
-  background: #475569;
-  border: 4px solid var(--bg-panel); /* Match editor background */
-  border-radius: 9999px;
-  background-clip: padding-box;
-}
-.editor-pane ::v-deep(.cm-scroller)::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-  border: 4px solid var(--bg-panel);
+.preview-pane::-webkit-scrollbar-thumb:hover,
+.editor-pane :deep(.cm-scroller)::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.8);
 }
 
 .octopus-layout {
@@ -2352,12 +2448,13 @@ html, body {
   top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-ui);
   background: var(--bg-app);
+  background-attachment: fixed;
   color: var(--text-primary);
   overflow: hidden;
-  padding: 16px 20px;
-  gap: 16px;
+  padding: 0;
+  gap: 0;
   transition: background-color var(--transition-speed) var(--transition-timing);
   animation: appEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -2373,49 +2470,60 @@ html, body {
   }
 }
 
-/* Ambient Deep Glow in the Background */
+
+/* Quick Actions & TOC Styling */
+.format-actions { display: flex; align-items: center; gap: 0.4rem; padding: 0px 12px; background: var(--bg-panel); border-bottom: 1px solid var(--border-subtle); overflow-x: auto; }
+.format-actions::-webkit-scrollbar { height: 0; display: none; }
+.icon-btn { background: transparent; color: var(--text-primary); border: 1px solid transparent; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit; font-size: 1rem; position: relative; flex-shrink: 0; }
+.icon-btn:hover { background: var(--border-strong); }
+.toolbar-divider { width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px; }
+.toc-panel { width: 220px; height: 100%; background: var(--bg-panel); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.toc-header { height: 32px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); font-weight: 600; font-size: 0.8rem; color: var(--text-primary); }
+.toc-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0; }
+.toc-content::-webkit-scrollbar { width: 6px; }  
+.toc-content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }   
+.toc-item { padding: 6px 12px 6px 20px; font-size: 0.8rem; color: var(--text-primary); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: all 0.2s; line-height: 1.4; }
+.toc-item:hover { background: var(--border-subtle); }
+/* Remove the old ambient glow pseudo-element — we use body bg-image instead */
 .octopus-layout::before {
-  content: '';
-  position: absolute;
-  top: -10vw;
-  left: -10vw;
-  width: 50vw;
-  height: 50vw;
-  background: var(--ambient-glow);
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.5;
-  z-index: 0;
-  pointer-events: none;
+  display: none;
 }
 .octopus-layout > * {
-  z-index: 1; /* Keep content above ambient glow */
+  z-index: 1;
 }
 
+/* === Glass Panel Header === */
 .octopus-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.5rem;
-  background: var(--bg-toolbar);
+  padding: 0 1.5rem;
+  height: 56px;
+  background: var(--bg-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0 !important;
+  box-shadow: none;
   z-index: 100;
+  flex-shrink: 0;
   transition: all var(--transition-speed) var(--transition-timing);
 }
 
 .system-menu-bar {
-  padding: 0.5rem 1.5rem;
-  background: var(--bg-panel);
+  padding: 0 1.5rem;
+  height: 56px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
   position: relative;
   z-index: 200;
   box-shadow: none;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .system-menu-bar .brand-group {
@@ -2427,16 +2535,18 @@ html, body {
 }
 
 .formatting-toolbar {
-  padding: 0.5rem 1.5rem;
-  background: var(--bg-toolbar);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  padding: 0 1.5rem;
+  height: 48px;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
   z-index: 100;
   border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .formatting-toolbar .actions {
@@ -2459,82 +2569,157 @@ html, body {
 
 .classic-menus {
   display: flex;
-  gap: 0.5rem;
-  margin-left: 1rem;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
 }
 
+/* --- Solid Opaque Premium Menus --- */
+
 .menu-item {
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-  padding: 0.4rem 0.8rem;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 14px;
+  margin: 0 4px;
   cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s;
+  border-radius: 6px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   user-select: none;
+  white-space: nowrap;
 }
 
 .menu-item:hover, .menu-item.active {
-  color: var(--text-primary);
-  background: var(--border-strong);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+html.dark .menu-item:hover, html.dark .menu-item.active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .dropdown-menu {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 0.5rem;
+  margin-top: 6px;
   background: var(--bg-panel);
-  min-width: 180px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
-  z-index: 100;
-  padding: 6px;
-  animation: menuFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  min-width: 250px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px !important;
+  box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.2), 0 4px 16px -4px rgba(0, 0, 0, 0.1) !important; 
+  z-index: 1000;
+  padding: 8px;
+  animation: eliteMenuSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
 }
 
-@keyframes menuFadeIn {
-  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+html.dark .dropdown-menu {
+  background: #1a1a1a;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.5), 0 4px 16px -4px rgba(0, 0, 0, 0.3) !important;
+}
+
+@keyframes eliteMenuSlide {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .dropdown-menu-large {
-  min-width: 220px;
+  min-width: 280px;
 }
 
 .dropdown-item {
-  padding: 6px 12px;
+  padding: 10px 14px;
   margin: 2px 0;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   justify-content: flex-start;
   align-items: center;
   position: relative;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: 6px !important;
+  transition: background 0.1s ease;
+  border: none;
 }
 
 .dropdown-item:hover {
-  background: var(--bg-hover);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+html.dark .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* Keyboard Shortcut badges */
+.dropdown-item .shortcut {
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.04);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-left: auto;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+  order: 2; /* Flex layout alignment override */
+  letter-spacing: 0px;
+}
+
+html.dark .dropdown-item .shortcut {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dropdown-item:hover .shortcut {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.1);
   color: var(--text-primary);
 }
 
-.dropdown-item .shortcut {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  margin-left: auto;
-  position: absolute;
-  right: 1rem;
+html.dark .dropdown-item:hover .shortcut {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .dropdown-item .check-icon {
   margin-right: 0.5rem;
   width: 1rem;
   display: inline-block;
+  font-size: 13px;
+}
+
+/* Cascading Submenu Styling */
+.dropdown-item.has-submenu .submenu {
+  position: absolute;
+  top: -8px;
+  left: 100%;
+  margin-left: 6px;
+  display: none;
+  background: var(--bg-panel); 
+  border: 1px solid var(--border-subtle); 
+  border-radius: 10px !important;
+  box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.15), 0 4px 16px -4px rgba(0, 0, 0, 0.08) !important; 
+  padding: 8px;
+  min-width: 200px;
+  z-index: 1001;
+}
+
+html.dark .dropdown-item.has-submenu .submenu {
+  background: #1a1a1a;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.5), 0 4px 16px -4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dropdown-item.has-submenu:hover .submenu {
+  display: block;
+  animation: eliteMenuSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .octopus-status-bar {
@@ -2557,7 +2742,12 @@ html, body {
 .dropdown-divider {
   height: 1px;
   background: var(--border-subtle);
-  margin: 4px 6px;
+  margin: 6px 8px;
+  opacity: 0.8;
+}
+
+html.dark .dropdown-divider {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .format-actions {
@@ -2568,14 +2758,14 @@ html, body {
 
 .icon-btn {
   background: transparent;
-  color: var(--text-primary);
-  border: 1px solid transparent;
+  color: var(--text-muted);
+  border: none;
   width: 32px;
   height: 32px;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 6px;
+  border-radius: 0 !important;
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
@@ -2584,9 +2774,8 @@ html, body {
 }
 
 .icon-btn:hover {
-  background: var(--border-strong);
-  color: var(--text-primary);
-  border-color: var(--border-strong);
+  background: var(--bg-hover);
+  color: var(--accent-color);
 }
 
 .icon-btn svg {
@@ -2618,13 +2807,14 @@ html, body {
 }
 
 .brand h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-size: 1.15rem;
+  font-weight: 700;
   margin: 0;
-  background: linear-gradient(135deg, #FF0080, #7928CA);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
+  -webkit-text-fill-color: unset;
+  background: none;
 }
 
 .current-env-indicator {
@@ -2660,7 +2850,7 @@ html, body {
   background: var(--border-strong);
   color: var(--text-primary);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 0 !important;
   padding: 0.4rem 0.75rem;
   font-family: inherit;
   font-size: 0.85rem;
@@ -2677,7 +2867,7 @@ html, body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 0 !important;
   font-size: 0.875rem;
   font-weight: 500;
   border: none;
@@ -2688,28 +2878,29 @@ html, body {
 
 .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary {
-  background: linear-gradient(to right, var(--accent-color), #4f46e5);
-  color: var(--text-primary);
+  background: var(--accent-color);
+  color: #0f111a;
 }
 
 .btn-copy {
-  background: linear-gradient(to right, #f59e0b, #d97706);
-  color: var(--text-primary);
+  background: var(--accent-color);
+  color: #0f111a;
 }
 
 .btn-native {
-  background: var(--border-strong);
-  color: #f1f5f9;
-  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--accent-color);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(12px);
 }
 
 .btn-wechat {
-  background: linear-gradient(to right, #059669, #10b981);
-  color: var(--text-primary);
+  background: var(--success-color, #10b981);
+  color: #ffffff;
 }
 
 .workspace {
@@ -2719,13 +2910,12 @@ html, body {
   height: 100%;
   overflow: hidden;
   position: relative;
-  min-height: 0; /* CRITICAL BUGFIX: Prevents flex children blowout */
-  border-radius: 16px;
-  border: 1px solid var(--border-subtle);
-  box-shadow: 
-    var(--shadow-glass),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05); /* Premium Top Border Glow */
-  background: var(--bg-panel);
+  min-height: 0;
+  border-radius: 0 !important;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  box-shadow: none;
+  background: transparent;
   transition: all var(--transition-speed) var(--transition-timing);
 }
 
@@ -2737,7 +2927,7 @@ html, body {
 .editor-pane {
   height: 100%;
   border-right: 1px solid var(--border-subtle);
-  background: var(--bg-panel);
+  background: #ffffff;
   overflow: hidden;
   display: flex;
   flex-direction: row;
@@ -2755,11 +2945,34 @@ html, body {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 15px !important;
+  line-height: 1.625 !important;
+  background: transparent !important;
+  color: #374151 !important;
 }
 .editor-pane ::v-deep(.cm-scroller) {
   overflow-y: auto;
   overflow-x: auto;
   height: 100%;
+}
+.editor-pane ::v-deep(.cm-content) {
+  font-family: 'JetBrains Mono', monospace !important;
+  padding: 2rem !important;
+}
+.editor-pane ::v-deep(.cm-gutters) {
+  background: transparent !important;
+  border-right: none !important;
+  color: #64748b !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 15px !important;
+  min-width: 48px;
+  padding-right: 1rem;
+  padding-top: 0.25rem;
+}
+.editor-pane ::v-deep(.cm-lineNumbers .cm-gutterElement) {
+  text-align: right;
+  padding-right: 1rem;
 }
 
 /* TOC Panel */
@@ -2773,7 +2986,7 @@ html, body {
   flex-shrink: 0;
 }
 .toc-header {
-  height: 48px;
+  height: 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2790,7 +3003,7 @@ html, body {
   padding: 8px 0;
 }
 .toc-content::-webkit-scrollbar { width: 6px; }
-.toc-content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+.toc-content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 0 !important; }
 .toc-item {
   padding: 6px 12px 6px 20px;
   font-size: 0.8rem;
@@ -2842,7 +3055,7 @@ html, body {
 .preview-pane {
   height: 100%;
   position: relative;
-  background: var(--bg-preview);  /* Edge-to-edge true white PC view */
+  background: var(--bg-preview);
   color: var(--text-primary);
   overflow-y: auto;
   overflow-x: hidden;
@@ -2852,12 +3065,11 @@ html, body {
 }
 
 .preview-pane::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 0 !important;
 }
 .preview-pane::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
+  background: rgba(100, 116, 139, 0.8);
 }
 
 .preview-pane.is-mobile {
@@ -2869,20 +3081,50 @@ html, body {
 }
 
 .preview-content {
-  padding: 2.5rem 3rem 4rem 3rem !important; /* Soft bottom flow */
+  padding: 2.5rem 2.5rem 4rem 2.5rem !important;
   width: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
+  max-width: 48rem !important;
+  margin: 0 auto !important;
   min-height: 100% !important;
-  background: var(--bg-preview) !important;
+  background: transparent !important;
   box-sizing: border-box !important;
   border: none !important;
   box-shadow: none !important;
+  font-family: var(--font-body) !important;
+  font-size: 15px !important;
+  line-height: 1.8 !important;
+  color: var(--text-primary) !important;
 }
 
 .view-toggles-pill {
   display: flex;
-  background: var(--bg-app); /* Match the dark nav background */
+  flex-direction: row;
+  align-items: center;
+  background: transparent;
+  gap: 2px;
+}
+
+.view-toggles-pill .pill-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0 !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.view-toggles-pill .pill-btn.active {
+  background: var(--accent-light);
+  color: var(--accent-color);
+}
+.view-toggles-pill .pill-btn:hover {
+  color: var(--accent-color);
 }
 
 /* --- UI Components --- */
@@ -2891,10 +3133,10 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg-panel);
+  background: transparent;
   padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border-strong);
+  border-radius: 0 !important;
+  border: 1px solid var(--border-subtle);
   box-shadow: 0 2px 4px rgba(0,0,0,0.04);
   transition: all 0.25s ease;
 }
@@ -2944,7 +3186,7 @@ html, body {
   color: var(--text-muted);
   background: var(--bg-hover);
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 0 !important;
   padding: 5px 10px;
   cursor: pointer;
   transition: all 0.25s ease;
@@ -2959,7 +3201,7 @@ html, body {
   width: 414px !important;
   max-width: 414px !important;
   min-height: 852px !important;
-  border-radius: 46px !important;
+  border-radius: 0 !important;
   border: 4px solid var(--bg-panel) !important;
   box-shadow: 
     var(--shadow-preview-device),
@@ -2981,7 +3223,7 @@ html, body {
   width: 120px;
   height: 35px;
   background: #000000;
-  border-radius: 20px;
+  border-radius: 0 !important;
   z-index: 10;
   box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.2);
 }
@@ -2995,7 +3237,7 @@ html, body {
   width: 4px;
   height: 60px;
   background: var(--border-strong);
-  border-radius: 4px 0 0 4px;
+  border-radius: 0 !important;
   box-shadow: 
     0 -80px 0 0 var(--border-strong), 
     0 -120px 0 -1px var(--border-strong),
@@ -3014,7 +3256,7 @@ html, body {
   display: flex;
   background: var(--bg-toolbar);
   padding: 4px;
-  border-radius: 8px;
+  border-radius: 0 !important;
   margin-right: 1.5rem;
   box-shadow: inset 0 1px 4px rgba(0,0,0,0.3), 0 1px 1px var(--border-subtle);
 }
@@ -3022,7 +3264,7 @@ html, body {
   background: transparent;
   color: var(--text-secondary);
   border: none;
-  border-radius: 6px;
+  border-radius: 0 !important;
   padding: 0.45rem 1.1rem;
   cursor: pointer;
   display: flex;
@@ -3055,7 +3297,7 @@ html, body {
   left: 14px;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: 0 !important;
   background: #ff5f56;
   box-shadow: 20px 0 0 #ffbd2e, 40px 0 0 #27c93f;
 }
@@ -3095,7 +3337,7 @@ html, body {
   border: 1px solid transparent;
   color: var(--text-primary);
   padding: 0.35rem 2.2rem 0.35rem 0.8rem;
-  border-radius: 6px;
+  border-radius: 0 !important;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -3124,7 +3366,7 @@ html, body {
   font-size: 0.85rem;
   font-weight: 500;
   padding: 0.35rem 0.5rem;
-  border-radius: 6px;
+  border-radius: 0 !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -3136,7 +3378,7 @@ html, body {
 .export-modal {
   background: var(--bg-panel);
   padding: 2.5rem 3rem;
-  border-radius: 16px;
+  border-radius: 0 !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   text-align: center;
   border: 1px solid var(--border-strong);
@@ -3146,7 +3388,7 @@ html, body {
 }
 
 .premium-modal {
-  border-radius: 20px;
+  border-radius: 0 !important;
   background: var(--bg-panel);
   box-shadow: 0 40px 80px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
   backdrop-filter: blur(48px) saturate(200%);
@@ -3162,7 +3404,7 @@ html, body {
 .setting-input {
   width: 100%;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 0 !important;
   background: var(--bg-app);
   color: var(--text-primary);
   padding: 8px 12px;
@@ -3179,7 +3421,7 @@ html, body {
 .copy-group {
   display: flex;
   background: var(--bg-hover);
-  border-radius: 6px;
+  border-radius: 0 !important;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
@@ -3217,7 +3459,7 @@ html, body {
   background: var(--accent-color);
   color: var(--text-primary);
   border: none;
-  border-radius: 6px;
+  border-radius: 0 !important;
   padding: 0.35rem 1rem;
   cursor: pointer;
   font-size: 0.85rem;
@@ -3238,7 +3480,7 @@ html, body {
   display: flex;
   background: var(--bg-app); /* Match the dark nav background */
   padding: 4px;
-  border-radius: 8px;
+  border-radius: 0 !important;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 1px 1px var(--border-subtle);
 }
 
@@ -3246,7 +3488,7 @@ html, body {
   background: transparent;
   color: var(--text-secondary);
   border: none;
-  border-radius: 6px;
+  border-radius: 0 !important;
   padding: 0.45rem 1rem;
   font-size: 0.85rem;
   font-weight: 500;
@@ -3279,7 +3521,7 @@ html, body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   padding: 14px 10px;
-  border-radius: 20px;
+  border-radius: 0 !important;
   box-shadow: var(--shadow-glass); /* Bugfix: Premium generic shadow instead of hardcoded dark shadow */
   z-index: 50;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -3287,7 +3529,7 @@ html, body {
 
 .float-btn {
   width: 44px; height: 44px;
-  border-radius: 12px;
+  border-radius: 0 !important;
   border: none;
   background: var(--bg-hover); /* Contrast Bugfix: Uses dynamic theme token */
   color: var(--text-secondary);
@@ -3332,7 +3574,7 @@ html, body {
 .export-modal {
   background: var(--bg-panel);
   padding: 2.5rem 3rem;
-  border-radius: 16px;
+  border-radius: 0 !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   text-align: center;
   border: 1px solid var(--border-strong);
@@ -3361,7 +3603,7 @@ html, body {
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   color: #f8fafc;
   padding: 1.2rem 1.8rem;
-  border-radius: 14px;
+  border-radius: 0 !important;
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08); /* Elite shadow */
   z-index: 99999;
   display: flex;
@@ -3400,7 +3642,7 @@ html, body {
   height: 50px;
   border: 4px solid var(--border-strong);
   border-top-color: var(--accent-color);
-  border-radius: 50%;
+  border-radius: 0 !important;
   animation: spin 1s linear infinite;
   margin: 0 auto;
 }
@@ -3442,7 +3684,7 @@ html, body {
 }
 /* Mac Code Block Styles */
 .mac-code-block {
-  border-radius: 8px;
+  border-radius: 0 !important;
   overflow: hidden;
   margin-bottom: 20px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -3459,25 +3701,25 @@ html, body {
 }
 .mac-code-block .mac-dot {
   width: 12px; height: 12px;
-  border-radius: 50%;
+  border-radius: 0 !important;
   display: inline-block;
 }
 .mac-code-block pre.hljs {
   margin: 0 !important;
-  border-radius: 0 0 8px 8px !important;
+  border-radius: 0 !important;
 }
 
 /* Sidebar Control Tabs */
 .s-tab { border-bottom: 2px solid transparent !important; opacity: 0.5; transition: all 0.2s; }
 .s-tab:hover { opacity: 0.8; }
-.s-tab.active { border-bottom: 2px solid var(--accent-light) !important; opacity: 1; color: var(--accent-light) !important; }
+.s-tab.active { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
 
 /* User-Requested UI Component Polish (Segments) */
 .view-toggles-pill {
   display: flex;
   background: var(--bg-hover);
   padding: 4px;
-  border-radius: 10px;
+  border-radius: 0 !important;
   gap: 4px;
   border: 1px solid var(--border-subtle);
 }
@@ -3489,7 +3731,7 @@ html, body {
   font-size: 0.85rem;
   font-weight: 500;
   padding: 0.4rem 0.8rem;
-  border-radius: 6px;
+  border-radius: 0 !important;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -3523,7 +3765,7 @@ html.dark .view-toggles-pill .pill-btn.active {
   max-width: 90vw;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
+  border-radius: 0 !important;
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0,0,0,0.06);
   z-index: 2000;
@@ -3558,7 +3800,7 @@ html.dark .smart-link-palette {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: 0 !important;
   color: #fff;
   background: #f59e0b;
   box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
@@ -3567,7 +3809,7 @@ html.dark .smart-link-palette {
 .smart-badge {
   font-size: 0.75rem;
   padding: 4px 12px;
-  border-radius: 99px;
+  border-radius: 0 !important;
   font-weight: 700;
   letter-spacing: 0.3px;
   transition: all 0.2s;
@@ -3595,7 +3837,7 @@ html.dark .smart-link-palette {
   border: 1px solid var(--border-strong);
   color: var(--text-primary);
   padding: 6px 14px;
-  border-radius: 8px;
+  border-radius: 0 !important;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -3612,7 +3854,7 @@ html.dark .smart-link-palette {
   color: var(--text-muted);
   cursor: pointer;
   padding: 6px;
-  border-radius: 6px;
+  border-radius: 0 !important;
   display: flex;
   align-items: center;
   transition: all 0.2s;
@@ -3630,7 +3872,7 @@ html.dark .smart-link-palette {
   padding: 16px;
   background: rgba(245, 158, 11, 0.03);
   border: 1px dashed rgba(245, 158, 11, 0.3);
-  border-radius: 10px;
+  border-radius: 0 !important;
   transition: all 0.2s;
 }
 .smart-locator-glass:hover {
@@ -3658,7 +3900,7 @@ html.dark .smart-link-palette {
   font-size: 0.8rem;
   font-weight: 800;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: 0 !important;
   box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
 }
 
@@ -3686,7 +3928,7 @@ html.dark .smart-link-palette {
   align-items: center;
   background: var(--bg-app);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 0 !important;
   padding: 2px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
@@ -3697,7 +3939,7 @@ html.dark .smart-link-palette {
   color: var(--text-secondary);
   cursor: pointer;
   padding: 6px;
-  border-radius: 6px;
+  border-radius: 0 !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3724,7 +3966,7 @@ html.dark .smart-link-palette {
   gap: 8px;
   background: var(--bg-app);
   padding: 4px;
-  border-radius: 8px;
+  border-radius: 0 !important;
   border: 1px solid var(--border-subtle);
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
@@ -3738,7 +3980,7 @@ html.dark .smart-link-palette {
   display: flex;
   align-items: center;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 0 !important;
   transition: all 0.2s;
 }
 .locator-nav-btn:hover {
@@ -3781,7 +4023,7 @@ html.dark .smart-link-palette {
 .ai-icon-bg {
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  border-radius: 0 !important;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -3828,7 +4070,7 @@ html.dark .smart-link-palette {
   min-width: 140px;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 0 !important;
   box-shadow: var(--shadow-glass);
   padding: 6px;
   visibility: hidden;
@@ -3842,4 +4084,381 @@ html.dark .smart-link-palette {
   opacity: 1;
   transform: translateX(0);
 }
+
+/* ═══ Action Rail Hover Effects ═══ */
+.rail-btn:hover {
+  color: var(--accent-color) !important;
+  background: rgba(0, 240, 255, 0.1) !important;
+  transform: scale(1.05);
+}
+
+/* ═══ Distribution Pill Hover Effects ═══ */
+.dist-btn:hover {
+  color: var(--text-primary) !important;
+}
+
+/* ═══ v1.2 iPhone Frame Styles ═══ */
+.iphone-frame {
+  width: 390px;
+  height: 844px;
+  border-radius: 54px !important;
+  background-color: #1c1c1c;
+  padding: 12px;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 2px #444;
+}
+.iphone-notch {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 35px;
+  background-color: #000;
+  border-radius: 20px !important;
+  z-index: 20;
+}
+.iphone-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 42px !important;
+  background-color: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+.iphone-reflection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* FAB Hover Tooltips */
+.fab-btn:hover {
+  box-shadow: 0 0 20px rgba(139, 90, 43, 0.15) !important;
+}
+.fab-btn:hover > div {
+  opacity: 1 !important;
+}
+
+/* Active Pill Button Styling */
+.pill-btn.active {
+  background: var(--primary) !important;
+  color: #fff !important;
+  box-shadow: 0 0 20px rgba(139, 90, 43, 0.15);
+}
+
+/* Editor pane bg + flex column for footer */
+.editor-pane {
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Preview pane bg */
+.preview-pane {
+  background: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Mobile preview content padding - use thin realistic margins */
+.preview-pane.is-mobile .preview-content-wrapper {
+  padding: 16px 12px !important;
+  overflow-x: hidden !important;
+}
+
+/* Ensure mobile preview content text doesn't overflow */
+.preview-pane.is-mobile .preview-content {
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Force all child elements inside mobile preview to respect container width */
+.preview-pane.is-mobile .preview-content * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+.preview-pane.is-mobile .preview-content img {
+  height: auto !important;
+}
+.preview-pane.is-mobile .preview-content pre {
+  overflow-x: auto !important;
+  white-space: pre-wrap !important;
+}
+.preview-pane.is-mobile .preview-content table {
+  display: block !important;
+  overflow-x: auto !important;
+  width: 100% !important;
+}
+.preview-pane.is-mobile .preview-content section#nice {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow-x: hidden !important;
+}
+
+/* ═══ Fix Inner Gray & Black Borders + Black Rect Phantom ═══ */
+/* Remove Github-markdown and Theme injected borders and shadow from wrappers */
+.preview-pane.is-mobile ::v-deep(.preview-content-wrapper),
+.preview-pane.is-mobile ::v-deep(.preview-content),
+.preview-pane.is-mobile ::v-deep(#nice),
+.preview-pane.is-mobile ::v-deep(.markdown-body) {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important; /* Let iphone-screen be the white background */
+}
+
+/* Nuke rogue theme-injected notches on the wrapper */
+.preview-pane.is-mobile ::v-deep(.preview-content-wrapper::before),
+.preview-pane.is-mobile ::v-deep(.preview-content-wrapper::after),
+.preview-pane.is-mobile ::v-deep(#nice::before),
+.preview-pane.is-mobile ::v-deep(#nice::after),
+.preview-pane.is-mobile ::v-deep(.preview-content::before),
+.preview-pane.is-mobile ::v-deep(.preview-content::after),
+.preview-pane.is-mobile ::v-deep(.markdown-body::before),
+.preview-pane.is-mobile ::v-deep(.markdown-body::after) {
+  display: none !important;
+  content: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: none !important;
+}
+
+/* Nuclear: kill ANY element with black background that looks like a notch */
+.preview-pane.is-mobile ::v-deep(.mac-code-block) {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Kill any stray .mac-header or phantom black block injection in mobile view */
+.preview-pane.is-mobile ::v-deep(.mac-header) {
+  display: none !important;
+  height: 0 !important;
+  opacity: 0 !important;
+}
+.preview-pane.is-mobile ::v-deep(.mac-code-block),
+.preview-pane.is-mobile ::v-deep(pre) {
+  padding-top: 0 !important;
+  border: none !important;
+}
+
+/* ═══ Phase 18: Design Reference Parity ═══ */
+
+/* Outer wrapper: full-height centered flex container matching design ref */
+.mobile-preview-pane {
+  width: 100%;
+  height: 100%;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: #f1f5f9 !important;
+}
+
+/* Ensure preview pane is also STRICTLY f1f5f9 for seamless blending */
+.preview-pane.is-mobile {
+  background: #f1f5f9 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ambient glow from design ref */
+.mobile-preview-pane > .ambient-glow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle at top right, rgba(139, 90, 43, 0.05), transparent 400px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scale wrapper: ensures phone fits in available space */
+.iphone-scale-wrapper {
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Scale to fit: 844px native + 24px margin = ~868px needed. Scale down if viewport is shorter */
+  height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* iPhone Frame: exact design reference specs */
+.iphone-frame {
+  width: 390px;
+  height: 844px;
+  border-radius: 54px;
+  background-color: #1c1c1c;
+  padding: 12px;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 2px #444;
+  flex-shrink: 0;
+  /* Scale to fit available height */
+  max-height: 100%;
+  transform: scale(1);
+  transform-origin: center center;
+}
+
+/* When the container is shorter than 844px, scale frame down to fit */
+@media (max-height: 950px) {
+  .iphone-frame {
+    transform: scale(0.85);
+  }
+}
+@media (max-height: 800px) {
+  .iphone-frame {
+    transform: scale(0.72);
+  }
+}
+
+.iphone-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 42px;
+  background-color: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Entrance animation */
+@keyframes floatUpFade {
+  0% { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.staggered-2 {
+  animation: floatUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.1s;
+}
 </style>
+
+<style>
+
+/* --- AI Rotary Menu Layout --- */
+.fab-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.fab-container .ai-rotary-btn .action-icon {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.fab-container:not(.is-open) .ai-rotary-btn:hover .ai-tooltip {
+  opacity: 1 !important;
+}
+.fab-btn:hover > div {
+  opacity: 1 !important;
+}
+.fab-container.is-open .ai-rotary-btn .action-icon {
+  transform: rotate(135deg) scale(0.9);
+}
+.fab-container.is-open .ai-rotary-btn {
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15) !important;
+}
+.fab-menu {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: none;
+}
+.fab-container.is-open .fab-menu {
+  pointer-events: auto;
+}
+.fab-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(20px) scale(0.8) rotate(-10deg);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  padding: 0;
+}
+.fab-container.is-open .fab-item {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(0deg);
+}
+/* Stagger bottom to top */
+.fab-container.is-open .fab-item:nth-child(2) {
+  transition-delay: 0.05s;
+}
+.fab-container.is-open .fab-item:nth-child(1) {
+  transition-delay: 0.1s;
+}
+.fab-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  color: white;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fab-icon-wrapper.assistant {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+}
+.fab-icon-wrapper.pic-gen {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+}
+.fab-item:hover .fab-icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+.fab-label {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  white-space: nowrap;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'PingFang SC', sans-serif;
+  border: 1px solid var(--border-subtle);
+  transition: transform 0.2s;
+}
+.fab-item:hover .fab-label {
+  transform: translateX(-4px);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+html.dark .fab-label {
+  background: #2a2a2a;
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+/* Theme List Items */
+.theme-list-item:hover { background: rgba(0,0,0,0.03) !important; }
+.theme-list-item.is-active { background: rgba(139,90,43,0.06) !important; }
+.setting-input:focus { border-color: var(--primary) !important; }
+.panel-select:focus { border-color: var(--primary) !important; }
+</style>
+

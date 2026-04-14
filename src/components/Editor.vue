@@ -1204,7 +1204,57 @@ const exportFile = (type: 'md' | 'html' | 'json') => {
     output = content.value;
   } else if (type === 'html') {
     const rawHtml = document.getElementById('nice')?.innerHTML || '';
-    output = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Octopus Export</title><style>body { font-family: sans-serif; padding: 20px; }</style></head><body>${rawHtml}</body></html>`;
+    output = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Octopus Export</title><style>body { font-family: sans-serif; padding: 20px; }
+
+:deep(.cm-scroller) {
+  padding-top: 4px !important;
+}
+:deep(.cm-content) {
+  padding-top: 4px !important;
+}
+  
+
+
+:deep(.cm-wrapper) { margin-top: 0 !important; }
+.editor-main-area { padding-top: 0 !important; margin-top: 0 !important; }
+
+
+/* =========================================================
+   ULTIMATE LAYOUT GAP FIXES (APPENDED LAST TO WIN SPECIFICITY)
+   ========================================================= */
+.formatting-toolbar {
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  border-bottom: 0 !important;
+}
+
+.workspace {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.toc-header {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 12px !important;
+  line-height: 32px !important;
+}
+
+/* CodeMirror explicit padding reset to fix false-gap illusion on right side */
+:deep(.cm-scroller),
+:deep(.cm-content) {
+  padding-top: 4px !important;
+  margin-top: 0 !important;
+}
+
+/* Kill any rogue header spacers */
+.header-spacer {
+  display: none !important;
+  height: 0 !important;
+}
+
+</style></head><body>${rawHtml}</body></html>`;
     mimeType = 'text/html';
   } else if (type === 'json') {
     const rawHtml = document.getElementById('nice')?.innerHTML || '';
@@ -1756,7 +1806,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
     </header>
 
     <!-- Tier 2: Formatting Toolbar (Floats dynamically or Pins in Zen Mode) -->
-    <div class="octopus-header formatting-toolbar" :class="{ 'is-zen-floating': isZenMode && !isZenToolbarPinned }" :style="isZenMode && !isZenToolbarPinned ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : (isZenMode && isZenToolbarPinned ? { position: 'static', width: '100%', margin: 0, borderRadius: 0, padding: 0, boxShadow: 'var(--shadow-subtle)', background: 'var(--bg-panel)' } : { padding: 0, height: 'auto', background: 'var(--bg-panel)' })" @mousedown.prevent="isZenMode && !isZenToolbarPinned ? startZenDrag($event) : null">
+    <div class="formatting-toolbar" :class="{ 'is-zen-floating': isZenMode && !isZenToolbarPinned }" :style="isZenMode && !isZenToolbarPinned ? { left: zenX + 'px', top: zenY + 'px', position: 'fixed', zIndex: 2000, margin: 0, width: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', cursor: 'move', userSelect: 'none', borderRadius: '12px', padding: '0', flexDirection: 'column', background: 'var(--bg-panel)' } : (isZenMode && isZenToolbarPinned ? { position: 'static', width: '100%', margin: 0, borderRadius: 0, padding: 0, boxShadow: 'var(--shadow-subtle)', background: 'var(--bg-panel)' } : { padding: 0, height: 'auto', background: 'var(--bg-panel)' })" @mousedown.prevent="isZenMode && !isZenToolbarPinned ? startZenDrag($event) : null">
       
       <!-- Zen Mode Drag Handle -->
       <div v-if="isZenMode" class="zen-toolbar-handle" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-bottom: 1px solid var(--border-subtle); border-radius: 12px 12px 0 0;" :style="isZenToolbarPinned ? { cursor: 'default' } : {}">
@@ -1905,7 +1955,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="iphone-scale-wrapper staggered-2">
             <div class="iphone-frame">
               <div class="iphone-screen">
-                <div class="preview-content-wrapper" style="width: 100%; height: 100%; overflow-y: auto; padding: 14px 16px; box-sizing: border-box; font-family: 'Noto Serif SC', serif; color: #1a1a1a;">
+                <div class="preview-content-wrapper" style="width: 100%; height: 100%; overflow-y: auto; padding: 8px 16px; box-sizing: border-box; font-family: 'Noto Serif SC', serif; color: #1a1a1a;">
                   <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
                 </div>
               </div>
@@ -2472,7 +2522,7 @@ html, body {
 
 
 /* Quick Actions & TOC Styling */
-.format-actions { display: flex; align-items: center; gap: 0.4rem; padding: 0px 12px; background: var(--bg-panel); border-bottom: 1px solid var(--border-subtle); overflow-x: auto; }
+.format-actions { display: flex; align-items: center; gap: 0.4rem; padding: 0 12px; background: transparent; border-bottom: none; overflow-x: auto; height: 100%; min-height: 40px; margin: 0; }
 .format-actions::-webkit-scrollbar { height: 0; display: none; }
 .icon-btn { background: transparent; color: var(--text-primary); border: 1px solid transparent; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit; font-size: 1rem; position: relative; flex-shrink: 0; }
 .icon-btn:hover { background: var(--border-strong); }

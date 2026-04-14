@@ -1254,7 +1254,34 @@ const exportFile = (type: 'md' | 'html' | 'json') => {
   height: 0 !important;
 }
 
-</style></head><body>${rawHtml}</body></html>`;
+
+
+
+
+/* Wipe out margin-top and padding-top on the first element in the mobile preview using :deep() */
+.preview-content-wrapper :deep(*) {
+  /* We apply a generic first-child reset deep down */
+}
+:deep(.preview-content) > *:first-child),
+:deep(.preview-content) > section:first-child > *:first-child),
+:deep(#rich_media_content > *:first-child) {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Ensure the markdown-body itself has no margin/padding at the top */
+:deep(.preview-content)) {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Also kill the padding inside the wrapper itself entirely on top */
+.preview-content-wrapper {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+\n\/* BRUTAL MOBILE GAP RESET *\/\n.preview-content-wrapper :deep(*) {\n  margin-top: 0 !important;\n  padding-top: 0 !important;\n}\n.preview-content-wrapper :deep(h1), .preview-content-wrapper :deep(h2), .preview-content-wrapper :deep(p) {\n  margin-top: 1em;\n}\n.preview-content-wrapper :deep(*:first-child) {\n  margin-top: 0 !important;\n  padding-top: 0 !important;\n}\n.preview-content-wrapper :deep(#rich_media_content) {\n  padding-top: 0 !important;\n}\n\/* Re-enable normal spacing for sibling text blocks *\/\n.preview-content-wrapper :deep(* + h1), .preview-content-wrapper :deep(* + h2) { margin-top: 1.5em !important; }\n.preview-content-wrapper .preview-content :deep(> h1:first-of-type), .preview-content-wrapper .preview-content :deep(> div:first-child > h1:first-of-type), .preview-content-wrapper :deep(#rich_media_content > h1:first-of-type), .preview-content-wrapper :deep(#rich_media_content > section > h1:first-of-type) { margin-top: 0 !important; padding-top: 0 !important; }\n\n\/* SCORCHED EARTH MOBILE TOP RESET *\/\n.preview-content-wrapper .preview-content :deep(> *:first-child),\n.preview-content-wrapper .preview-content :deep(> section:first-child),\n.preview-content-wrapper .preview-content :deep(#rich_media_content > *:first-child),\n.preview-content-wrapper .preview-content :deep(#rich_media_content > section:first-child > *:first-child) {\n  margin-top: 0 !important;\n  padding-top: 0 !important;\n}\n\/* Target WeChat specific wrappers *\/\n.preview-content-wrapper :deep(#js_article),\n.preview-content-wrapper :deep(#rich_media_content) {\n  padding-top: 0 !important;\n  margin-top: 0 !important;\n}\n\/* Target empty paragraphs if markdown injects them *\/\n.preview-content-wrapper :deep(p:empty:first-child) {\n  display: none !important;\n}\n.preview-content-wrapper :deep(.rich_media_area_primary) {\n  padding-top: 0 !important;\n}\n</style></head><body>${rawHtml}</body></html>`;
     mimeType = 'text/html';
   } else if (type === 'json') {
     const rawHtml = document.getElementById('nice')?.innerHTML || '';
@@ -1955,7 +1982,17 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="iphone-scale-wrapper staggered-2">
             <div class="iphone-frame">
               <div class="iphone-screen">
-                <div class="preview-content-wrapper" style="width: 100%; height: 100%; overflow-y: auto; padding: 8px 16px; box-sizing: border-box; font-family: 'Noto Serif SC', serif; color: #1a1a1a;">
+                <!-- Authentic iOS Status Bar -->
+                <div class="ios-status-bar" style="height: 48px; width: 100%; position: absolute; top: 0; left: 0; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 26px 10px 26px; box-sizing: border-box; z-index: 10; pointer-events: none; color: #000;">
+                  <span style="font-size: 15px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: -0.2px;">9:41</span>
+                  <!-- Dynamic Island -->
+                  <div style="position: absolute; left: 50%; top: 11px; transform: translateX(-50%); width: 120px; height: 35px; background: #000; border-radius: 20px;"></div>
+                  <!-- Right Icons -->
+                  <div style="display: flex; gap: 6px; align-items: center; padding-bottom: 2px;">
+                    <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><path d="M17 3.5C17 2.67157 16.3284 2 15.5 2C15.5 2 14 2 14 2V9C14 9 15.5 9 15.5 9C16.3284 9 17 8.32843 17 7.5V3.5Z"/><rect x="0.5" y="0.5" width="12" height="10" rx="2.5" stroke="currentColor" fill="transparent"/><rect x="2" y="2" width="9" height="7" rx="1" fill="currentColor"/></svg>
+                  </div>
+                </div>
+                <div class="preview-content-wrapper" style="width: 100%; height: 100%; overflow-y: auto; padding: 56px 16px 16px 16px; box-sizing: border-box; font-family: 'Noto Serif SC', serif; color: #1a1a1a;">
                   <div class="preview-content" :class="extraCssClass" v-html="htmlOutput"></div>
                 </div>
               </div>
@@ -4220,7 +4257,7 @@ html.dark .smart-link-palette {
 
 /* Mobile preview content padding - use thin realistic margins */
 .preview-pane.is-mobile .preview-content-wrapper {
-  padding: 16px 12px !important;
+  padding: 0 12px !important;
   overflow-x: hidden !important;
 }
 

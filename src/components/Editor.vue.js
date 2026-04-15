@@ -25,6 +25,54 @@ const codeThemeMap = {
     'monokai': monokaiCss,
     'dracula': draculaCss
 };
+// --- Image Cropper Logic ---
+const isCropperOpen = ref(false);
+const currentCropImageUrl = ref('');
+const openCropper = (url) => {
+    currentCropImageUrl.value = url;
+    isCropperOpen.value = true;
+};
+const closeCropper = () => {
+    isCropperOpen.value = false;
+    currentCropImageUrl.value = '';
+};
+const handlePreviewClick = (e) => {
+    const target = e.target;
+    if (target && target.tagName && target.tagName.toLowerCase() === 'img') {
+        const src = target.getAttribute('src');
+        if (src && !src.startsWith('data:image')) {
+            openCropper(src);
+        }
+    }
+};
+const handleCropSave = async (file) => {
+    try {
+        const oldUrl = currentCropImageUrl.value;
+        // Build a temp config fallback to GitHub or picgo if not strictly typed
+        let conf = { provider: 'picgo' };
+        const stored = localStorage.getItem('octopus-img');
+        if (stored) {
+            try {
+                conf = JSON.parse(stored);
+            }
+            catch (e) { }
+        }
+        const newUrl = await uploadImage(file, conf);
+        // Replace markdown string
+        content.value = content.value.replace(oldUrl, newUrl);
+        closeCropper();
+        // Toast
+        if (typeof showToast === "function") {
+            showToast("图片裁剪并替换成功", "success");
+        }
+    }
+    catch (e) {
+        console.error(e);
+        if (typeof showToast === "function")
+            showToast("替换失败：" + e.message, "error");
+    }
+};
+// --- End Image Cropper Logic ---
 const isDesktop = ref(!!window.electronAPI);
 const isWechatAvailable = ref(!!window.wechatAPI);
 // Wenyan Parity: Themes Picker (BMPI Collection)
@@ -3624,6 +3672,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
 });
 /** @type {__VLS_StyleScopedClasses['resizer-handle']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ onClick: (__VLS_ctx.handlePreviewClick) },
     ...{ class: "preview-pane" },
     ...{ class: ({ 'is-mobile': __VLS_ctx.viewMode === 'mobile' }) },
     ref: "previewContainer",
@@ -3643,7 +3692,7 @@ if (__VLS_ctx.themeStyleContent) {
     const { default: __VLS_42 } = __VLS_40.slots;
     (__VLS_ctx.themeStyleContent);
     // @ts-ignore
-    [themeStyleContent, themeStyleContent, content, content, content, content, viewMode, isEditingTheme, isEditingTheme, leftWidth, tocList, extensions, handleReady, startDrag,];
+    [themeStyleContent, themeStyleContent, content, content, content, content, viewMode, isEditingTheme, isEditingTheme, leftWidth, tocList, extensions, handleReady, startDrag, handlePreviewClick,];
     var __VLS_40;
 }
 if (__VLS_ctx.codeThemeStyleContent) {

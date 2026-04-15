@@ -11,6 +11,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
 import { uploadImage, type UploadConfig } from '../utils/uploader';
+import CropperModal from './CropperModal.vue';
 
 // Static raw CSS imports to bypass Vite dynamic loader sandbox and CDN blocks
 import githubCss from 'highlight.js/styles/github.css?raw';
@@ -28,6 +29,56 @@ const codeThemeMap: Record<string, string> = {
   'monokai': monokaiCss,
   'dracula': draculaCss
 };
+
+
+// --- Image Cropper Logic ---
+const isCropperOpen = ref(false);
+const currentCropImageUrl = ref('');
+
+const openCropper = (url: string) => {
+  currentCropImageUrl.value = url;
+  isCropperOpen.value = true;
+};
+const closeCropper = () => {
+  isCropperOpen.value = false;
+  currentCropImageUrl.value = '';
+};
+
+const handlePreviewClick = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (target && target.tagName && target.tagName.toLowerCase() === 'img') {
+    const src = target.getAttribute('src');
+    if (src && !src.startsWith('data:image')) {
+      openCropper(src);
+    }
+  }
+};
+
+const handleCropSave = async (file: File) => {
+  try {
+    const oldUrl = currentCropImageUrl.value;
+    // Build a temp config fallback to GitHub or picgo if not strictly typed
+    let conf: UploadConfig = { provider: 'picgo' }; 
+    const stored = localStorage.getItem('octopus-img');
+    if (stored) {
+        try { conf = JSON.parse(stored); } catch(e){}
+    }
+    const newUrl = await uploadImage(file, conf);
+    
+    // Replace markdown string
+    content.value = content.value.replace(oldUrl, newUrl);
+    closeCropper();
+    
+    // Toast
+    if (typeof showToast === "function") {
+        showToast("图片裁剪并替换成功", "success");
+    }
+  } catch (e: any) {
+    console.error(e);
+    if (typeof showToast === "function") showToast("替换失败：" + e.message, "error");
+  }
+};
+// --- End Image Cropper Logic ---
 
 const isDesktop = ref(!!(window as any).electronAPI);
 const isWechatAvailable = ref(!!(window as any).wechatAPI);
@@ -2054,7 +2105,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <div class="resizer-handle"></div>
       </div>
 
-      <div class="preview-pane" :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isEditingTheme ? '33.333%' : (100 - leftWidth + '%'), position: 'relative' }">
+      <div class="preview-pane" @click="handlePreviewClick"  :class="{ 'is-mobile': viewMode === 'mobile' }" ref="previewContainer" :style="{ width: isEditingTheme ? '33.333%' : (100 - leftWidth + '%'), position: 'relative' }">
         
         <!-- Inject dynamic CSS raw strings explicitly into the DOM -->
         <component :is="'style'" v-if="themeStyleContent" id="markdown-theme">{{ themeStyleContent }}</component>

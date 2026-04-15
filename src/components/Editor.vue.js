@@ -1001,10 +1001,10 @@ const syncToPlatform = (plat) => {
         twitter: 'https://twitter.com/compose/tweet',
         weibo: 'https://weibo.com/'
     };
-    // URL routing is now handled safely by the COSE Extension mapping in background.js.
+    // URL routing is now handled safely by the sync Extension mapping in background.js.
     // We keep this generic fallback ONLY if the extension isn't installed.
     window.setTimeout(() => {
-        if (!isCoseInstalled.value) {
+        if (!isExtensionInstalled.value) {
             window.open(urls[plat], '_blank');
         }
     }, 100);
@@ -1085,7 +1085,7 @@ const copyHtml = (platform = 'wechat') => {
         const platName = platform === 'wechat' ? '微信' : (platform === 'zhihu' ? '知乎' : (platform === 'weibo' ? '微博' : (platform === 'twitter' ? 'X (Twitter)' : '云端')));
         // Check if the Extension bridge is listening. If yes, pass raw payloads via IPC.
         // If not, it falls back instantly to the old behavior (just copying).
-        if (isCoseInstalled.value) {
+        if (isExtensionInstalled.value) {
             window.postMessage({
                 type: 'OCTOPUS_EMIT_SYNC',
                 payload: {
@@ -1100,11 +1100,11 @@ const copyHtml = (platform = 'wechat') => {
             }, '*');
         }
         document.execCommand('copy');
-        if (isCoseInstalled.value) {
-            showToast(`🚀 已存入剪贴板！正由 COSE 扩展接管前往【${platName}】并尝试自动注入...`, "success");
+        if (isExtensionInstalled.value) {
+            showToast(`🚀 已存入剪贴板！正由 Octopus MD 扩展接管前往【${platName}】并尝试自动注入...`, "success");
         }
         else {
-            showToast(`✅ 已入板！请直接去【${platName}】粘贴以完成发布。(推荐安装 COSE 扩展实现全自动)`, "success");
+            showToast(`✅ 已入板！请直接去【${platName}】粘贴以完成发布。(推荐安装 Octopus MD 扩展实现全自动)`, "success");
         }
     }
     catch (e) {
@@ -1175,7 +1175,7 @@ const syncWechat = async () => {
     }
 };
 const isExporting = ref(false);
-const isCoseInstalled = ref(false);
+const isExtensionInstalled = ref(false);
 onMounted(() => {
     document.addEventListener('click', (e) => {
         isAiMenuOpen.value = false;
@@ -1183,9 +1183,9 @@ onMounted(() => {
     window.addEventListener('message', (event) => {
         if (event.source !== window)
             return;
-        if (event.data && event.data.type === 'OCTOPUS_COSE_INSTALLED') {
-            isCoseInstalled.value = true;
-            console.log('✅ Octopus COSE Extension detected: v' + event.data.version);
+        if (event.data && event.data.type === 'OCTOPUS_EXT_INSTALLED') {
+            isExtensionInstalled.value = true;
+            console.log('✅ Octopus MD Sync Extension detected: v' + event.data.version);
         }
     });
 });
@@ -1684,7 +1684,7 @@ const distributeToSelectedPlatforms = async () => {
         showToast('请至少选择一个分发平台', 'info');
         return;
     }
-    if (isCoseInstalled.value) {
+    if (isExtensionInstalled.value) {
         for (const platform of selectedPlatforms.value) {
             syncToPlatform(platform);
             await new Promise(r => setTimeout(r, 600));
@@ -4036,7 +4036,7 @@ for (const [p] of __VLS_vFor((['wechat', 'zhihu', 'juejin', 'csdn']))) {
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ style: {} },
 });
-__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isCoseInstalled) }, null, null);
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isExtensionInstalled) }, null, null);
 __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
 __VLS_asFunctionalElement1(__VLS_intrinsics.br)({});
 __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
@@ -4060,7 +4060,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
             __VLS_ctx.copyHtml('wechat');
             __VLS_ctx.toggleMenu(null);
             // @ts-ignore
-            [toggleMenu, selectedPlatforms, selectedPlatforms, isCoseInstalled, distributeToSelectedPlatforms, copyHtml,];
+            [toggleMenu, selectedPlatforms, selectedPlatforms, isExtensionInstalled, distributeToSelectedPlatforms, copyHtml,];
         } },
     ...{ class: "html-copy-btn" },
     ...{ style: {} },

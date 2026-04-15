@@ -1,7 +1,7 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'OCTOPUS_SYNC_PAYLOAD') {
     const payload = request.payload;
-    console.log('[COSE Background] Received sync payload for target:', payload.target);
+    console.log('[Octopus MD Background] Received sync payload for target:', payload.target);
     
     // Save to local extension storage where injectors can retrieve it
     chrome.storage.local.set({ octopus_sync_payload: payload }, () => {

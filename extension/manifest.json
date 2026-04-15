@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Octopus COSE (Sync Everywhere)",
+  "name": "Octopus MD Sync (Sync Everywhere)",
   "version": "1.0.0",
   "description": "Octopus MD 专属多平台文章无损同步分发与 DOM 注入引擎。支持微信、知乎、掘金、微博、X (Twitter)、CSDN。",
   "permissions": [
@@ -66,6 +66,6 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Octopus COSE"
+    "default_title": "Octopus MD Sync"
   }
 }

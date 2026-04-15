@@ -3,7 +3,7 @@ window.addEventListener('message', (event) => {
   if (event.source !== window) return;
 
   if (event.data && event.data.type === 'OCTOPUS_EMIT_SYNC') {
-    console.log('🐙 [Octopus COSE Bridge] Received synchronization payload from vue app.', event.data.payload.target);
+    console.log('🐙 [Octopus MD Sync Bridge] Received synchronization payload from vue app.', event.data.payload.target);
     
     // Forward the payload to the Manifest V3 background worker
     chrome.runtime.sendMessage(
@@ -13,10 +13,10 @@ window.addEventListener('message', (event) => {
       },
       (response) => {
         if (chrome.runtime.lastError) {
-          console.error('🐙 [Octopus COSE Bridge] Communication Error:', chrome.runtime.lastError);
+          console.error('🐙 [Octopus MD Sync Bridge] Communication Error:', chrome.runtime.lastError);
           window.postMessage({ type: 'OCTOPUS_SYNC_RESULT', success: false, error: chrome.runtime.lastError.message }, '*');
         } else {
-          console.log('🐙 [Octopus COSE Bridge] Background Worker acknowledged:', response);
+          console.log('🐙 [Octopus MD Sync Bridge] Background Worker acknowledged:', response);
           window.postMessage({ type: 'OCTOPUS_SYNC_RESULT', success: true }, '*');
         }
       }
@@ -25,5 +25,5 @@ window.addEventListener('message', (event) => {
 });
 
 // Acknowledge installation explicitly
-window.postMessage({ type: 'OCTOPUS_COSE_INSTALLED', version: '1.0.0' }, '*');
-console.log('🐙 [Octopus COSE Bridge] Successfully injected and waiting for IPC payloads.');
+window.postMessage({ type: 'OCTOPUS_EXT_INSTALLED', version: '1.0.0' }, '*');
+console.log('🐙 [Octopus MD Sync Bridge] Successfully injected and waiting for IPC payloads.');

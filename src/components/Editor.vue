@@ -1046,10 +1046,10 @@ const syncToPlatform = (plat: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter'
     weibo: 'https://weibo.com/'
   };
   
-  // URL routing is now handled safely by the COSE Extension mapping in background.js.
+  // URL routing is now handled safely by the sync Extension mapping in background.js.
   // We keep this generic fallback ONLY if the extension isn't installed.
   window.setTimeout(() => {
-    if (!isCoseInstalled.value) {
+    if (!isExtensionInstalled.value) {
       window.open(urls[plat], '_blank');
     }
   }, 100);
@@ -1145,7 +1145,7 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' |
     
     // Check if the Extension bridge is listening. If yes, pass raw payloads via IPC.
     // If not, it falls back instantly to the old behavior (just copying).
-    if (isCoseInstalled.value) {
+    if (isExtensionInstalled.value) {
         window.postMessage({
             type: 'OCTOPUS_EMIT_SYNC',
             payload: {
@@ -1161,10 +1161,10 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' |
     }
   
     document.execCommand('copy');
-    if (isCoseInstalled.value) {
-        showToast(`🚀 已存入剪贴板！正由 COSE 扩展接管前往【${platName}】并尝试自动注入...`, "success");
+    if (isExtensionInstalled.value) {
+        showToast(`🚀 已存入剪贴板！正由 Octopus MD 扩展接管前往【${platName}】并尝试自动注入...`, "success");
     } else {
-        showToast(`✅ 已入板！请直接去【${platName}】粘贴以完成发布。(推荐安装 COSE 扩展实现全自动)`, "success");
+        showToast(`✅ 已入板！请直接去【${platName}】粘贴以完成发布。(推荐安装 Octopus MD 扩展实现全自动)`, "success");
     }
   } catch (e) {
     customAlert("获取剪贴板权限失败，请确保您在 HTTPS 环境下或检查浏览器设置。");
@@ -1266,7 +1266,7 @@ const syncWechat = async () => {
 };
 
 const isExporting = ref(false);
-const isCoseInstalled = ref(false);
+const isExtensionInstalled = ref(false);
 
 onMounted(() => {
 
@@ -1276,9 +1276,9 @@ onMounted(() => {
 
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
-    if (event.data && event.data.type === 'OCTOPUS_COSE_INSTALLED') {
-      isCoseInstalled.value = true;
-      console.log('✅ Octopus COSE Extension detected: v' + event.data.version);
+    if (event.data && event.data.type === 'OCTOPUS_EXT_INSTALLED') {
+      isExtensionInstalled.value = true;
+      console.log('✅ Octopus MD Sync Extension detected: v' + event.data.version);
     }
   });
 });
@@ -1810,7 +1810,7 @@ const distributeToSelectedPlatforms = async () => {
     return;
   }
   
-  if (isCoseInstalled.value) {
+  if (isExtensionInstalled.value) {
     for (const platform of selectedPlatforms.value) {
       syncToPlatform(platform as any);
       await new Promise(r => setTimeout(r, 600)); 
@@ -2276,7 +2276,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
         <div style="position: relative; display: flex; flex-direction: column; align-items: center;" @click.stop="toggleMenu('fabPublish')">
           <div class="dropdown-menu" style="top: auto !important; bottom: calc(100% + 16px); right: 0; left: auto; width: 340px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: bottom right;" v-show="activeMenu === 'fabPublish'" @click.stop>
-            <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (COSE)</h4>
+            <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (sync)</h4>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
               <button v-for="p in ['wechat', 'zhihu', 'juejin', 'csdn']" :key="p"
                 class="brutalist-sync-btn" 
@@ -2296,7 +2296,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               </button>
             </div>
             
-            <div v-show="!isCoseInstalled" style="background: rgba(139, 90, 43, 0.05); border-left: 3px solid var(--primary); padding: 10px 12px; border-radius: 4px; font-size: 12px; color: #8b5a2b; line-height: 1.5; margin-top: 4px;">
+            <div v-show="!isExtensionInstalled" style="background: rgba(139, 90, 43, 0.05); border-left: 3px solid var(--primary); padding: 10px 12px; border-radius: 4px; font-size: 12px; color: #8b5a2b; line-height: 1.5; margin-top: 4px;">
               <strong>⚠️ 原生轻量分发模式已开启</strong><br>
               未检测到本地特权桥接插件。发射后程序将预先拷入格式，请在各大平台页面中自行 <strong>Ctrl+V 粘贴</strong> 即可发布。
             </div>
@@ -2511,7 +2511,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             </div>
           </div>
           
-          <!-- Sync Center Modal (COSE Emulation) -->
+          <!-- Sync Center Modal (sync Emulation) -->
           <div v-if="isSyncModalVisible" class="export-modal custom-modal sync-modal" style="width: 500px; max-width: 95vw;">
             <h3 style="margin-top:0; color: var(--text-primary);">🚀 跨平台内容分发与同步中心</h3>
             <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">系统将通过深层 DOM 提取内联样式并锁定入富文本剪贴板，随后自动为您调起目标平台的编辑后台。<br/><span style="color:var(--accent-color);font-weight:600;">受限于浏览器安全策略机制，云端无法为您自动粘贴。您进入平台后只需按下</span> <kbd style="background:var(--bg-active);padding:2px 4px;border-radius:4px;border:1px solid var(--border-strong);">Ctrl+V</kbd> <span style="color:var(--accent-color);font-weight:600;">即可实现 100% 格式转网同步过去无损粘贴！</span></p>

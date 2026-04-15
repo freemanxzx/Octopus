@@ -282,6 +282,7 @@ const externalLinks = ref<ExtLinkItem[]>([]);
 const hasExternalLinks = computed(() => externalLinks.value.length > 0);
 const activeExtLinkIdx = ref(0);
 const showLinkWarning = ref(true);
+const userDismissedLinkRadar = ref(false);
 const isLinkRadarExpanded = ref(false);
 let linkCheckDebounce: number | null = null;
 
@@ -317,7 +318,14 @@ watch(content, (newVal) => {
     const linksFound: ExtLinkItem[] = [];
     const extLinkRegex = /(?:^|[^!])\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/g;
     
+    let isInsideCode = false;
     lines.forEach((lineText, idx) => {
+      if (lineText.trim().startsWith('```')) {
+        isInsideCode = !isInsideCode;
+        return;
+      }
+      if (isInsideCode) return;
+      
       let match;
       while ((match = extLinkRegex.exec(lineText)) !== null) {
         linksFound.push({
@@ -2007,7 +2015,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 
 
     <transition name="slide-up">
-    <div v-if="hasExternalLinks && showLinkWarning" class="smart-link-palette">
+    <div v-if="!userDismissedLinkRadar && !enableLinkFootnote && hasExternalLinks && showLinkWarning" class="smart-link-palette" :class="{ 'is-expanded': isLinkRadarExpanded }">
       <div class="smart-link-header" @click="isLinkRadarExpanded = !isLinkRadarExpanded" style="cursor: pointer; user-select: none;">
         <div class="smart-title">
           <div class="smart-icon-box pulse-warning">
@@ -2017,11 +2025,11 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <span class="smart-badge badge-warn">{{ externalLinks.length }} 个发现 (点击{{ isLinkRadarExpanded ? '收起' : '展开详情' }})</span>
         </div>
         <div class="smart-actions">
-          <button class="smart-btn-primary" @click.stop="toggleLinkFootnote(); showLinkWarning = false">
+          <button class="smart-btn-primary" @click.stop="toggleLinkFootnote(); userDismissedLinkRadar = true">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
             一键转为脚注
           </button>
-          <button class="smart-btn-icon" @click.stop="showLinkWarning = false" title="忽略警告">
+          <button class="smart-btn-icon" @click.stop="userDismissedLinkRadar = true" title="忽略警告不再提醒">
             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -2121,7 +2129,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               <div class="iphone-screen">
                 <!-- Authentic iOS Status Bar -->
                 <div class="ios-status-bar" style="height: 48px; width: 100%; position: absolute; top: 0; left: 0; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 26px 10px 26px; box-sizing: border-box; z-index: 10; pointer-events: none; color: #000;">
-                  <span style="font-size: 15px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: -0.2px;">9:41</span>
+                  <span style="font-size: 15px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: -0.2px;"></span>
                   <!-- Dynamic Island -->
                   <div style="position: absolute; left: 50%; top: 11px; transform: translateX(-50%); width: 120px; height: 35px; background: #000; border-radius: 20px;"></div>
                   <!-- Right Icons -->
@@ -3611,267 +3619,39 @@ html.dark .dropdown-divider {
   background-color: var(--bg-active);
 }
 
-.btn-icon-text {
-  background: transparent;
-  color: var(--text-secondary);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 0.35rem 0.5rem;
-  border-radius: 0 !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-icon-text:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
-.export-modal {
-  background: var(--bg-panel);
-  padding: 2.5rem 3rem;
-  border-radius: 0 !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  text-align: center;
-  border: 1px solid var(--border-strong);
-  max-width: 400px;
-  min-width: 320px;
-  color: var(--text-primary);
-}
-
-.premium-modal {
-  border-radius: 0 !important;
-  background: var(--bg-panel);
-  box-shadow: 0 40px 80px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-  backdrop-filter: blur(48px) saturate(200%);
-}
-
-.setting-item label {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
-
-.setting-input {
-  width: 100%;
-  border: 1px solid var(--border-subtle);
-  border-radius: 0 !important;
-  background: var(--bg-app);
-  color: var(--text-primary);
-  padding: 8px 12px;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.setting-input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
-  outline: none;
-}
-
-.copy-group {
-  display: flex;
-  background: var(--bg-hover);
-  border-radius: 0 !important;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.btn-group-item {
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  padding: 0.35rem 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-group-item:hover {
-  color: var(--text-primary);
-  background: var(--border-strong);
-}
-
-.btn-group-item:last-child {
-  border-right: none;
-}
-
-.btn-group-item.wechat:hover { background: #059669; }
-.btn-group-item.zhihu:hover { background: #0084ff; }
-.btn-group-item.juejin:hover { background: #1e80ff; }
-
-.btn-primary-filled {
-  background: var(--accent-color);
-  color: var(--text-primary);
-  border: none;
-  border-radius: 0 !important;
-  padding: 0.35rem 1rem;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-primary-filled:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.view-toggles-pill {
-  display: flex;
-  background: var(--bg-app); /* Match the dark nav background */
-  padding: 4px;
-  border-radius: 0 !important;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 1px 1px var(--border-subtle);
-}
-
-.pill-btn {
-  background: transparent;
-  color: var(--text-secondary);
-  border: none;
-  border-radius: 0 !important;
-  padding: 0.45rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.pill-btn:hover {
-  color: var(--text-primary);
-}
-
-.pill-btn.active {
-  background: #498df8;
-  color: var(--text-primary);
-  box-shadow: 0 2px 10px rgba(73, 141, 248, 0.4);
-}
-
-.floating-toolbar {
-  position: absolute;
-  right: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: var(--bg-glass); /* Bugfix: Using global glass variable */
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  padding: 14px 10px;
-  border-radius: 0 !important;
-  box-shadow: var(--shadow-glass); /* Bugfix: Premium generic shadow instead of hardcoded dark shadow */
-  z-index: 50;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.float-btn {
-  width: 44px; height: 44px;
-  border-radius: 0 !important;
-  border: none;
-  background: var(--bg-hover); /* Contrast Bugfix: Uses dynamic theme token */
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex; 
-  justify-content: center; 
-  align-items: center;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-}
-
-.float-btn:hover {
-  color: var(--text-primary);
-  transform: translateX(-4px) scale(1.05); /* Enhanced Micro-animation */
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.1);
-}
-
-.float-btn.wechat:hover { background: rgba(5, 150, 105, 0.15); color: #10b981; }
-.float-btn.zhihu:hover { background: rgba(0, 132, 255, 0.15); color: #38bdf8; }
-.float-btn.juejin:hover { background: rgba(30, 128, 255, 0.15); color: #60a5fa; }
-.float-btn.export:hover { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-
-.float-divider {
-  width: 100%;
-  height: 1px;
-  background: var(--border-strong);
-  margin: 6px 0;
-}
-
-.export-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--bg-glass); /* Bugfix: Support light mode for export overlay */
-  backdrop-filter: blur(8px);
-  z-index: 99999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.export-modal {
-  background: var(--bg-panel);
-  padding: 2.5rem 3rem;
-  border-radius: 0 !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  text-align: center;
-  border: 1px solid var(--border-strong);
-  max-width: 400px;
-  min-width: 320px;
-}
-
-.custom-modal {
-  padding: 2rem;
-  text-align: left;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
 .toast-container {
   position: fixed;
   bottom: 2.5rem;
   right: 2.5rem;
-  background: rgba(15, 23, 42, 0.75); /* MacOS Glassmorphism */
+  background: var(--bg-glass); /* Sleek Glassmorphism */
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  color: #f8fafc;
-  padding: 1.2rem 1.8rem;
-  border-radius: 0 !important;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08); /* Elite shadow */
+  color: var(--text-primary);
+  padding: 12px 24px;
+  border-radius: 99px !important;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   z-index: 99999;
   display: flex;
   align-items: center;
+  gap: 12px;
   font-weight: 500;
-  border-left: 4px solid var(--accent-color); 
-  letter-spacing: 0.01em;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
 }
 
-.toast-success { border-left-color: #34d399; }
-.toast-error { border-left-color: #fb7185; }
-.toast-info { border-left-color: var(--accent-color); }
+.toast-container::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.toast-success::before { background-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.6); }
+.toast-error::before { background-color: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
+.toast-info::before { background-color: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.6); }
 
 .slide-up-enter-active, .slide-up-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -4032,6 +3812,9 @@ html.dark .view-toggles-pill .pill-btn.active {
   flex-direction: column;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.smart-link-palette.is-expanded {
+  border-radius: 24px !important;
+}
 html.dark .smart-link-palette {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -4174,38 +3957,37 @@ html.dark .smart-link-palette {
 }
 
 .locator-url-track {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
   color: var(--text-muted);
-  text-decoration: underline dashed;
-  text-underline-offset: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.8;
+  opacity: 0.7;
+  margin-top: 4px;
 }
 
 /* Nav Controls within Locator Block */
 .locator-nav-controls {
   display: flex;
   align-items: center;
-  background: var(--bg-app);
+  background: var(--bg-hover);
   border: 1px solid var(--border-subtle);
   border-radius: 99px !important;
-  padding: 2px 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 2px 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  gap: 4px;
 }
 
 .locator-nav-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
   cursor: pointer;
-  padding: 6px;
-  border-radius: 0 !important;
+  padding: 4px;
+  border-radius: 50% !important;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
-  justify-content: center;
   transition: all 0.2s;
 }
 

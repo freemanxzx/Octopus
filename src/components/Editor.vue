@@ -1658,7 +1658,21 @@ const distributeToSelectedPlatforms = async () => {
     toggleMenu('');
     showToast('一键分发指令已触发完成！', 'success');
   } else {
-    syncQueue.value = selectedPlatforms.value.map(p => ({ platform: p, status: 'pending' }));
+    // 降级模式：预先拷入基础剪贴板并直接全开所有窗口
+    copyHtml('wechat');
+    const urls: Record<string, string> = {
+      wechat: 'https://mp.weixin.qq.com/',
+      zhihu: 'https://zhuanlan.zhihu.com/write',
+      juejin: 'https://juejin.cn/editor/drafts/new',
+      csdn: 'https://editor.csdn.net/md/',
+      twitter: 'https://twitter.com/compose/tweet',
+      weibo: 'https://weibo.com/'
+    };
+    for (const p of selectedPlatforms.value) {
+      if (urls[p]) window.open(urls[p], '_blank');
+    }
+    toggleMenu('');
+    showToast('富文本已拷贝至剪贴板，平台窗口已打开就绪！', 'success');
   }
 };
 
@@ -2111,27 +2125,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               </button>
             </div>
             
-            <!-- No plugin warning banner -->
-            <div v-show="!isCoseInstalled && syncQueue.length === 0" style="background: rgba(220, 38, 38, 0.05); border-left: 3px solid #dc2626; padding: 10px 12px; border-radius: 4px; font-size: 12px; color: #7f1d1d; line-height: 1.5;">
-              <strong>⚠️ 原生降级模式</strong><br>
-              未装插件时，将以向导模式逐个发送，避免剪贴板格式冲突。
-            </div>
-
-            <!-- Distribution Queue Wizard -->
-            <div v-if="syncQueue.length > 0" style="display: flex; flex-direction: column; gap: 8px;">
-               <div style="font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                 📋 分发向导：请按序点击发送
-               </div>
-               <button v-for="q in syncQueue" :key="q.platform" @click="executeManualSync(q.platform)" 
-                       :style="{ padding: '12px', borderRadius: '8px', background: q.status === 'done' ? '#f3f4f6' : 'var(--primary)', color: q.status === 'done' ? '#9ca3af' : '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }">
-                 <span>{{ platformLabels[q.platform] }}</span>
-                 <span style="font-size: 12px; font-weight: normal;">{{ q.status === 'done' ? '✓ 已完成' : '点击发送 →' }}</span>
-               </button>
-               <button @click="syncQueue = []; toggleMenu('')" style="padding: 10px; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 8px; background: transparent; color: #4b5563; font-size: 13px; font-weight: 600; cursor: pointer;">关闭向导</button>
-            </div>
-
-            <button v-if="syncQueue.length === 0 && selectedPlatforms.length > 0" class="distribute-action-btn" @click="distributeToSelectedPlatforms" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(139,90,43,0.3); margin-top: 4px;">
-               🚀 发射到所选平台 ({{selectedPlatforms.length}})
+            <button v-if="selectedPlatforms.length > 0" class="distribute-action-btn" @click="distributeToSelectedPlatforms" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(139,90,43,0.3); margin-top: 4px;">
+               🚀 一键发射到所选平台 ({{selectedPlatforms.length}})
             </button>
           </div>
           

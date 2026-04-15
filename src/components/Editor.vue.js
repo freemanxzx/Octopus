@@ -1568,7 +1568,22 @@ const distributeToSelectedPlatforms = async () => {
         showToast('一键分发指令已触发完成！', 'success');
     }
     else {
-        syncQueue.value = selectedPlatforms.value.map(p => ({ platform: p, status: 'pending' }));
+        // 降级模式：预先拷入基础剪贴板并直接全开所有窗口
+        copyHtml('wechat');
+        const urls = {
+            wechat: 'https://mp.weixin.qq.com/',
+            zhihu: 'https://zhuanlan.zhihu.com/write',
+            juejin: 'https://juejin.cn/editor/drafts/new',
+            csdn: 'https://editor.csdn.net/md/',
+            twitter: 'https://twitter.com/compose/tweet',
+            weibo: 'https://weibo.com/'
+        };
+        for (const p of selectedPlatforms.value) {
+            if (urls[p])
+                window.open(urls[p], '_blank');
+        }
+        toggleMenu('');
+        showToast('富文本已拷贝至剪贴板，平台窗口已打开就绪！', 'success');
     }
 };
 const executeManualSync = (platform) => {
@@ -3899,53 +3914,7 @@ for (const [p] of __VLS_vFor((['wechat', 'zhihu', 'juejin', 'csdn']))) {
     // @ts-ignore
     [selectedPlatforms, selectedPlatforms, selectedPlatforms, selectedPlatforms, platformLabels,];
 }
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ style: {} },
-});
-__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isCoseInstalled && __VLS_ctx.syncQueue.length === 0) }, null, null);
-__VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
-__VLS_asFunctionalElement1(__VLS_intrinsics.br)({});
-if (__VLS_ctx.syncQueue.length > 0) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ style: {} },
-    });
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ style: {} },
-    });
-    for (const [q] of __VLS_vFor((__VLS_ctx.syncQueue))) {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-            ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.syncQueue.length > 0))
-                        return;
-                    __VLS_ctx.executeManualSync(q.platform);
-                    // @ts-ignore
-                    [isCoseInstalled, syncQueue, syncQueue, syncQueue, executeManualSync,];
-                } },
-            key: (q.platform),
-            ...{ style: ({ padding: '12px', borderRadius: '8px', background: q.status === 'done' ? '#f3f4f6' : 'var(--primary)', color: q.status === 'done' ? '#9ca3af' : '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }) },
-        });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
-        (__VLS_ctx.platformLabels[q.platform]);
-        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-            ...{ style: {} },
-        });
-        (q.status === 'done' ? '✓ 已完成' : '点击发送 →');
-        // @ts-ignore
-        [platformLabels,];
-    }
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.syncQueue.length > 0))
-                    return;
-                __VLS_ctx.syncQueue = [];
-                __VLS_ctx.toggleMenu('');
-                // @ts-ignore
-                [toggleMenu, syncQueue,];
-            } },
-        ...{ style: {} },
-    });
-}
-if (__VLS_ctx.syncQueue.length === 0 && __VLS_ctx.selectedPlatforms.length > 0) {
+if (__VLS_ctx.selectedPlatforms.length > 0) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
         ...{ onClick: (__VLS_ctx.distributeToSelectedPlatforms) },
         ...{ class: "distribute-action-btn" },
@@ -3994,7 +3963,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.isEditingTheme = false;
             // @ts-ignore
-            [isZenMode, activeMenu, isEditingTheme, isEditingTheme, selectedPlatforms, selectedPlatforms, syncQueue, distributeToSelectedPlatforms,];
+            [isZenMode, activeMenu, isEditingTheme, isEditingTheme, selectedPlatforms, selectedPlatforms, distributeToSelectedPlatforms,];
         } },
     ...{ style: {} },
     onmouseover: "this.style.background='rgba(0,0,0,0.08)'",

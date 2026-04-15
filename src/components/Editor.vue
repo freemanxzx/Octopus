@@ -2144,6 +2144,19 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             <button v-if="selectedPlatforms.length > 0" class="distribute-action-btn" @click="distributeToSelectedPlatforms" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(139,90,43,0.3); margin-top: 4px;">
                🚀 一键发射到所选平台 ({{selectedPlatforms.length}})
             </button>
+            
+            <div style="border-top: 1px dashed rgba(0,0,0,0.1); margin: 6px 0;"></div>
+            
+            <div style="display: flex; gap: 8px;">
+              <button class="html-copy-btn" @click="copyHtml('wechat'); toggleMenu(null)" style="flex: 1; padding: 10px; border-radius: 8px; font-weight: 700; border: none; background: #1a1a1a; color: white; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                 <span style="font-size: 12px;">万能复制</span>
+              </button>
+              <button class="html-copy-btn" @click="exportImage(); toggleMenu(null)" style="flex: 1; padding: 10px; border-radius: 8px; font-weight: 700; border: none; background: #ea580c; color: white; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(234,88,12,0.2);">
+                 <span class="material-symbols-outlined" style="font-size: 16px;">image</span>
+                 <span style="font-size: 12px;">生成长图</span>
+              </button>
+            </div>
           </div>
           
           <button class="fab-btn" :class="{ 'is-active': activeMenu === 'fabPublish' }" style="width: 48px; height: 48px; border-radius: 9999px; background: var(--primary); border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">

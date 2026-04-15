@@ -3938,6 +3938,64 @@ if (__VLS_ctx.selectedPlatforms.length > 0) {
     /** @type {__VLS_StyleScopedClasses['distribute-action-btn']} */ ;
     (__VLS_ctx.selectedPlatforms.length);
 }
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ style: {} },
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ style: {} },
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.copyHtml('wechat');
+            __VLS_ctx.toggleMenu(null);
+            // @ts-ignore
+            [toggleMenu, selectedPlatforms, selectedPlatforms, isCoseInstalled, distributeToSelectedPlatforms, copyHtml,];
+        } },
+    ...{ class: "html-copy-btn" },
+    ...{ style: {} },
+});
+/** @type {__VLS_StyleScopedClasses['html-copy-btn']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+    viewBox: "0 0 24 24",
+    width: "14",
+    height: "14",
+    stroke: "currentColor",
+    fill: "none",
+    'stroke-width': "2.5",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.rect, __VLS_intrinsics.rect)({
+    x: "9",
+    y: "9",
+    width: "13",
+    height: "13",
+    rx: "2",
+    ry: "2",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({
+    d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+    ...{ style: {} },
+});
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.exportImage();
+            __VLS_ctx.toggleMenu(null);
+            // @ts-ignore
+            [toggleMenu, exportImage,];
+        } },
+    ...{ class: "html-copy-btn" },
+    ...{ style: {} },
+});
+/** @type {__VLS_StyleScopedClasses['html-copy-btn']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+    ...{ class: "material-symbols-outlined" },
+    ...{ style: {} },
+});
+/** @type {__VLS_StyleScopedClasses['material-symbols-outlined']} */ ;
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+    ...{ style: {} },
+});
 __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ class: "fab-btn" },
     ...{ class: ({ 'is-active': __VLS_ctx.activeMenu === 'fabPublish' }) },
@@ -3978,7 +4036,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.isEditingTheme = false;
             // @ts-ignore
-            [isZenMode, activeMenu, isEditingTheme, isEditingTheme, selectedPlatforms, selectedPlatforms, isCoseInstalled, distributeToSelectedPlatforms,];
+            [isZenMode, activeMenu, isEditingTheme, isEditingTheme,];
         } },
     ...{ style: {} },
     onmouseover: "this.style.background='rgba(0,0,0,0.08)'",

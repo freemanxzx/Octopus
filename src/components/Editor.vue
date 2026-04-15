@@ -1668,11 +1668,21 @@ const distributeToSelectedPlatforms = async () => {
       twitter: 'https://twitter.com/compose/tweet',
       weibo: 'https://weibo.com/'
     };
+    
+    let blockedPopups = false;
     for (const p of selectedPlatforms.value) {
-      if (urls[p]) window.open(urls[p], '_blank');
+      if (urls[p]) {
+        const newWindow = window.open(urls[p], '_blank');
+        if (!newWindow) blockedPopups = true;
+      }
     }
+    
     toggleMenu('');
-    showToast('富文本已拷贝至剪贴板，平台窗口已打开就绪！', 'success');
+    if (blockedPopups) {
+      showToast('⚠️ 浏览器弹窗拦截：为实现真正一键多发，请点击地址栏右侧图标“始终允许弹窗”！', 'error');
+    } else {
+      showToast('富文本已拷贝至剪贴板，平台窗口已打开就绪！', 'success');
+    }
   }
 };
 

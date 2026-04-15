@@ -1824,102 +1824,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               <div class="dropdown-item" @click="insertFormat('{注音|Ruby语法}', '')"><span class="shortcut">Ruby</span>插入注音（Ruby）</div>
               <div class="dropdown-item" @click="insertFormat('\n\n<section style=&quot;display:flex; padding:15px; border-radius:10px; background:#f8f9fa; border:1px solid #e9ecef; align-items:center; margin:20px 0;&quot;><img src=&quot;https://api.dicebear.com/7.x/bottts/svg?seed=Octopus&quot; style=&quot;width:60px; height:60px; border-radius:50%; margin-right:15px;&quot;/><div><h3 style=&quot;margin:0 0 5px 0; color:#343a40;&quot;>这里是公众号名字</h3><p style=&quot;margin:0; font-size:13px; color:#6c757d;&quot;>欢迎关注我的公众号，每天分享最前沿硬核的极客技术与排版黑魔法！</p></div></section>\n\n', '')"><span class="shortcut">CARD</span>插入公众号名片</div>
             </div>
-          </div>
-          <!-- View Menu -->
-          <div class="menu-item" @click.stop="toggleMenu('view')">
-            查看
-            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'view'">
-              <div class="dropdown-item" @click="viewMode = 'pc'">
-                <span class="shortcut">宽屏 PC 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'pc' ? '■' : '　' }}</span>PC 宽屏视图
-              </div>
-              <div class="dropdown-item" @click="viewMode = 'mobile'">
-                <span class="shortcut">iPhone 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'mobile' ? '■' : '　' }}</span>手机预览视图
-              </div>
-              <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="togglePreviewMode"><span class="shortcut">F11 ZEN</span>{{ isZenMode ? '退出沉浸模式' : '进入沉浸模式' }}</div>
-              <div class="dropdown-item" @click="toggleMacCodeBlock"><span class="shortcut">MAC</span>{{ isMacCodeBlock ? '卸载' : '部署' }} Mac 风格代码块</div>
-              <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="loadDraftsHistory"><span class="shortcut">HISTORY</span>历史草稿管理</div>
-            </div>
-          </div>
-          <!-- Settings Menu -->
-          <div class="menu-item" @click.stop="toggleMenu('settings')">
-            设置
-            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'settings'">
-              <div class="dropdown-item" @click="isImageConfigVisible = true; activeMenu = null"><span class="shortcut">HOST</span>图床配置</div>
-              <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="resetEditor"><span class="shortcut">RESET</span>重置编辑器</div>
-            </div>
-          </div>
-          <!-- Help Menu -->
-          <div class="menu-item" @click.stop="toggleMenu('help')">
-            帮助
-            <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'help'">
-              <div class="dropdown-item" @click="notImpl"><span class="shortcut">LOG</span>更新日志</div>
-              <div class="dropdown-item" @click="notImpl"><span class="shortcut">KEYS</span>快捷键一览</div>
-              <div class="dropdown-item" @click="showAbout"><span class="shortcut">INFO</span>关于 Octopus MD</div>
-            </div>
-          </div>
-        </nav>
-      </div>
-
-      <!-- Hidden file input for image uploads (used by Action Rail) -->
-      <input type="file" ref="fileInput" @change="handleFileSelected" accept="image/*" style="display: none" />
-
-      <div class="actions" style="display: flex; align-items: center; gap: 16px;">
-        <div class="view-toggles-pill" style="display: flex; background: rgba(0,0,0,0.04); padding: 4px; border-radius: var(--radius-md);">
-            <button class="pill-btn" :class="{active: viewMode === 'pc'}" @click="setViewMode('pc')" style="background: transparent; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; padding: 4px 12px; display: flex; align-items: center; gap: 4px; transition: all 0.2s; color: var(--text-secondary);">
-              PC版式
-            </button>
-            <button class="pill-btn" :class="{active: viewMode === 'mobile'}" @click="setViewMode('mobile')" style="background: transparent; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; padding: 4px 12px; display: flex; align-items: center; gap: 4px; transition: all 0.2s; color: var(--text-secondary);">
-              手机预览
-            </button>
-        </div>
-
-        <div style="position: relative;" @click.stop="toggleMenu('publish')">
-          <button style="display: flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: var(--radius-md); background: var(--primary); color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: none; box-shadow: 0 4px 12px rgba(139, 90, 43, 0.2);">
-            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M21 2l-2 22-7-6.2-4 4V13L21 2zm-8.8 9.3l-8.6 4.3 18.6-11.6z"></path></svg>
-            <span>一键分发</span>
-          </button>
-          
-          <div class="dropdown-menu" style="right: 0; left: auto; width: 340px; padding: 16px; margin-top: 14px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: top right;" v-show="activeMenu === 'publish'" @click.stop>
-            <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (COSE)</h4>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-              <button v-for="p in ['wechat', 'zhihu', 'juejin', 'csdn', 'weibo', 'twitter']" :key="p"
-                class="brutalist-sync-btn" 
-                @click.stop="togglePlatformSelection(p)"
-                :style="{ 
-                  padding: '12px', border: '2px solid', borderRadius: '12px', fontWeight: '700', 
-                  cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', 
-                  alignItems: 'center', justifyContent: 'center', gap: '6px',
-                  borderColor: selectedPlatforms.includes(p) ? 'var(--primary)' : 'rgba(0,0,0,0.1)',
-                  background: selectedPlatforms.includes(p) ? 'rgba(139, 90, 43, 0.08)' : 'transparent',
-                  color: selectedPlatforms.includes(p) ? 'var(--primary)' : 'var(--text-muted)'
-                }">
-                <span style="font-size: 18px;">{{ {wechat:'💬',zhihu:'知',juejin:'💎',csdn:'C',weibo:'微',twitter:'𝕏'}[p] }}</span>
-                <span style="font-size: 12px;">{{ platformLabels[p] }}</span>
-                <span v-if="selectedPlatforms.includes(p)" style="font-size: 10px; color: var(--primary);">✓ 已选</span>
-              </button>
-            </div>
-            
-            <!-- No plugin warning banner -->
-            <div v-show="!isCoseInstalled && syncQueue.length === 0" style="background: rgba(220, 38, 38, 0.05); border-left: 3px solid #dc2626; padding: 10px 12px; border-radius: 4px; font-size: 12px; color: #7f1d1d; line-height: 1.5;">
-              <strong>⚠️ 原生降级模式</strong><br>
-              未装 COSE 插件时，批量分发将以向导模式逐个发送，避免剪贴板格式冲突。
-            </div>
-
-            <!-- Distribution Queue Wizard -->
-            <div v-if="syncQueue.length > 0" style="display: flex; flex-direction: column; gap: 8px;">
-               <div style="font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                 📋 分发向导：请按序点击发送
-               </div>
-               <button v-for="q in syncQueue" :key="q.platform" @click="executeManualSync(q.platform)" 
-                       :style="{ padding: '12px', borderRadius: '8px', background: q.status === 'done' ? '#f3f4f6' : 'var(--primary)', color: q.status === 'done' ? '#9ca3af' : '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }">
-                 <span>{{ platformLabels[q.platform] }}</span>
-                 <span style="font-size: 12px; font-weight: normal;">{{ q.status === 'done' ? '✓ 已完成' : '点击发送 →' }}</span>
-               </button>
-               <button @click="syncQueue = []; toggleMenu('')" style="padding: 10px; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 8px; background: transparent; color: #4b5563; font-size: 13px; font-weight: 600; cursor: pointer;">关闭向导</button>
-            </div>
 
             <button v-if="syncQueue.length === 0 && selectedPlatforms.length > 0" class="distribute-action-btn" @click="distributeToSelectedPlatforms" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(139,90,43,0.3); margin-top: 4px;">
                🚀 一键发射到所选平台 ({{selectedPlatforms.length}})
@@ -2164,46 +2068,55 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         </div>
 
         <div style="position: relative; display: flex; flex-direction: column; align-items: center;" @click.stop="toggleMenu('fabPublish')">
+          
           <div class="dropdown-menu" style="top: auto !important; bottom: calc(100% + 16px); right: 0; left: auto; width: 340px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: bottom right;" v-show="activeMenu === 'fabPublish'" @click.stop>
+<div class="dropdown-menu" style="top: auto !important; bottom: calc(100% + 16px); right: 0; left: auto; width: 340px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: bottom right;" v-show="activeMenu === 'fabPublish'" @click.stop>
             <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (COSE)</h4>
+            
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-              <button class="brutalist-sync-btn" @click="syncToPlatform('wechat'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 12px; background: rgba(16, 185, 129, 0.05); color: #059669; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
-                同步微信
-              </button>
-              
-              <button class="brutalist-sync-btn" @click="syncToPlatform('zhihu'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 12px; background: rgba(59, 130, 246, 0.05); color: #2563eb; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">知</span>
-                同步知乎
-              </button>
-
-              <button class="brutalist-sync-btn" @click="syncToPlatform('juejin'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(79, 70, 229, 0.3); border-radius: 12px; background: rgba(79, 70, 229, 0.05); color: #4338ca; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
-                同步掘金
-              </button>
-
-              <button class="brutalist-sync-btn" @click="syncToPlatform('csdn'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(220, 38, 38, 0.3); border-radius: 12px; background: rgba(220, 38, 38, 0.05); color: #b91c1c; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <span style="font-size: 20px; font-weight: 900; font-family: monospace; letter-spacing: -2px; line-height: 1.2;">C</span>
-                同步 CSDN
-              </button>
-
-              <button class="brutalist-sync-btn" @click="syncToPlatform('weibo'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; background: rgba(239, 68, 68, 0.05); color: #dc2626; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">微</span>
-                同步微博
-              </button>
-
-              <button class="brutalist-sync-btn" @click="syncToPlatform('twitter'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(0, 0, 0, 0.2); border-radius: 12px; background: rgba(0, 0, 0, 0.03); color: #1a1a1a; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">𝕏</span>
-                同步 Twitter
+              <button v-for="p in ['wechat', 'zhihu', 'juejin', 'csdn', 'weibo', 'twitter']" :key="p"
+                class="brutalist-sync-btn" 
+                @click.stop="togglePlatformSelection(p)"
+                :style="{ 
+                  padding: '12px', border: '2px solid', borderRadius: '12px', fontWeight: '700', 
+                  cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', 
+                  alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  borderColor: selectedPlatforms.includes(p) ? 'var(--primary)' : 'rgba(0,0,0,0.1)',
+                  background: selectedPlatforms.includes(p) ? 'rgba(139, 90, 43, 0.08)' : 'transparent',
+                  color: selectedPlatforms.includes(p) ? 'var(--primary)' : 'var(--text-muted)'
+                }">
+                <span style="font-size: 18px;">{{ {wechat:'💬',zhihu:'知',juejin:'💎',csdn:'C',weibo:'微',twitter:'𝕏'}[p] }}</span>
+                <span style="font-size: 12px;">{{ platformLabels[p] }}</span>
+                <span v-if="selectedPlatforms.includes(p)" style="font-size: 10px; color: var(--primary);">✓ 已选</span>
               </button>
             </div>
             
-            <button class="html-copy-btn" @click="copyHtml('wechat'); toggleMenu(null)" style="width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: #1a1a1a; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
-               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-               万能发文：复制完整富文本
+            <!-- No plugin warning banner -->
+            <div v-show="!isCoseInstalled && syncQueue.length === 0" style="background: rgba(220, 38, 38, 0.05); border-left: 3px solid #dc2626; padding: 10px 12px; border-radius: 4px; font-size: 12px; color: #7f1d1d; line-height: 1.5;">
+              <strong>⚠️ 原生降级模式</strong><br>
+              未装 COSE 插件时，请点击发送，会自动逐一打开多平台网页供发布。
+            </div>
+
+            <!-- Distribution Queue Wizard -->
+            <div v-if="syncQueue.length > 0" style="display: flex; flex-direction: column; gap: 8px;">
+               <div style="font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                 📋 分发向导：请按序点击发送
+               </div>
+               <button v-for="q in syncQueue" :key="q.platform" @click="executeManualSync(q.platform)" 
+                       :style="{ padding: '12px', borderRadius: '8px', background: q.status === 'done' ? '#f3f4f6' : 'var(--primary)', color: q.status === 'done' ? '#9ca3af' : '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }">
+                 <span>{{ platformLabels[q.platform] }}</span>
+                 <span style="font-size: 12px; font-weight: normal;">{{ q.status === 'done' ? '✓ 已完成' : '点击发送 →' }}</span>
+               </button>
+               <button @click="syncQueue = []; toggleMenu('')" style="padding: 10px; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 8px; background: transparent; color: #4b5563; font-size: 13px; font-weight: 600; cursor: pointer;">关闭向导</button>
+            </div>
+
+            <button v-if="syncQueue.length === 0 && selectedPlatforms.length > 0" class="distribute-action-btn" @click="distributeToSelectedPlatforms" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(139,90,43,0.3); margin-top: 4px;">
+               🚀 一键发射到所选平台 ({{selectedPlatforms.length}})
             </button>
           </div>
           
+          
+
           <!-- 万能复制 FAB -->
         <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
           <button class="fab-btn" @click="copyHtml('wechat')" style="width: 48px; height: 48px; border-radius: 9999px; background: #1a1a1a; border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.08); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
@@ -2220,20 +2133,6 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           </button>
         </div>
 
-        <button class="fab-btn" :class="{ 'is-active': activeMenu === 'fabPublish' }" style="width: 48px; height: 48px; border-radius: 9999px; background: var(--primary); border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <span class="material-symbols-outlined" style="font-size: 24px;">sync</span>
-            <div style="position: absolute; right: 56px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); padding: 6px 12px; border-radius: var(--radius-md); font-size: 13px; color: #1a1a1a; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">一键分发中心</div>
-          </button>
-        </div>
-      </div>
-      
-      <!-- Tier 3 Designer Pane (Tabs: Visual / Native CSS) -->
-      <div v-show="isEditingTheme && !isZenMode" class="editor-pane css-pane" style="width: 33.333%; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; background: #faf9f7; min-height: 0; box-shadow: -10px 0 30px rgba(0,0,0,0.04); z-index: 50;">
-        <!-- Panel Header -->
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid rgba(139,90,43,0.08);">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 3px; height: 18px; background: var(--primary); border-radius: 2px;"></div>
-            <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.02em;">排版中心</span>
           </div>
           <button @click="isEditingTheme = false" style="width: 28px; height: 28px; border: none; background: rgba(0,0,0,0.04); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.15s; font-size: 14px;" onmouseover="this.style.background='rgba(0,0,0,0.08)'" onmouseout="this.style.background='rgba(0,0,0,0.04)'">✕</button>
         </div>

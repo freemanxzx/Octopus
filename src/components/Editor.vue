@@ -3214,7 +3214,7 @@ html.dark .dropdown-divider {
 }
 .editor-pane ::v-deep(.cm-content) {
   font-family: 'JetBrains Mono', monospace !important;
-  padding: 2rem !important;
+  padding: 4px 0 !important;
 }
 .editor-pane ::v-deep(.cm-gutters) {
   background: transparent !important;
@@ -3223,12 +3223,12 @@ html.dark .dropdown-divider {
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 15px !important;
   min-width: 48px;
-  padding-right: 1rem;
+  padding-right: 4px;
   padding-top: 0.25rem;
 }
 .editor-pane ::v-deep(.cm-lineNumbers .cm-gutterElement) {
   text-align: right;
-  padding-right: 1rem;
+  padding-right: 4px;
 }
 
 /* TOC Panel */

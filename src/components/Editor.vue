@@ -4012,41 +4012,46 @@ html.dark .view-toggles-pill .pill-btn.active {
   color: #ffffff;
 }
 
-/* WX Link Auto Detection Banner (Redesigned to Bottom-Left) */
+/* WX Link Auto Detection Banner (Redesigned to Floating Glass Pill) */
 .smart-link-palette {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  width: 560px;
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
   max-width: 90vw;
-  background: var(--bg-panel);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-subtle);
-  border-radius: 0 !important;
+  border-radius: 99px !important;
   overflow: hidden;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
   z-index: 2000;
   display: flex;
   flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 html.dark .smart-link-palette {
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .smart-link-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 12px 8px 16px;
+  background: transparent;
+  border-bottom: none;
 }
 
 .smart-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 0.95rem;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
   color: var(--text-primary);
 }
 
@@ -4054,21 +4059,22 @@ html.dark .smart-link-palette {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 0 !important;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% !important;
   color: #fff;
-  background: #f59e0b;
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
 }
 
 .smart-badge {
   font-size: 0.75rem;
   padding: 4px 12px;
-  border-radius: 0 !important;
-  font-weight: 700;
+  border-radius: 99px !important;
+  font-weight: 600;
   letter-spacing: 0.3px;
   transition: all 0.2s;
+  cursor: pointer;
 }
 .smart-badge:hover {
   background: rgba(245, 158, 11, 0.25);
@@ -4089,15 +4095,16 @@ html.dark .smart-link-palette {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  padding: 6px 14px;
-  border-radius: 0 !important;
+  padding: 6px 16px;
+  border-radius: 99px !important;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
 }
 .smart-btn-primary:hover {
   background: var(--bg-active);
@@ -4110,7 +4117,7 @@ html.dark .smart-link-palette {
   color: var(--text-muted);
   cursor: pointer;
   padding: 6px;
-  border-radius: 0 !important;
+  border-radius: 50% !important;
   display: flex;
   align-items: center;
   transition: all 0.2s;
@@ -4124,11 +4131,11 @@ html.dark .smart-link-palette {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 16px;
-  padding: 16px;
-  background: rgba(245, 158, 11, 0.03);
+  margin: 0 16px 16px;
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.05);
   border: 1px dashed rgba(245, 158, 11, 0.3);
-  border-radius: 0 !important;
+  border-radius: 16px !important;
   transition: all 0.2s;
 }
 .smart-locator-glass:hover {
@@ -4150,14 +4157,14 @@ html.dark .smart-link-palette {
 }
 
 .locator-line-tag {
-  background: #f59e0b;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #fff;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8rem;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 0 !important;
-  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
 }
 
 .locator-anchor-text {
@@ -4184,9 +4191,9 @@ html.dark .smart-link-palette {
   align-items: center;
   background: var(--bg-app);
   border: 1px solid var(--border-subtle);
-  border-radius: 0 !important;
-  padding: 2px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border-radius: 99px !important;
+  padding: 2px 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .locator-nav-btn {

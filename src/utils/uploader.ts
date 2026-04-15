@@ -25,6 +25,16 @@ export type UploadConfig = {
   aiKey?: string;
   aiModel?: string;
   aiImageModel?: string;
+
+  // WeChat Official Accounts Sync
+  wechatAppId?: string;
+  wechatAppSecret?: string;
+  wechatThumbMediaId?: string;
+
+  // Platform Cookies for Native Sync
+  zhihuCookie?: string;
+  juejinCookie?: string;
+  csdnCookie?: string;
 };
 
 const toBase64 = (file: File): Promise<string> => {

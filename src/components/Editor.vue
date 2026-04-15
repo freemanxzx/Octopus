@@ -11,6 +11,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
 import { uploadImage, type UploadConfig } from '../utils/uploader';
+import { syncToWechatDraft } from '../utils/wechat';
 import CropperModal from './CropperModal.vue';
 
 // Static raw CSS imports to bypass Vite dynamic loader sandbox and CDN blocks
@@ -1171,6 +1172,97 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' |
   
   selection?.removeAllRanges();
   document.body.removeChild(clone);
+};
+
+const extractCookie = async (platform: string) => {
+  if (!(window as any).platformAPI?.extractAuthCookie) {
+     customAlert("⛔ [原生专属] 一键截取登录态仅支持桌面客户端！SaaS Web 端受浏览器高危沙箱限制，无法拉起独立 Cookie 嗅探池。");
+     return;
+  }
+  try {
+     let c = '';
+     if (platform === 'zhihu') {
+        showToast("🚀 正在拉起极速沙箱拦截知乎 Cookie...完成登录后直接关闭窗口即可！", "info");
+        c = await (window as any).platformAPI.extractAuthCookie("https://zhuanlan.zhihu.com/", ".zhihu.com");
+        if (c) { uploadConfig.value.zhihuCookie = c; showToast("✅ 免密提取成功", "success"); }
+     } else if (platform === 'juejin') {
+        showToast("🚀 正在拉起极速沙箱拦截掘金 Cookie...完成登录后直接关闭窗口即可！", "info");
+        c = await (window as any).platformAPI.extractAuthCookie("https://juejin.cn/", ".juejin.cn");
+        if (c) { uploadConfig.value.juejinCookie = c; showToast("✅ 免密提取成功", "success"); }
+     } else if (platform === 'csdn') {
+        showToast("🚀 正在拉起极速沙箱拦截 CSDN Cookie...完成登录后直接关闭窗口即可！", "info");
+        c = await (window as any).platformAPI.extractAuthCookie("https://passport.csdn.net/login", ".csdn.net");
+        if (c) { uploadConfig.value.csdnCookie = c; showToast("✅ 免密提取成功", "success"); }
+     }
+  } catch (e) {
+     customAlert("提取凭证失败：" + String(e));
+  }
+};
+
+// Feature: Native Desktop One-Click WeChat Synchronizer
+const syncWechat = async () => {
+  if (!previewContainer.value) return;
+  const original = previewContainer.value.querySelector('.preview-content') as HTMLElement;
+  if (!original) return;
+
+  const clone = original.cloneNode(true) as HTMLElement;
+  const sourceNodes = original.querySelectorAll('*');
+  const targetNodes = clone.querySelectorAll('*');
+  
+  for (let i = 0; i < sourceNodes.length; i++) {
+    const computed = window.getComputedStyle(sourceNodes[i]);
+    const propertiesToKeep = ['color', 'background-color', 'font-size', 'font-weight', 'font-family', 'font-style', 'text-decoration', 'margin', 'padding', 'border', 'border-radius', 'line-height', 'text-align', 'display'];
+    
+    let cssStr = '';
+    propertiesToKeep.forEach(prop => {
+      const val = computed.getPropertyValue(prop);
+      if (val && val !== 'rgba(0, 0, 0, 0)' && val !== '0px' && val !== 'transparent' && val !== 'none' && val !== 'normal') {
+        cssStr += `${prop}:${val};`;
+      }
+    });
+
+    if (cssStr) {
+      (targetNodes[i] as HTMLElement).style.cssText = cssStr;
+    }
+  }
+  
+  const mjxs = clone.getElementsByTagName('mjx-container');
+  for (let i = 0; i < mjxs.length; i++) {
+      const mjx = mjxs[i] as HTMLElement;
+      mjx.removeAttribute("jax");
+      mjx.removeAttribute("tabindex");
+      mjx.removeAttribute("ctxtmenu_counter");
+      
+      const svg = mjx.querySelector('svg');
+      if (svg) {
+          const width = svg.getAttribute("width");
+          const height = svg.getAttribute("height");
+          svg.removeAttribute("width");
+          svg.removeAttribute("height");
+          if (width) svg.style.width = width;
+          if (height) svg.style.height = height;
+      }
+  }
+  clone.querySelectorAll('style').forEach(s => s.remove());
+  
+  let cloneHtml = clone.innerHTML;
+  cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?display="true"[^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<section $1>$2</section>");
+  cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<span $1>$2</span>");
+  cloneHtml = cloneHtml.replace(/\s<span class="MathJax"/g, '&nbsp;<span class="MathJax"');
+  cloneHtml = cloneHtml.replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
+  cloneHtml = cloneHtml.replace(/class="mjx-solid"/g, 'fill="none" stroke-width="70"');
+  cloneHtml = cloneHtml.replace(/<mjx-assistive-mml[\s\S]*?<\/mjx-assistive-mml>/g, "");
+  
+  const title = content.value.split('\n')[0].replace(/^[#\s]+/, '').trim() || "Untitled Octopus Draft";
+  
+  try {
+    showToast('🚀 正在由桌面级原生协议直连微信云下发...', 'success');
+    const articleId = await syncToWechatDraft(cloneHtml, title, uploadConfig.value);
+    showToast(`✅ 直连成功！已安全推流至微信草稿箱 (ID: ${articleId})`, "success");
+    toggleMenu(null);
+  } catch (error: any) {
+    customAlert(`原生推流被拒：${error.message}`);
+  }
 };
 
 const isExporting = ref(false);

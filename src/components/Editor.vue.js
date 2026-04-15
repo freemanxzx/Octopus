@@ -10,6 +10,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
 import { uploadImage } from '../utils/uploader';
+import { syncToWechatDraft } from '../utils/wechat';
 // Static raw CSS imports to bypass Vite dynamic loader sandbox and CDN blocks
 import githubCss from 'highlight.js/styles/github.css?raw';
 import vs2015Css from 'highlight.js/styles/vs2015.css?raw';
@@ -254,6 +255,7 @@ const externalLinks = ref([]);
 const hasExternalLinks = computed(() => externalLinks.value.length > 0);
 const activeExtLinkIdx = ref(0);
 const showLinkWarning = ref(true);
+const userDismissedLinkRadar = ref(false);
 const isLinkRadarExpanded = ref(false);
 let linkCheckDebounce = null;
 const jumpToExtLine = (direction) => {
@@ -287,7 +289,14 @@ watch(content, (newVal) => {
     linkCheckDebounce = window.setTimeout(() => {
         const linksFound = [];
         const extLinkRegex = /(?:^|[^!])\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/g;
+        let isInsideCode = false;
         lines.forEach((lineText, idx) => {
+            if (lineText.trim().startsWith('```')) {
+                isInsideCode = !isInsideCode;
+                return;
+            }
+            if (isInsideCode)
+                return;
             let match;
             while ((match = extLinkRegex.exec(lineText)) !== null) {
                 linksFound.push({
@@ -1104,6 +1113,67 @@ const copyHtml = (platform = 'wechat') => {
     selection?.removeAllRanges();
     document.body.removeChild(clone);
 };
+// Feature: Native Desktop One-Click WeChat Synchronizer
+const syncWechat = async () => {
+    if (!previewContainer.value)
+        return;
+    const original = previewContainer.value.querySelector('.preview-content');
+    if (!original)
+        return;
+    const clone = original.cloneNode(true);
+    const sourceNodes = original.querySelectorAll('*');
+    const targetNodes = clone.querySelectorAll('*');
+    for (let i = 0; i < sourceNodes.length; i++) {
+        const computed = window.getComputedStyle(sourceNodes[i]);
+        const propertiesToKeep = ['color', 'background-color', 'font-size', 'font-weight', 'font-family', 'font-style', 'text-decoration', 'margin', 'padding', 'border', 'border-radius', 'line-height', 'text-align', 'display'];
+        let cssStr = '';
+        propertiesToKeep.forEach(prop => {
+            const val = computed.getPropertyValue(prop);
+            if (val && val !== 'rgba(0, 0, 0, 0)' && val !== '0px' && val !== 'transparent' && val !== 'none' && val !== 'normal') {
+                cssStr += `${prop}:${val};`;
+            }
+        });
+        if (cssStr) {
+            targetNodes[i].style.cssText = cssStr;
+        }
+    }
+    const mjxs = clone.getElementsByTagName('mjx-container');
+    for (let i = 0; i < mjxs.length; i++) {
+        const mjx = mjxs[i];
+        mjx.removeAttribute("jax");
+        mjx.removeAttribute("tabindex");
+        mjx.removeAttribute("ctxtmenu_counter");
+        const svg = mjx.querySelector('svg');
+        if (svg) {
+            const width = svg.getAttribute("width");
+            const height = svg.getAttribute("height");
+            svg.removeAttribute("width");
+            svg.removeAttribute("height");
+            if (width)
+                svg.style.width = width;
+            if (height)
+                svg.style.height = height;
+        }
+    }
+    clone.querySelectorAll('style').forEach(s => s.remove());
+    let cloneHtml = clone.innerHTML;
+    cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?display="true"[^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<section $1>$2</section>");
+    cloneHtml = cloneHtml.replace(/<mjx-container([^>]*?)>([\s\S]*?)<\/mjx-container>/g, "<span $1>$2</span>");
+    cloneHtml = cloneHtml.replace(/\s<span class="MathJax"/g, '&nbsp;<span class="MathJax"');
+    cloneHtml = cloneHtml.replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
+    cloneHtml = cloneHtml.replace(/class="mjx-solid"/g, 'fill="none" stroke-width="70"');
+    cloneHtml = cloneHtml.replace(/<mjx-assistive-mml[\s\S]*?<\/mjx-assistive-mml>/g, "");
+    const title = content.value.split('\n')[0].replace(/^[#\s]+/, '').trim() || "Untitled Octopus Draft";
+    try {
+        showToast('🚀 正在由桌面级原生协议直连微信云下发...', 'success');
+        const articleId = await syncToWechatDraft(cloneHtml, title, uploadConfig.value);
+        showToast(`✅ 直连成功！已安全推流至微信草稿箱 (ID: ${articleId})`, "success");
+        toggleMenu(null);
+    }
+    catch (error) {
+        customAlert(`原生推流被拒：${error.message}`);
+    }
+};
 const isExporting = ref(false);
 const isCoseInstalled = ref(false);
 onMounted(() => {
@@ -1874,29 +1944,7 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['toolbar-divider']} */ ;
 /** @type {__VLS_StyleScopedClasses['premium-select']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-icon-text']} */ ;
-/** @type {__VLS_StyleScopedClasses['setting-input']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-group-item']} */ ;
-/** @type {__VLS_StyleScopedClasses['btn-primary-filled']} */ ;
-/** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
-/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['active']} */ ;
-/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['wechat']} */ ;
-/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['zhihu']} */ ;
-/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['juejin']} */ ;
-/** @type {__VLS_StyleScopedClasses['float-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
-/** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
+/** @type {__VLS_StyleScopedClasses['toast-container']} */ ;
 /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
 /** @type {__VLS_StyleScopedClasses['serif-font']} */ ;
 /** @type {__VLS_StyleScopedClasses['system-menu-bar']} */ ;
@@ -1928,6 +1976,7 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['view-toggles-pill']} */ ;
 /** @type {__VLS_StyleScopedClasses['pill-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['active']} */ ;
+/** @type {__VLS_StyleScopedClasses['smart-link-palette']} */ ;
 /** @type {__VLS_StyleScopedClasses['dark']} */ ;
 /** @type {__VLS_StyleScopedClasses['smart-link-palette']} */ ;
 /** @type {__VLS_StyleScopedClasses['smart-badge']} */ ;
@@ -3308,18 +3357,20 @@ const __VLS_20 = __VLS_19({
     name: "slide-up",
 }, ...__VLS_functionalComponentArgsRest(__VLS_19));
 const { default: __VLS_23 } = __VLS_21.slots;
-if (__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning) {
+if (!__VLS_ctx.userDismissedLinkRadar && !__VLS_ctx.enableLinkFootnote && __VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "smart-link-palette" },
+        ...{ class: ({ 'is-expanded': __VLS_ctx.isLinkRadarExpanded }) },
     });
     /** @type {__VLS_StyleScopedClasses['smart-link-palette']} */ ;
+    /** @type {__VLS_StyleScopedClasses['is-expanded']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
+                if (!(!__VLS_ctx.userDismissedLinkRadar && !__VLS_ctx.enableLinkFootnote && __VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
                     return;
                 __VLS_ctx.isLinkRadarExpanded = !__VLS_ctx.isLinkRadarExpanded;
                 // @ts-ignore
-                [toggleLinkFootnote, hasExternalLinks, showLinkWarning, isLinkRadarExpanded, isLinkRadarExpanded,];
+                [toggleLinkFootnote, userDismissedLinkRadar, enableLinkFootnote, hasExternalLinks, showLinkWarning, isLinkRadarExpanded, isLinkRadarExpanded, isLinkRadarExpanded,];
             } },
         ...{ class: "smart-link-header" },
         ...{ style: {} },
@@ -3373,12 +3424,12 @@ if (__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning) {
     /** @type {__VLS_StyleScopedClasses['smart-actions']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
         ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
+                if (!(!__VLS_ctx.userDismissedLinkRadar && !__VLS_ctx.enableLinkFootnote && __VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
                     return;
                 __VLS_ctx.toggleLinkFootnote();
-                __VLS_ctx.showLinkWarning = false;
+                __VLS_ctx.userDismissedLinkRadar = true;
                 // @ts-ignore
-                [toggleLinkFootnote, showLinkWarning, isLinkRadarExpanded, externalLinks,];
+                [toggleLinkFootnote, userDismissedLinkRadar, isLinkRadarExpanded, externalLinks,];
             } },
         ...{ class: "smart-btn-primary" },
     });
@@ -3399,14 +3450,14 @@ if (__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning) {
     });
     __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
         ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
+                if (!(!__VLS_ctx.userDismissedLinkRadar && !__VLS_ctx.enableLinkFootnote && __VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
                     return;
-                __VLS_ctx.showLinkWarning = false;
+                __VLS_ctx.userDismissedLinkRadar = true;
                 // @ts-ignore
-                [showLinkWarning,];
+                [userDismissedLinkRadar,];
             } },
         ...{ class: "smart-btn-icon" },
-        title: "忽略警告",
+        title: "忽略警告不再提醒",
     });
     /** @type {__VLS_StyleScopedClasses['smart-btn-icon']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
@@ -3448,7 +3499,7 @@ if (__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning) {
         /** @type {__VLS_StyleScopedClasses['smart-locator-glass']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
             ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
+                    if (!(!__VLS_ctx.userDismissedLinkRadar && !__VLS_ctx.enableLinkFootnote && __VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
                         return;
                     if (!(__VLS_ctx.externalLinks.length > 0))
                         return;
@@ -3485,7 +3536,7 @@ if (__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning) {
         /** @type {__VLS_StyleScopedClasses['locator-nav-controls']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
             ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
+                    if (!(!__VLS_ctx.userDismissedLinkRadar && !__VLS_ctx.enableLinkFootnote && __VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
                         return;
                     if (!(__VLS_ctx.externalLinks.length > 0))
                         return;
@@ -3516,7 +3567,7 @@ if (__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning) {
         (__VLS_ctx.externalLinks.length);
         __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
             ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
+                    if (!(!__VLS_ctx.userDismissedLinkRadar && !__VLS_ctx.enableLinkFootnote && __VLS_ctx.hasExternalLinks && __VLS_ctx.showLinkWarning))
                         return;
                     if (!(__VLS_ctx.externalLinks.length > 0))
                         return;

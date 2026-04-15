@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('wechatAPI', {
 contextBridge.exposeInMainWorld('platformAPI', {
   publishToZhihu: (cookie: string, title: string, content: string) => ipcRenderer.invoke('platform-publish-zhihu', cookie, title, content),
   publishToJuejin: (cookie: string, title: string, content: string) => ipcRenderer.invoke('platform-publish-juejin', cookie, title, content),
-  publishToCSDN: (cookie: string, title: string, content: string) => ipcRenderer.invoke('platform-publish-csdn', cookie, title, content)
+  publishToCSDN: (cookie: string, title: string, content: string) => ipcRenderer.invoke('platform-publish-csdn', cookie, title, content),
+  extractAuthCookie: (platformUrl: string, domainString: string) => ipcRenderer.invoke('platform-auth-extract', platformUrl, domainString)
 });

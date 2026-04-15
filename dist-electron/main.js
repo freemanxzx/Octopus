@@ -16,6 +16,8 @@ function createWindow() {
             nodeIntegration: false,
         }
     });
+    // Strip out the legacy OS-level native menu bar (File, Edit, View, etc.)
+    mainWindow.setMenu(null);
     if (process.env.VITE_DEV_SERVER_URL) {
         mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
         mainWindow.webContents.openDevTools();

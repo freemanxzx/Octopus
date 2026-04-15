@@ -20,6 +20,9 @@ function createWindow() {
     }
   });
 
+  // Strip out the legacy OS-level native menu bar (File, Edit, View, etc.)
+  mainWindow.setMenu(null);
+
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools();
@@ -66,6 +69,39 @@ app.whenReady().then(() => {
 
   ipcMain.handle('platform-publish-csdn', async (_, cookie, title, content) => {
     return await publishToCSDN(cookie, title, content);
+  });
+
+  // Feature: Desktop Secure Web Session Extractor
+  ipcMain.handle('platform-auth-extract', async (_, platformUrl: string, domainString: string) => {
+    return new Promise((resolve) => {
+      let authWin: BrowserWindow | null = new BrowserWindow({
+        width: 1000,
+        height: 700,
+        title: "一键同步登录状态 (关闭窗口即保存凭证)",
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+          partition: 'persist:octopus-sync', // Persistent partition to remember logins!
+        }
+      });
+      authWin.setMenu(null);
+
+      // Auto resolve when user manually closes the auth window
+      authWin.on('close', async () => {
+         try {
+           if (authWin) {
+             const cookies = await authWin.webContents.session.cookies.get({ domain: domainString });
+             const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+             resolve(cookieStr);
+           }
+         } catch (e) {
+           resolve("");
+         }
+         authWin = null;
+      });
+
+      authWin.loadURL(platformUrl);
+    });
   });
 
   createWindow();

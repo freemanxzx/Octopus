@@ -17,11 +17,20 @@ const observeElement = (selector, timeout = 10000) => {
 
 chrome.storage.local.get(['octopus_sync_payload'], async (result) => {
   const payload = result.octopus_sync_payload;
-  if (!payload || payload.target !== 'csdn') return;
+  if (!payload || payload.target !== 'oschina') return;
 
-  console.log('[Octopus MD Sync] CSDN Injection Started.');
+  console.log('[Octopus MD Sync] OSChina Injection Started.');
 
   try {
+    const titleInput = await observeElement('#titleGrid input[name="title"]');
+    console.log('[Octopus MD Sync] OSChina Title found.');
+    
+    if (titleInput) {
+        titleInput.value = payload.meta.title;
+        titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+        titleInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
     const editor = await observeElement(() => {
       const iframe = document.querySelector('iframe');
       if (iframe) {
@@ -31,23 +40,15 @@ chrome.storage.local.get(['octopus_sync_payload'], async (result) => {
              if (nestedEditor) return nestedEditor;
          }
       }
-      return document.querySelector('.editor') || document.querySelector('[contenteditable="true"]');
+      return null;
     });
-    
-    const titleInput = document.querySelector('#txtTitle') || document.querySelector('.article-bar__title');
-    
-    console.log('[Octopus MD Sync] CSDN Editor found. Injecting payload.');
-    
-    if (titleInput) {
-      titleInput.value = payload.meta.title;
-      titleInput.dispatchEvent(new Event('input', { bubbles: true }));
-      titleInput.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    console.log('[Octopus MD Sync] OSChina Editor found.');
     
     editor.focus();
+    
     const dataTransfer = new DataTransfer();
-    dataTransfer.setData('text/plain', payload.markdown);
     dataTransfer.setData('text/html', payload.html || payload.markdown);
+    dataTransfer.setData('text/plain', payload.markdown);
     
     editor.dispatchEvent(new ClipboardEvent('paste', {
       clipboardData: dataTransfer,
@@ -57,9 +58,9 @@ chrome.storage.local.get(['octopus_sync_payload'], async (result) => {
 
     editor.dispatchEvent(new Event('input', { bubbles: true }));
     editor.dispatchEvent(new Event('change', { bubbles: true }));
-
+    
     chrome.storage.local.remove('octopus_sync_payload');
-  } catch (e) {
+  } catch(e) {
     console.warn('[Octopus MD Sync] Target editor unresolvable (DOM changed). Degrading to manual paste.', e);
     alert('🐙 Octopus MD Sync: 无法自动锁定输入框。\n请在此页面的输入框内直接按下 Ctrl+V 完成格式无损粘贴。');
     chrome.storage.local.remove('octopus_sync_payload');

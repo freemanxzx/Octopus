@@ -1,31 +1,72 @@
-chrome.storage.local.get(['octopus_sync_payload'], (result) => {
+/**
+ * Octopus MD Sync — Weibo Injection Script
+ * Target: weibo.com composer (长微博 / 微头条)
+ * 
+ * Weibo uses dynamically hashed CSS class names (e.g. Form_input_3-oM8).
+ * We must use attribute/role selectors or structural queries, never hardcoded hashes.
+ */
+const observeElement = (selector, timeout = 10000) => {
+  return new Promise((resolve, reject) => {
+    let checkElement = typeof selector === 'function' ? selector : () => document.querySelector(selector);
+    let element = checkElement();
+    if (element) return resolve(element);
+    const observer = new MutationObserver(() => {
+      element = checkElement();
+      if (element) {
+        observer.disconnect();
+        resolve(element);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => { observer.disconnect(); reject(new Error('timeout')); }, timeout);
+  });
+};
+
+chrome.storage.local.get(['octopus_sync_payload'], async (result) => {
   const payload = result.octopus_sync_payload;
   if (!payload || payload.target !== 'weibo') return;
 
   console.log('[Octopus MD Sync] Weibo Injection Started.');
 
-  let attempts = 0;
-  const checkReady = setInterval(() => {
-    attempts++;
-    if (attempts > 8) {
-      clearInterval(checkReady);
-      console.warn('[Octopus MD Sync] Target editor unresolvable (DOM changed). Degrading to manual paste.');
-      alert('🐙 Octopus MD Sync: 无法自动锁定输入框。\n请在此页面的输入框内直接按下 Ctrl+V 完成格式无损粘贴。');
-      chrome.storage.local.remove('octopus_sync_payload');
-      return;
-    }
-    // Weibo home composer textarea
-    const editor = document.querySelector('textarea.Form_input_3-oM8');
-    if (editor) {
-      clearInterval(checkReady);
-      console.log('[Octopus MD Sync] Weibo Editor found. Injecting payload.');
-      
-      editor.focus();
-      editor.value = payload.meta.title + "\n\n" + payload.markdown;
+  try {
+    // Weibo dynamically hashes class names, so we use a robust structural selector
+    const editor = await observeElement(() => {
+      // Try contenteditable first (article mode)
+      const ce = document.querySelector('[contenteditable="true"]');
+      if (ce) return ce;
+      // Fallback: find the main textarea via structural query
+      const textareas = document.querySelectorAll('textarea');
+      for (const ta of textareas) {
+        // Skip tiny textareas (search bars etc), target the main composer
+        if (ta.offsetHeight > 50) return ta;
+      }
+      return null;
+    });
+    
+    console.log('[Octopus MD Sync] Weibo Editor found. Injecting payload.');
+    
+    editor.focus();
+
+    if (editor.tagName === 'TEXTAREA') {
+      editor.value = payload.meta.title + '\n\n' + payload.markdown;
       editor.dispatchEvent(new Event('input', { bubbles: true }));
       editor.dispatchEvent(new Event('change', { bubbles: true }));
-
-      chrome.storage.local.remove('octopus_sync_payload');
+    } else {
+      // contenteditable mode
+      const dataTransfer = new DataTransfer();
+      dataTransfer.setData('text/html', payload.html || payload.markdown);
+      dataTransfer.setData('text/plain', payload.markdown);
+      editor.dispatchEvent(new ClipboardEvent('paste', {
+        clipboardData: dataTransfer,
+        bubbles: true,
+        cancelable: true
+      }));
     }
-  }, 1000);
+
+    chrome.storage.local.remove('octopus_sync_payload');
+  } catch (e) {
+    console.warn('[Octopus MD Sync] Target editor unresolvable (DOM changed). Degrading to manual paste.', e);
+    alert('🐙 Octopus MD Sync: 无法自动锁定输入框。\n请在此页面的输入框内直接按下 Ctrl+V 完成格式无损粘贴。');
+    chrome.storage.local.remove('octopus_sync_payload');
+  }
 });

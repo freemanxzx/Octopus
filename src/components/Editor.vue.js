@@ -1082,7 +1082,12 @@ const copyHtml = (platform = 'wechat') => {
     selection?.removeAllRanges();
     selection?.addRange(range);
     try {
-        const platName = platform === 'wechat' ? '微信' : (platform === 'zhihu' ? '知乎' : (platform === 'weibo' ? '微博' : (platform === 'twitter' ? 'X (Twitter)' : '云端')));
+        const platNames = {
+            wechat: '微信公众号', zhihu: '知乎', juejin: '掘金', csdn: 'CSDN',
+            weibo: '微博', twitter: 'X (Twitter)', cnblogs: '博客园',
+            segmentfault: '思否', '51cto': '51CTO', oschina: '开源中国'
+        };
+        const platName = platNames[platform] || platform;
         // Check if the Extension bridge is listening. If yes, pass raw payloads via IPC.
         // If not, it falls back instantly to the old behavior (just copying).
         if (isExtensionInstalled.value) {
@@ -1112,6 +1117,42 @@ const copyHtml = (platform = 'wechat') => {
     }
     selection?.removeAllRanges();
     document.body.removeChild(clone);
+};
+const extractCookie = async (platform) => {
+    if (!window.platformAPI?.extractAuthCookie) {
+        customAlert("⛔ [原生专属] 一键截取登录态仅支持桌面客户端！SaaS Web 端受浏览器高危沙箱限制，无法拉起独立 Cookie 嗅探池。");
+        return;
+    }
+    try {
+        let c = '';
+        if (platform === 'zhihu') {
+            showToast("🚀 正在拉起极速沙箱拦截知乎 Cookie...完成登录后直接关闭窗口即可！", "info");
+            c = await window.platformAPI.extractAuthCookie("https://zhuanlan.zhihu.com/", ".zhihu.com");
+            if (c) {
+                uploadConfig.value.zhihuCookie = c;
+                showToast("✅ 免密提取成功", "success");
+            }
+        }
+        else if (platform === 'juejin') {
+            showToast("🚀 正在拉起极速沙箱拦截掘金 Cookie...完成登录后直接关闭窗口即可！", "info");
+            c = await window.platformAPI.extractAuthCookie("https://juejin.cn/", ".juejin.cn");
+            if (c) {
+                uploadConfig.value.juejinCookie = c;
+                showToast("✅ 免密提取成功", "success");
+            }
+        }
+        else if (platform === 'csdn') {
+            showToast("🚀 正在拉起极速沙箱拦截 CSDN Cookie...完成登录后直接关闭窗口即可！", "info");
+            c = await window.platformAPI.extractAuthCookie("https://passport.csdn.net/login", ".csdn.net");
+            if (c) {
+                uploadConfig.value.csdnCookie = c;
+                showToast("✅ 免密提取成功", "success");
+            }
+        }
+    }
+    catch (e) {
+        customAlert("提取凭证失败：" + String(e));
+    }
 };
 // Feature: Native Desktop One-Click WeChat Synchronizer
 const syncWechat = async () => {

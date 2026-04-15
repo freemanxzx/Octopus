@@ -1141,7 +1141,12 @@ const copyHtml = (platform: 'wechat' | 'zhihu' | 'juejin' | 'csdn' | 'twitter' |
   selection?.addRange(range);
   
   try {
-    const platName = platform === 'wechat' ? '微信' : (platform === 'zhihu' ? '知乎' : (platform === 'weibo' ? '微博' : (platform === 'twitter' ? 'X (Twitter)' : '云端')));
+    const platNames: Record<string, string> = {
+      wechat: '微信公众号', zhihu: '知乎', juejin: '掘金', csdn: 'CSDN',
+      weibo: '微博', twitter: 'X (Twitter)', cnblogs: '博客园',
+      segmentfault: '思否', '51cto': '51CTO', oschina: '开源中国'
+    };
+    const platName = platNames[platform] || platform;
     
     // Check if the Extension bridge is listening. If yes, pass raw payloads via IPC.
     // If not, it falls back instantly to the old behavior (just copying).

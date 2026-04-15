@@ -2,13 +2,13 @@
   "manifest_version": 3,
   "name": "Octopus MD Sync (Sync Everywhere)",
   "version": "1.0.0",
-  "description": "Octopus MD 专属多平台文章无损同步分发与 DOM 注入引擎。支持微信、知乎、掘金、微博、X (Twitter)、CSDN。",
+  "description": "Octopus MD 专属多平台文章无损同步分发引擎。支持微信公众号、知乎、掘金、CSDN、微博、X (Twitter)、博客园、思否、51CTO、开源中国共 10 大平台一键发布。",
   "permissions": [
     "scripting",
     "activeTab",
     "storage",
-    "tabs",
-    "cookies"
+    "unlimitedStorage",
+    "tabs"
   ],
   "host_permissions": [
     "*://mp.weixin.qq.com/*",
@@ -18,6 +18,10 @@
     "*://weibo.com/*",
     "*://x.com/*",
     "*://twitter.com/*",
+    "*://*.cnblogs.com/*",
+    "*://segmentfault.com/*",
+    "*://*.51cto.com/*",
+    "*://*.oschina.net/*",
     "http://localhost:5173/*",
     "https://octopus.md/*"
   ],
@@ -62,10 +66,40 @@
       "matches": ["https://x.com/compose/tweet*", "https://twitter.com/compose/tweet*"],
       "js": ["scripts/inject-twitter.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://i.cnblogs.com/*"],
+      "js": ["scripts/inject-cnblogs.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://segmentfault.com/write*"],
+      "js": ["scripts/inject-segmentfault.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://blog.51cto.com/blogger/publish*", "*://blog.51cto.com/draft*"],
+      "js": ["scripts/inject-51cto.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://my.oschina.net/*/blog/write*", "*://my.oschina.net/blog/write*"],
+      "js": ["scripts/inject-oschina.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Octopus MD Sync"
+    "default_title": "Octopus MD Sync",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
   }
 }

@@ -14,6 +14,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'csdn': url = 'https://mp.csdn.net/mp_blog/creation/editor'; break;
         case 'weibo': url = 'https://weibo.com/'; break;
         case 'twitter': url = 'https://twitter.com/compose/tweet'; break;
+        case 'cnblogs': url = 'https://i.cnblogs.com/EditPosts.aspx?opt=1'; break;
+        case 'segmentfault': url = 'https://segmentfault.com/write'; break;
+        case '51cto': url = 'https://blog.51cto.com/blogger/publish'; break;
+        case 'oschina': url = 'https://my.oschina.net/blog/write'; break;
         default: console.warn('Unknown target platform:', payload.target);
       }
       

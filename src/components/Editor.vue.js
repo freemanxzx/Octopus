@@ -4724,9 +4724,14 @@ if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.
         });
         /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
         /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
-        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
-            ...{ style: {} },
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "config-modal-header" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-modal-header']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
+            ...{ class: "config-modal-title" },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-modal-title']} */ ;
         (__VLS_ctx.modalState.title);
         __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
             ...{ style: {} },
@@ -4772,14 +4777,51 @@ if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.
     if (__VLS_ctx.isSyncModalVisible) {
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
             ...{ class: "export-modal custom-modal sync-modal" },
-            ...{ style: {} },
         });
         /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
         /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
         /** @type {__VLS_StyleScopedClasses['sync-modal']} */ ;
-        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
-            ...{ style: {} },
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "config-modal-header" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-modal-header']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
+            ...{ class: "config-modal-title" },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-modal-title']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+            viewBox: "0 0 24 24",
+            width: "20",
+            height: "20",
+            fill: "none",
+            stroke: "currentColor",
+            'stroke-width': "2",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.path)({
+            d: "M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.polyline)({
+            points: "16 6 12 2 8 6",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.line)({
+            x1: "12",
+            y1: "2",
+            x2: "12",
+            y2: "15",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.isSyncModalVisible || __VLS_ctx.isVisualConfigVisible))
+                        return;
+                    if (!(__VLS_ctx.isSyncModalVisible))
+                        return;
+                    __VLS_ctx.isSyncModalVisible = false;
+                    // @ts-ignore
+                    [isSyncModalVisible, isSyncModalVisible,];
+                } },
+            ...{ class: "config-close-btn" },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-close-btn']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
             ...{ style: {} },
         });
@@ -4806,7 +4848,7 @@ if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.
                         return;
                     __VLS_ctx.syncToPlatform('wechat');
                     // @ts-ignore
-                    [isSyncModalVisible, syncToPlatform,];
+                    [syncToPlatform,];
                 } },
             ...{ class: "sync-grid-btn wechat" },
             ...{ style: {} },
@@ -4949,43 +4991,82 @@ if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.
             ...{ style: {} },
         });
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "config-info-box" },
             ...{ style: {} },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-info-box']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+        __VLS_asFunctionalElement1(__VLS_intrinsics.kbd, __VLS_intrinsics.kbd)({
+            ...{ style: {} },
+        });
+    }
+    if (__VLS_ctx.isImageConfigVisible) {
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "export-modal custom-modal" },
+        });
+        /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
+        /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "config-modal-header" },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-modal-header']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
+            ...{ class: "config-modal-title" },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-modal-title']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+            viewBox: "0 0 24 24",
+            width: "20",
+            height: "20",
+            fill: "none",
+            stroke: "currentColor",
+            'stroke-width': "2",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.rect)({
+            x: "3",
+            y: "3",
+            width: "18",
+            height: "18",
+            rx: "2",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.circle)({
+            cx: "8.5",
+            cy: "8.5",
+            r: "1.5",
+        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.polyline)({
+            points: "21 15 16 10 5 21",
         });
         __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
             ...{ onClick: (...[$event]) => {
                     if (!(__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.isSyncModalVisible || __VLS_ctx.isVisualConfigVisible))
                         return;
-                    if (!(__VLS_ctx.isSyncModalVisible))
+                    if (!(__VLS_ctx.isImageConfigVisible))
                         return;
-                    __VLS_ctx.isSyncModalVisible = false;
+                    __VLS_ctx.isImageConfigVisible = false;
                     // @ts-ignore
-                    [isSyncModalVisible,];
+                    [isImageConfigVisible, isImageConfigVisible,];
                 } },
-            ...{ class: "btn btn-native" },
+            ...{ class: "config-close-btn" },
         });
-        /** @type {__VLS_StyleScopedClasses['btn']} */ ;
-        /** @type {__VLS_StyleScopedClasses['btn-native']} */ ;
-    }
-    if (__VLS_ctx.isImageConfigVisible) {
+        /** @type {__VLS_StyleScopedClasses['config-close-btn']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ class: "export-modal custom-modal" },
-            ...{ style: {} },
+            ...{ class: "config-section-card" },
         });
-        /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
-        /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
-        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
-            ...{ style: {} },
-        });
+        /** @type {__VLS_StyleScopedClasses['config-section-card']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ style: {} },
+            ...{ class: "config-section-header" },
         });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+        /** @type {__VLS_StyleScopedClasses['config-section-header']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
             ...{ style: {} },
         });
         __VLS_asFunctionalElement1(__VLS_intrinsics.select, __VLS_intrinsics.select)({
             value: (__VLS_ctx.uploadConfig.provider),
-            ...{ style: {} },
+            ...{ class: "config-select" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-select']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.option, __VLS_intrinsics.option)({
             value: "base64",
         });
@@ -5006,196 +5087,251 @@ if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.
         });
         if (__VLS_ctx.uploadConfig.provider === 'github') {
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ class: "config-sub-fields" },
                 ...{ style: {} },
             });
+            /** @type {__VLS_StyleScopedClasses['config-sub-fields']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+                ...{ class: "hint" },
+            });
+            /** @type {__VLS_StyleScopedClasses['hint']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 value: (__VLS_ctx.uploadConfig.githubRepo),
                 type: "text",
                 placeholder: "username/repo",
-                ...{ style: {} },
+                ...{ class: "config-input" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 type: "password",
                 placeholder: "ghp_xxxxxxxxxxxxxxxxxxx",
-                ...{ style: {} },
+                ...{ class: "config-input" },
             });
             (__VLS_ctx.uploadConfig.githubToken);
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
+                ...{ class: "config-row" },
             });
-            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
-            });
+            /** @type {__VLS_StyleScopedClasses['config-row']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+                ...{ class: "hint" },
+            });
+            /** @type {__VLS_StyleScopedClasses['hint']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 value: (__VLS_ctx.uploadConfig.githubPath),
                 type: "text",
                 placeholder: "images/2026",
-                ...{ style: {} },
+                ...{ class: "config-input" },
             });
-            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
-            });
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+                ...{ class: "hint" },
+            });
+            /** @type {__VLS_StyleScopedClasses['hint']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 value: (__VLS_ctx.uploadConfig.githubBranch),
                 type: "text",
                 placeholder: "main",
-                ...{ style: {} },
+                ...{ class: "config-input" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
         }
         if (['alioss', 'txcos', 'qiniu'].includes(__VLS_ctx.uploadConfig.provider)) {
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ class: "config-sub-fields" },
                 ...{ style: {} },
             });
+            /** @type {__VLS_StyleScopedClasses['config-sub-fields']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ class: "config-row" },
+            });
+            /** @type {__VLS_StyleScopedClasses['config-row']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 value: (__VLS_ctx.uploadConfig.accessKey),
                 type: "text",
-                placeholder: "AccessKey ID",
-                ...{ style: {} },
+                placeholder: "AK...",
+                ...{ class: "config-input" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 type: "password",
-                placeholder: "AccessKey Secret",
-                ...{ style: {} },
+                placeholder: "SK...",
+                ...{ class: "config-input" },
             });
             (__VLS_ctx.uploadConfig.secretKey);
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
+                ...{ class: "config-row" },
             });
-            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
-            });
+            /** @type {__VLS_StyleScopedClasses['config-row']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 value: (__VLS_ctx.uploadConfig.bucket),
                 type: "text",
-                placeholder: "Bucket 名称",
-                ...{ style: {} },
+                placeholder: "my-bucket",
+                ...{ class: "config-input" },
             });
-            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
-            });
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 value: (__VLS_ctx.uploadConfig.region),
                 type: "text",
                 placeholder: (__VLS_ctx.uploadConfig.provider === 'qiniu' ? 'z0' : (__VLS_ctx.uploadConfig.provider === 'alioss' ? 'oss-cn-hangzhou' : 'ap-guangzhou')),
-                ...{ style: {} },
+                ...{ class: "config-input" },
             });
-            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
-            });
-            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-                ...{ style: {} },
-            });
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                ...{ style: {} },
+                ...{ class: "config-field-label" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+                ...{ class: "hint" },
+            });
+            /** @type {__VLS_StyleScopedClasses['hint']} */ ;
             __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                 value: (__VLS_ctx.uploadConfig.path),
                 type: "text",
                 placeholder: "blog/uploads/",
-                ...{ style: {} },
+                ...{ class: "config-input" },
             });
+            /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
             if (__VLS_ctx.uploadConfig.provider === 'qiniu') {
                 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
                 __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-                    ...{ style: {} },
+                    ...{ class: "config-field-label" },
                 });
+                /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
+                __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+                    ...{ class: "hint" },
+                });
+                /** @type {__VLS_StyleScopedClasses['hint']} */ ;
                 __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
                     value: (__VLS_ctx.uploadConfig.domain),
                     type: "text",
                     placeholder: "https://cdn.example.com",
-                    ...{ style: {} },
+                    ...{ class: "config-input" },
                 });
+                /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
             }
         }
         if (__VLS_ctx.uploadConfig.provider === 'picgo') {
-            __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+            __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+                ...{ class: "config-info-box" },
                 ...{ style: {} },
             });
+            /** @type {__VLS_StyleScopedClasses['config-info-box']} */ ;
+            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+            __VLS_asFunctionalElement1(__VLS_intrinsics.b, __VLS_intrinsics.b)({});
         }
-        __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "config-section-card" },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-section-card']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "config-section-header" },
+        });
+        /** @type {__VLS_StyleScopedClasses['config-section-header']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
             ...{ style: {} },
         });
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ style: {} },
+            ...{ class: "config-fields" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-fields']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
         __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-            ...{ style: {} },
+            ...{ class: "config-field-label" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
             value: (__VLS_ctx.uploadConfig.aiEndpoint),
             type: "text",
             placeholder: "https://proxy-ai.doocs.org/v1",
-            ...{ style: {} },
+            ...{ class: "config-input" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
         __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-            ...{ style: {} },
+            ...{ class: "config-field-label" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
             type: "password",
             placeholder: "sk-...",
-            ...{ style: {} },
+            ...{ class: "config-input" },
         });
         (__VLS_ctx.uploadConfig.aiKey);
+        /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ style: {} },
+            ...{ class: "config-row" },
         });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ style: {} },
-        });
+        /** @type {__VLS_StyleScopedClasses['config-row']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
         __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-            ...{ style: {} },
+            ...{ class: "config-field-label" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
             value: (__VLS_ctx.uploadConfig.aiModel),
             type: "text",
             placeholder: "Qwen/Qwen2.5-7B-Instruct",
-            ...{ style: {} },
+            ...{ class: "config-input" },
         });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ style: {} },
-        });
+        /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
         __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-            ...{ style: {} },
+            ...{ class: "config-field-label" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-field-label']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.input)({
             value: (__VLS_ctx.uploadConfig.aiImageModel),
             type: "text",
             placeholder: "Kwai-Kolors/Kolors",
-            ...{ style: {} },
+            ...{ class: "config-input" },
         });
+        /** @type {__VLS_StyleScopedClasses['config-input']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
             ...{ class: "modal-actions" },
-            ...{ style: {} },
         });
         /** @type {__VLS_StyleScopedClasses['modal-actions']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
@@ -5206,13 +5342,11 @@ if (__VLS_ctx.modalState.visible || __VLS_ctx.isImageConfigVisible || __VLS_ctx.
                         return;
                     __VLS_ctx.isImageConfigVisible = false;
                     // @ts-ignore
-                    [isImageConfigVisible, isImageConfigVisible, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig,];
+                    [isImageConfigVisible, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig, uploadConfig,];
                 } },
-            ...{ class: "btn btn-primary" },
-            ...{ style: {} },
+            ...{ class: "btn-save-config" },
         });
-        /** @type {__VLS_StyleScopedClasses['btn']} */ ;
-        /** @type {__VLS_StyleScopedClasses['btn-primary']} */ ;
+        /** @type {__VLS_StyleScopedClasses['btn-save-config']} */ ;
     }
 }
 // @ts-ignore
@@ -5421,12 +5555,35 @@ if (__VLS_ctx.isAITextToImageVisible) {
     /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
     /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "modal-header" },
-        ...{ style: {} },
+        ...{ class: "config-modal-header" },
     });
-    /** @type {__VLS_StyleScopedClasses['modal-header']} */ ;
+    /** @type {__VLS_StyleScopedClasses['config-modal-header']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
-        ...{ style: {} },
+        ...{ class: "config-modal-title" },
+    });
+    /** @type {__VLS_StyleScopedClasses['config-modal-title']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+        viewBox: "0 0 24 24",
+        width: "20",
+        height: "20",
+        fill: "none",
+        stroke: "currentColor",
+        'stroke-width': "2",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.rect)({
+        x: "3",
+        y: "3",
+        width: "18",
+        height: "18",
+        rx: "2",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle)({
+        cx: "12",
+        cy: "13",
+        r: "4",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.path)({
+        d: "M5 3v4M19 3v4",
     });
     __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
         ...{ onClick: (...[$event]) => {
@@ -5436,11 +5593,9 @@ if (__VLS_ctx.isAITextToImageVisible) {
                 // @ts-ignore
                 [isAITextToImageVisible,];
             } },
-        ...{ class: "btn btn-native" },
-        ...{ style: {} },
+        ...{ class: "config-close-btn" },
     });
-    /** @type {__VLS_StyleScopedClasses['btn']} */ ;
-    /** @type {__VLS_StyleScopedClasses['btn-native']} */ ;
+    /** @type {__VLS_StyleScopedClasses['config-close-btn']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "modal-body" },
         ...{ style: {} },
@@ -5503,12 +5658,28 @@ if (__VLS_ctx.isHistoryVisible) {
     /** @type {__VLS_StyleScopedClasses['export-modal']} */ ;
     /** @type {__VLS_StyleScopedClasses['custom-modal']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "modal-header" },
-        ...{ style: {} },
+        ...{ class: "config-modal-header" },
     });
-    /** @type {__VLS_StyleScopedClasses['modal-header']} */ ;
+    /** @type {__VLS_StyleScopedClasses['config-modal-header']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({
-        ...{ style: {} },
+        ...{ class: "config-modal-title" },
+    });
+    /** @type {__VLS_StyleScopedClasses['config-modal-title']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
+        viewBox: "0 0 24 24",
+        width: "20",
+        height: "20",
+        fill: "none",
+        stroke: "currentColor",
+        'stroke-width': "2",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.circle)({
+        cx: "12",
+        cy: "12",
+        r: "10",
+    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.polyline)({
+        points: "12 6 12 12 16 14",
     });
     __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
         ...{ onClick: (...[$event]) => {
@@ -5518,11 +5689,9 @@ if (__VLS_ctx.isHistoryVisible) {
                 // @ts-ignore
                 [isHistoryVisible,];
             } },
-        ...{ class: "btn btn-native" },
-        ...{ style: {} },
+        ...{ class: "config-close-btn" },
     });
-    /** @type {__VLS_StyleScopedClasses['btn']} */ ;
-    /** @type {__VLS_StyleScopedClasses['btn-native']} */ ;
+    /** @type {__VLS_StyleScopedClasses['config-close-btn']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "modal-body" },
         ...{ style: {} },

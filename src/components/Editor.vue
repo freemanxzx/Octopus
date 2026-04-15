@@ -2508,8 +2508,10 @@ const insertFormat = (prefix: string, suffix: string = '') => {
         <div v-if="modalState.visible || isImageConfigVisible || isSyncModalVisible || isVisualConfigVisible" class="export-overlay" @click.self="isImageConfigVisible = false; isSyncModalVisible = false; isVisualConfigVisible = false; clsoeModal(false)">
           <!-- General Dialog -->
           <div v-if="modalState.visible" class="export-modal custom-modal">
-            <h3 style="margin-top:0;">{{ modalState.title }}</h3>
-            <p style="margin: 1.5rem 0; white-space: pre-wrap;">{{ modalState.message }}</p>
+            <div class="config-modal-header">
+              <h3 class="config-modal-title">{{ modalState.title }}</h3>
+            </div>
+            <p style="margin: 0 0 1.25rem 0; white-space: pre-wrap; color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem;">{{ modalState.message }}</p>
             <div class="modal-actions">
               <button v-if="modalState.isConfirm" class="btn btn-native" @click="clsoeModal(false)">取消</button>
               <button class="btn btn-primary" @click="clsoeModal(true)">确定</button>
@@ -2517,8 +2519,14 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           </div>
           
           <!-- Sync Center Modal (sync Emulation) -->
-          <div v-if="isSyncModalVisible" class="export-modal custom-modal sync-modal" style="width: 500px; max-width: 95vw;">
-            <h3 style="margin-top:0; color: var(--text-primary);">🚀 跨平台内容分发与同步中心</h3>
+          <div v-if="isSyncModalVisible" class="export-modal custom-modal sync-modal">
+            <div class="config-modal-header">
+              <h3 class="config-modal-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                跨平台内容分发中心
+              </h3>
+              <button class="config-close-btn" @click="isSyncModalVisible = false">✕</button>
+            </div>
             <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">系统将通过深层 DOM 提取内联样式并锁定入富文本剪贴板，随后自动为您调起目标平台的编辑后台。<br/><span style="color:var(--accent-color);font-weight:600;">受限于浏览器安全策略机制，云端无法为您自动粘贴。您进入平台后只需按下</span> <kbd style="background:var(--bg-active);padding:2px 4px;border-radius:4px;border:1px solid var(--border-strong);">Ctrl+V</kbd> <span style="color:var(--accent-color);font-weight:600;">即可实现 100% 格式转网同步过去无损粘贴！</span></p>
             
             <div class="sync-platform-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 480px; overflow-y: auto;">
@@ -2548,105 +2556,125 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               </button>
             </div>
             
-            <div style="text-align: right; margin-top: 24px;">
-              <button class="btn btn-native" @click="isSyncModalVisible = false">关闭同步中心</button>
+            <div class="config-info-box" style="margin-top: 16px;">
+              <span>💡</span>
+              <span>进入平台后只需按下 <kbd style="background:var(--bg-active,#f3f3f3);padding:2px 6px;border-radius:4px;border:1px solid var(--border-strong,#ddd);font-size:11px;">Ctrl+V</kbd> 即可 100% 无损粘贴！</span>
             </div>
           </div>
           
           <!-- Image Host Configuration Dialog -->
-          <div v-if="isImageConfigVisible" class="export-modal custom-modal" style="width: 420px; max-width: 90vw;">
-            <h3 style="margin-top:0; margin-bottom: 1rem; color: var(--text-primary);">图床上传服务配置</h3>
-            
-            <div style="margin-bottom: 1rem;">
-              <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 500;">选择默认支持策略</p>
-              <select v-model="uploadConfig.provider" style="width: 100%; padding: 0.5rem; border-radius: 6px; background: var(--border-subtle); color: var(--text-primary); border: 1px solid var(--border-strong);">
-                <option value="base64">本地 Base64 原生内联 (免配置/体积受限)</option>
-                <option value="picgo">PicGo 本地服务器挂载 (http://127.0.0.1:36677)</option>
-                <option value="github">GitHub 仓库直连 (jsDelivr CDN 全球分发)</option>
-                <option value="alioss">阿里云 OSS 存储 (AliOSS)</option>
-                <option value="txcos">腾讯云 COS 存储 (TxCOS)</option>
-                <option value="qiniu">七牛云 存储 (Qiniu)</option>
+          <div v-if="isImageConfigVisible" class="export-modal custom-modal">
+            <div class="config-modal-header">
+              <h3 class="config-modal-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                服务中心配置
+              </h3>
+              <button class="config-close-btn" @click="isImageConfigVisible = false">✕</button>
+            </div>
+
+            <!-- Image Hosting Card -->
+            <div class="config-section-card">
+              <div class="config-section-header">
+                <span style="font-size: 18px;">☁️</span>
+                图床分发引擎
+              </div>
+              <select v-model="uploadConfig.provider" class="config-select">
+                <option value="base64">⬇️ 本地 Base64 原生内联 (免配置/体积受限)</option>
+                <option value="picgo">⚙️ PicGo 本地服务器挂载 (http://127.0.0.1:36677)</option>
+                <option value="github">🐙 GitHub 仓库直连 (jsDelivr CDN 全球分发)</option>
+                <option value="alioss">☁️ 阿里云 OSS 存储 (AliOSS)</option>
+                <option value="txcos">☁️ 腾讯云 COS 存储 (TxCOS)</option>
+                <option value="qiniu">☁️ 七牛云 存储 (Qiniu)</option>
               </select>
-            </div>
-            
-            <div v-if="uploadConfig.provider === 'github'" style="display: flex; flex-direction: column; gap: 0.8rem;">
-              <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">GitHub Repo (例如: john/blog-assets)</p>
-                <input v-model="uploadConfig.githubRepo" type="text" placeholder="username/repo" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-              </div>
-              <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">Personal Access Token (用于 API 写权限)</p>
-                <input v-model="uploadConfig.githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxx" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-              </div>
-              <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">存储路径</p>
-                  <input v-model="uploadConfig.githubPath" type="text" placeholder="images/2026" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+
+              <div v-if="uploadConfig.provider === 'github'" class="config-sub-fields" style="margin-top: 12px;">
+                <div>
+                  <p class="config-field-label">GitHub Repo <span class="hint">(如: john/blog-assets)</span></p>
+                  <input v-model="uploadConfig.githubRepo" type="text" placeholder="username/repo" class="config-input" />
                 </div>
-                <div style="flex: 1;">
-                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">分支</p>
-                  <input v-model="uploadConfig.githubBranch" type="text" placeholder="main" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
+                <div>
+                  <p class="config-field-label">Personal Access Token</p>
+                  <input v-model="uploadConfig.githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxx" class="config-input" />
+                </div>
+                <div class="config-row">
+                  <div>
+                    <p class="config-field-label">存储路径 <span class="hint">(如: img/)</span></p>
+                    <input v-model="uploadConfig.githubPath" type="text" placeholder="images/2026" class="config-input" />
+                  </div>
+                  <div>
+                    <p class="config-field-label">分支 <span class="hint">(默认 main)</span></p>
+                    <input v-model="uploadConfig.githubBranch" type="text" placeholder="main" class="config-input" />
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="['alioss', 'txcos', 'qiniu'].includes(uploadConfig.provider)" class="config-sub-fields" style="margin-top: 12px;">
+                <div class="config-row">
+                  <div>
+                    <p class="config-field-label">AccessKey (AK)</p>
+                    <input v-model="uploadConfig.accessKey" type="text" placeholder="AK..." class="config-input" />
+                  </div>
+                  <div>
+                    <p class="config-field-label">SecretKey (SK)</p>
+                    <input v-model="uploadConfig.secretKey" type="password" placeholder="SK..." class="config-input" />
+                  </div>
+                </div>
+                <div class="config-row">
+                  <div>
+                    <p class="config-field-label">Bucket名称</p>
+                    <input v-model="uploadConfig.bucket" type="text" placeholder="my-bucket" class="config-input" />
+                  </div>
+                  <div>
+                    <p class="config-field-label">所属区域 (Region)</p>
+                    <input v-model="uploadConfig.region" type="text" :placeholder="uploadConfig.provider === 'qiniu' ? 'z0' : (uploadConfig.provider === 'alioss' ? 'oss-cn-hangzhou' : 'ap-guangzhou')" class="config-input" />
+                  </div>
+                </div>
+                <div>
+                  <p class="config-field-label">存储目录路径 <span class="hint">(可选)</span></p>
+                  <input v-model="uploadConfig.path" type="text" placeholder="blog/uploads/" class="config-input" />
+                </div>
+                <div v-if="uploadConfig.provider === 'qiniu'">
+                  <p class="config-field-label">CDN绑定域名 <span class="hint">(七牛必填)</span></p>
+                  <input v-model="uploadConfig.domain" type="text" placeholder="https://cdn.example.com" class="config-input" />
+                </div>
+              </div>
+
+              <div v-if="uploadConfig.provider === 'picgo'" class="config-info-box" style="margin-top: 12px;">
+                <span>ℹ️</span>
+                <span>请确保后台已启动 <b>PicGo</b> 桌面端程序，并在「设置→Server」中开启服务（端口 36677），编辑器将自动桥接。</span>
+              </div>
+            </div>
+
+            <!-- AI Engine Card -->
+            <div class="config-section-card">
+              <div class="config-section-header">
+                <span style="font-size: 18px;">🤖</span>
+                AI 智能引擎凭证
+              </div>
+              <div class="config-fields">
+                <div>
+                  <p class="config-field-label">OpenAI 兼容型 API 主机地址</p>
+                  <input v-model="uploadConfig.aiEndpoint" type="text" placeholder="https://proxy-ai.doocs.org/v1" class="config-input" />
+                </div>
+                <div>
+                  <p class="config-field-label">API 会话密钥 (Secret Key)</p>
+                  <input v-model="uploadConfig.aiKey" type="password" placeholder="sk-..." class="config-input" />
+                </div>
+                <div class="config-row">
+                  <div>
+                    <p class="config-field-label">对话分析大模型 ID</p>
+                    <input v-model="uploadConfig.aiModel" type="text" placeholder="Qwen/Qwen2.5-7B-Instruct" class="config-input" />
+                  </div>
+                  <div>
+                    <p class="config-field-label">多模态画图模型 ID</p>
+                    <input v-model="uploadConfig.aiImageModel" type="text" placeholder="Kwai-Kolors/Kolors" class="config-input" />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div v-if="['alioss', 'txcos', 'qiniu'].includes(uploadConfig.provider)" style="display: flex; flex-direction: column; gap: 0.8rem;">
-              <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">AccessKey (AK)</p>
-                <input v-model="uploadConfig.accessKey" type="text" placeholder="AccessKey ID" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-              </div>
-              <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">SecretKey (SK)</p>
-                <input v-model="uploadConfig.secretKey" type="password" placeholder="AccessKey Secret" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-              </div>
-              <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">Bucket</p>
-                  <input v-model="uploadConfig.bucket" type="text" placeholder="Bucket 名称" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-                </div>
-                <div style="flex: 1;">
-                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">Region / 区域</p>
-                  <input v-model="uploadConfig.region" type="text" :placeholder="uploadConfig.provider === 'qiniu' ? 'z0' : (uploadConfig.provider === 'alioss' ? 'oss-cn-hangzhou' : 'ap-guangzhou')" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-                </div>
-              </div>
-              <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                  <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">存储目录路径 (可选)</p>
-                  <input v-model="uploadConfig.path" type="text" placeholder="blog/uploads/" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-                </div>
-              </div>
-              <div v-if="uploadConfig.provider === 'qiniu'">
-                 <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">CDN 访问域名 (七牛必填)</p>
-                 <input v-model="uploadConfig.domain" type="text" placeholder="https://cdn.example.com" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-              </div>
-            </div>
-            
-            <p v-if="uploadConfig.provider === 'picgo'" style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">* 确保您的后台已启动 PicGo 客户端进程并默认开启了 Server 支持，即可无缝连接任意外部图床 (AliOSS/COS/SMMS)。</p>
-            
-            <h3 style="margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; color: var(--text-primary); font-size: 1rem;">🤖 AI 助手与模型凭证配置</h3>
-            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-              <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 主机地址 (默认提供免费代理服务器)</p>
-                <input v-model="uploadConfig.aiEndpoint" type="text" placeholder="https://proxy-ai.doocs.org/v1" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-              </div>
-              <div>
-                <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">API 密匙 (默认源无需认证接口凭证)</p>
-                <input v-model="uploadConfig.aiKey" type="password" placeholder="sk-..." style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-              </div>
-              <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                   <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">对话大模型 (Model ID)</p>
-                   <input v-model="uploadConfig.aiModel" type="text" placeholder="Qwen/Qwen2.5-7B-Instruct" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-                </div>
-                <div style="flex: 1;">
-                   <p style="margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-secondary);">绘图大模型 (Model ID)</p>
-                   <input v-model="uploadConfig.aiImageModel" type="text" placeholder="Kwai-Kolors/Kolors" style="width: 100%; padding: 0.4rem; border-radius: 4px; background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-strong);" />
-                </div>
-              </div>
-            </div>
-
-            <div class="modal-actions" style="margin-top: 1.5rem;">
-              <button class="btn btn-primary" style="width: 100%; justify-content: center;" @click="isImageConfigVisible = false">保存配置并关闭</button>
+            <div class="modal-actions">
+              <button class="btn-save-config" @click="isImageConfigVisible = false">✓ 保存配置</button>
             </div>
           </div>
 
@@ -2696,10 +2724,13 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       <!-- AI Text-To-Image Diffusion Modal -->
       <transition name="fade">
         <div v-if="isAITextToImageVisible" class="export-overlay" style="z-index: 150;" @click.self="isAITextToImageVisible = false">
-          <div class="export-modal custom-modal" style="max-width: 500px; width: 90%; z-index: 151;">
-             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-               <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">🖼️ 文生图 (AI 图像扩散)</h3>
-               <button class="btn btn-native" style="padding: 4px 8px; font-size: 0.8rem;" @click="isAITextToImageVisible = false">✕</button>
+          <div class="export-modal custom-modal" style="max-width: 500px; width: 90%;">
+             <div class="config-modal-header">
+               <h3 class="config-modal-title">
+                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M5 3v4M19 3v4"/></svg>
+                 文生图 (AI 图像扩散)
+               </h3>
+               <button class="config-close-btn" @click="isAITextToImageVisible = false">✕</button>
              </div>
              <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
                 <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top:0;">请输入高度具体的描绘咒语，系统将通过通用图像大模型接口为您渲染配图，并直接自动插入至 Markdown 编辑器中。</p>
@@ -2717,9 +2748,12 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       <transition name="fade">
         <div v-if="isHistoryVisible" class="export-overlay" @click.self="isHistoryVisible = false">
           <div class="export-modal custom-modal" style="max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">📖 本地草稿时光机</h3>
-              <button class="btn btn-native" style="padding: 4px 8px; font-size: 0.8rem;" @click="isHistoryVisible = false">✕</button>
+            <div class="config-modal-header">
+              <h3 class="config-modal-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                本地草稿时光机
+              </h3>
+              <button class="config-close-btn" @click="isHistoryVisible = false">✕</button>
             </div>
             <div class="modal-body" style="overflow-y: auto; flex: 1;">
               <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">系统每 10 秒自动为您进行容灾快照。点击按钮即可将编辑器无缝回退至当时状态。</p>

@@ -1885,7 +1885,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="dropdown-menu" style="right: 0; left: auto; width: 340px; padding: 16px; margin-top: 14px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: top right;" v-show="activeMenu === 'publish'" @click.stop>
             <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (COSE)</h4>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-              <button v-for="p in ['wechat', 'zhihu', 'juejin', 'csdn']" :key="p"
+              <button v-for="p in ['wechat', 'zhihu', 'juejin', 'csdn', 'weibo', 'twitter']" :key="p"
                 class="brutalist-sync-btn" 
                 @click.stop="togglePlatformSelection(p)"
                 :style="{ 
@@ -1896,7 +1896,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
                   background: selectedPlatforms.includes(p) ? 'rgba(139, 90, 43, 0.08)' : 'transparent',
                   color: selectedPlatforms.includes(p) ? 'var(--primary)' : 'var(--text-muted)'
                 }">
-                <span style="font-size: 18px;">{{ {wechat:'💬',zhihu:'知',juejin:'💎',csdn:'C'}[p] }}</span>
+                <span style="font-size: 18px;">{{ {wechat:'💬',zhihu:'知',juejin:'💎',csdn:'C',weibo:'微',twitter:'𝕏'}[p] }}</span>
                 <span style="font-size: 12px;">{{ platformLabels[p] }}</span>
                 <span v-if="selectedPlatforms.includes(p)" style="font-size: 10px; color: var(--primary);">✓ 已选</span>
               </button>
@@ -1928,6 +1928,25 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             <button class="html-copy-btn" @click="copyHtml('wechat'); toggleMenu(null)" style="width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: #1a1a1a; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                万能发文：复制完整富文本
+            </button>
+            
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 4px;">
+              <button @click="copyHtml('wechat'); toggleMenu(null)" style="padding: 8px; border-radius: 8px; font-weight: 600; font-size: 12px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); color: #059669; cursor: pointer; transition: all 0.2s;">
+                复制微信格式
+              </button>
+              <button @click="copyHtml('zhihu'); toggleMenu(null)" style="padding: 8px; border-radius: 8px; font-weight: 600; font-size: 12px; border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.05); color: #2563eb; cursor: pointer; transition: all 0.2s;">
+                复制知乎格式
+              </button>
+              <button @click="copyHtml('juejin'); toggleMenu(null)" style="padding: 8px; border-radius: 8px; font-weight: 600; font-size: 12px; border: 1px solid rgba(79, 70, 229, 0.3); background: rgba(79, 70, 229, 0.05); color: #4338ca; cursor: pointer; transition: all 0.2s;">
+                复制掘金格式
+              </button>
+              <button @click="copyHtml('csdn'); toggleMenu(null)" style="padding: 8px; border-radius: 8px; font-weight: 600; font-size: 12px; border: 1px solid rgba(220, 38, 38, 0.3); background: rgba(220, 38, 38, 0.05); color: #b91c1c; cursor: pointer; transition: all 0.2s;">
+                复制CSDN格式
+              </button>
+            </div>
+
+            <button @click="exportImage(); toggleMenu(null)" style="width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              📸 导出高清长图
             </button>
           </div>
         </div>
@@ -2167,6 +2186,16 @@ const insertFormat = (prefix: string, suffix: string = '') => {
                 <span style="font-size: 20px; font-weight: 900; font-family: monospace; letter-spacing: -2px; line-height: 1.2;">C</span>
                 同步 CSDN
               </button>
+
+              <button class="brutalist-sync-btn" @click="syncToPlatform('weibo'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; background: rgba(239, 68, 68, 0.05); color: #dc2626; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">微</span>
+                同步微博
+              </button>
+
+              <button class="brutalist-sync-btn" @click="syncToPlatform('twitter'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(0, 0, 0, 0.2); border-radius: 12px; background: rgba(0, 0, 0, 0.03); color: #1a1a1a; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">𝕏</span>
+                同步 Twitter
+              </button>
             </div>
             
             <button class="html-copy-btn" @click="copyHtml('wechat'); toggleMenu(null)" style="width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: #1a1a1a; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
@@ -2175,7 +2204,23 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             </button>
           </div>
           
-          <button class="fab-btn" :class="{ 'is-active': activeMenu === 'fabPublish' }" style="width: 48px; height: 48px; border-radius: 9999px; background: var(--primary); border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <!-- 万能复制 FAB -->
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+          <button class="fab-btn" @click="copyHtml('wechat')" style="width: 48px; height: 48px; border-radius: 9999px; background: #1a1a1a; border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.08); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <div style="position: absolute; right: 56px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); padding: 6px 12px; border-radius: var(--radius-md); font-size: 13px; color: #1a1a1a; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">万能复制</div>
+          </button>
+        </div>
+
+        <!-- 导出长图 FAB -->
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+          <button class="fab-btn" @click="exportImage()" style="width: 48px; height: 48px; border-radius: 9999px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(102,126,234,0.2); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <div style="position: absolute; right: 56px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); padding: 6px 12px; border-radius: var(--radius-md); font-size: 13px; color: #1a1a1a; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">导出长图</div>
+          </button>
+        </div>
+
+        <button class="fab-btn" :class="{ 'is-active': activeMenu === 'fabPublish' }" style="width: 48px; height: 48px; border-radius: 9999px; background: var(--primary); border: none; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: transform 0.2s; position: relative; z-index: 1000;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
             <span class="material-symbols-outlined" style="font-size: 24px;">sync</span>
             <div style="position: absolute; right: 56px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); padding: 6px 12px; border-radius: var(--radius-md); font-size: 13px; color: #1a1a1a; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">一键分发中心</div>
           </button>

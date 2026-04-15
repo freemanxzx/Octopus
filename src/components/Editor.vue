@@ -1431,13 +1431,22 @@ const exportImage = async () => {
     const contentNode = previewContainer.value.querySelector('.preview-content') as HTMLElement;
     if (!contentNode) throw new Error("无法定位预览区域内容");
 
+    // Force wait for images to load or DOM to stabilize over a tick
+    await new Promise(r => setTimeout(r, 100));
+
+    const exportWidth = 850;
+    // Add extra padding to scrollHeight to guarantee no clipping at the bottom
+    const exportHeight = contentNode.scrollHeight + 80;
+
     const dataUrl = await htmlToImage.toPng(contentNode, { 
       backgroundColor: 'var(--bg-preview)',
       pixelRatio: 2, // Retina resolution
+      width: exportWidth,
+      height: exportHeight,
       style: {
         transform: 'none',
-        height: contentNode.scrollHeight + 'px',
-        width: '850px', // Standard comfortable reading width for long images
+        width: exportWidth + 'px',
+        height: exportHeight + 'px',
         padding: '40px',
         margin: '0',
         borderRadius: '0',

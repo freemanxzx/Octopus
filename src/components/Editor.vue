@@ -2124,17 +2124,23 @@ const insertFormat = (prefix: string, suffix: string = '') => {
                 :style="{ 
                   padding: '12px', border: '2px solid', borderRadius: '12px', fontWeight: '700', 
                   cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', 
-                  alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  alignItems: 'center', justifyContent: 'center', gap: '4px',
                   borderColor: selectedPlatforms.includes(p) ? 'var(--primary)' : 'rgba(0,0,0,0.1)',
                   background: selectedPlatforms.includes(p) ? 'rgba(139, 90, 43, 0.08)' : 'transparent',
                   color: selectedPlatforms.includes(p) ? 'var(--primary)' : 'var(--text-muted)'
                 }">
-                <span style="font-size: 18px;">{{ {wechat:'💬',zhihu:'知',juejin:'💎',csdn:'C'}[p] }}</span>
-                <span style="font-size: 12px;">{{ platformLabels[p] }}</span>
-                <span v-if="selectedPlatforms.includes(p)" style="font-size: 10px; color: var(--primary);">✓ 已选</span>
+                <img :src="`https://cdn.simpleicons.org/${p}/${ {'wechat':'07C160', 'zhihu':'0084FF', 'juejin':'1E80FF', 'csdn':'FC5531'}[p] }`" 
+                     :style="{ width: '28px', height: '28px', opacity: selectedPlatforms.includes(p) ? 1 : 0.6, filter: selectedPlatforms.includes(p) ? 'none' : 'grayscale(100%)', transition: 'all 0.2s' }" />
+                <span style="font-size: 13px; margin-top: 4px;">{{ platformLabels[p] }}</span>
+                <span style="font-size: 10px; color: var(--primary); transition: all 0.2s" :style="{ opacity: selectedPlatforms.includes(p) ? 1 : 0 }">✓ 已选</span>
               </button>
             </div>
             
+            <div v-show="!isCoseInstalled" style="background: rgba(139, 90, 43, 0.05); border-left: 3px solid var(--primary); padding: 10px 12px; border-radius: 4px; font-size: 12px; color: #8b5a2b; line-height: 1.5; margin-top: 4px;">
+              <strong>⚠️ 原生轻量分发模式已开启</strong><br>
+              未检测到本地特权桥接插件。发射后程序将预先拷入格式，请在各大平台页面中自行 <strong>Ctrl+V 粘贴</strong> 即可发布。
+            </div>
+
             <button v-if="selectedPlatforms.length > 0" class="distribute-action-btn" @click="distributeToSelectedPlatforms" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(139,90,43,0.3); margin-top: 4px;">
                🚀 一键发射到所选平台 ({{selectedPlatforms.length}})
             </button>

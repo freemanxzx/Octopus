@@ -1578,12 +1578,21 @@ const distributeToSelectedPlatforms = async () => {
             twitter: 'https://twitter.com/compose/tweet',
             weibo: 'https://weibo.com/'
         };
+        let blockedPopups = false;
         for (const p of selectedPlatforms.value) {
-            if (urls[p])
-                window.open(urls[p], '_blank');
+            if (urls[p]) {
+                const newWindow = window.open(urls[p], '_blank');
+                if (!newWindow)
+                    blockedPopups = true;
+            }
         }
         toggleMenu('');
-        showToast('富文本已拷贝至剪贴板，平台窗口已打开就绪！', 'success');
+        if (blockedPopups) {
+            showToast('⚠️ 浏览器弹窗拦截：为实现真正一键多发，请点击地址栏右侧图标“始终允许弹窗”！', 'error');
+        }
+        else {
+            showToast('富文本已拷贝至剪贴板，平台窗口已打开就绪！', 'success');
+        }
     }
 };
 const executeManualSync = (platform) => {
@@ -3891,29 +3900,35 @@ for (const [p] of __VLS_vFor((['wechat', 'zhihu', 'juejin', 'csdn']))) {
         ...{ style: ({
                 padding: '12px', border: '2px solid', borderRadius: '12px', fontWeight: '700',
                 cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: '6px',
+                alignItems: 'center', justifyContent: 'center', gap: '4px',
                 borderColor: __VLS_ctx.selectedPlatforms.includes(p) ? 'var(--primary)' : 'rgba(0,0,0,0.1)',
                 background: __VLS_ctx.selectedPlatforms.includes(p) ? 'rgba(139, 90, 43, 0.08)' : 'transparent',
                 color: __VLS_ctx.selectedPlatforms.includes(p) ? 'var(--primary)' : 'var(--text-muted)'
             }) },
     });
     /** @type {__VLS_StyleScopedClasses['brutalist-sync-btn']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        ...{ style: {} },
+    __VLS_asFunctionalElement1(__VLS_intrinsics.img)({
+        src: (`https://cdn.simpleicons.org/${p}/${{ 'wechat': '07C160', 'zhihu': '0084FF', 'juejin': '1E80FF', 'csdn': 'FC5531' }[p]}`),
+        ...{ style: ({ width: '28px', height: '28px', opacity: __VLS_ctx.selectedPlatforms.includes(p) ? 1 : 0.6, filter: __VLS_ctx.selectedPlatforms.includes(p) ? 'none' : 'grayscale(100%)', transition: 'all 0.2s' }) },
     });
-    ({ wechat: '💬', zhihu: '知', juejin: '💎', csdn: 'C' }[p]);
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
         ...{ style: {} },
     });
     (__VLS_ctx.platformLabels[p]);
-    if (__VLS_ctx.selectedPlatforms.includes(p)) {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-            ...{ style: {} },
-        });
-    }
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ style: {} },
+        ...{ style: ({ opacity: __VLS_ctx.selectedPlatforms.includes(p) ? 1 : 0 }) },
+    });
     // @ts-ignore
-    [selectedPlatforms, selectedPlatforms, selectedPlatforms, selectedPlatforms, platformLabels,];
+    [selectedPlatforms, selectedPlatforms, selectedPlatforms, selectedPlatforms, selectedPlatforms, selectedPlatforms, platformLabels,];
 }
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+    ...{ style: {} },
+});
+__VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directiveBindingRestFields, value: (!__VLS_ctx.isCoseInstalled) }, null, null);
+__VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
+__VLS_asFunctionalElement1(__VLS_intrinsics.br)({});
+__VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
 if (__VLS_ctx.selectedPlatforms.length > 0) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
         ...{ onClick: (__VLS_ctx.distributeToSelectedPlatforms) },
@@ -3963,7 +3978,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.isEditingTheme = false;
             // @ts-ignore
-            [isZenMode, activeMenu, isEditingTheme, isEditingTheme, selectedPlatforms, selectedPlatforms, distributeToSelectedPlatforms,];
+            [isZenMode, activeMenu, isEditingTheme, isEditingTheme, selectedPlatforms, selectedPlatforms, isCoseInstalled, distributeToSelectedPlatforms,];
         } },
     ...{ style: {} },
     onmouseover: "this.style.background='rgba(0,0,0,0.08)'",

@@ -15,10 +15,10 @@ import { syncToWechatDraft } from '../utils/wechat';
 import githubCss from 'highlight.js/styles/github.css?raw';
 import vs2015Css from 'highlight.js/styles/vs2015.css?raw';
 import atomOneDarkCss from 'highlight.js/styles/atom-one-dark.css?raw';
+import tutorialDoc from '../../docs/Octopus_MD_Tutorial.md?raw';
 import atomOneLightCss from 'highlight.js/styles/atom-one-light.css?raw';
 import monokaiCss from 'highlight.js/styles/monokai.css?raw';
 import draculaCss from 'highlight.js/styles/base16/dracula.css?raw';
-import tutorialDoc from '../assets/tutorial.md?raw';
 const codeThemeMap = {
     'github': githubCss,
     'vs2015': vs2015Css,
@@ -876,13 +876,15 @@ const toggleFullscreen = () => {
 const showAbout = () => {
     customAlert("🐙 Octopus MD\n全平台自媒体图文编辑器\nVersion 1.0.0 (Feature Parity with Markdown2Html)\n打造最高效的图文处理流。");
 };
-const loadTutorial = () => {
-    if (confirm("确定要加载基础教程吗？\n警告：这将会完全覆盖当前编辑器中的内容！请确保您已经保存了重要的草稿。")) {
-        content.value = tutorialDoc || "# 教程加载失败\n\n请检查文件是否损坏。";
-        activeMenu.value = null;
-        showToast("教程文档已成功加载至编辑器", "success");
+const openTutorial = async () => {
+    activeMenu.value = null;
+    const proceed = await customConfirm("提示：加载官方教程文档将会覆盖您当前编辑区的内容。\n如果您当前有重要文章，请确保已经复制或保存快照！\n\n是否继续加载教程？");
+    if (proceed) {
+        content.value = tutorialDoc;
+        showToast("教程加载成功！", "success");
     }
 };
+const notImpl = () => showToast("高级功能正在加速接入中，敬请期待！", "info");
 // CSS bindings for Mac Code Block and Serif
 const extraCssClass = computed(() => {
     let classes = [];
@@ -2845,7 +2847,7 @@ __VLS_asFunctionalDirective(__VLS_directives.vShow, {})(null, { ...__VLS_directi
 /** @type {__VLS_StyleScopedClasses['dropdown-menu']} */ ;
 /** @type {__VLS_StyleScopedClasses['dropdown-menu-large']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ onClick: (__VLS_ctx.loadTutorial) },
+    ...{ onClick: (__VLS_ctx.openTutorial) },
     ...{ class: "dropdown-item" },
 });
 /** @type {__VLS_StyleScopedClasses['dropdown-item']} */ ;
@@ -2853,10 +2855,6 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
     ...{ class: "shortcut" },
 });
 /** @type {__VLS_StyleScopedClasses['shortcut']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "dropdown-divider" },
-});
-/** @type {__VLS_StyleScopedClasses['dropdown-divider']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ onClick: (__VLS_ctx.showAbout) },
     ...{ class: "dropdown-item" },
@@ -2887,7 +2885,7 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.setViewMode('pc');
             // @ts-ignore
-            [activeMenu, loadTutorial, showAbout, handleFileSelected, setViewMode,];
+            [activeMenu, openTutorial, showAbout, handleFileSelected, setViewMode,];
         } },
     ...{ class: "pill-btn" },
     ...{ class: ({ active: __VLS_ctx.viewMode === 'pc' }) },

@@ -18,6 +18,7 @@ import CropperModal from './CropperModal.vue';
 import githubCss from 'highlight.js/styles/github.css?raw';
 import vs2015Css from 'highlight.js/styles/vs2015.css?raw';
 import atomOneDarkCss from 'highlight.js/styles/atom-one-dark.css?raw';
+import tutorialDoc from '../../docs/Octopus_MD_Tutorial.md?raw';
 import atomOneLightCss from 'highlight.js/styles/atom-one-light.css?raw';
 import monokaiCss from 'highlight.js/styles/monokai.css?raw';
 import draculaCss from 'highlight.js/styles/base16/dracula.css?raw';
@@ -934,6 +935,15 @@ const toggleFullscreen = () => {
 
 const showAbout = () => {
   customAlert("🐙 Octopus MD\n全平台自媒体图文编辑器\nVersion 1.0.0 (Feature Parity with Markdown2Html)\n打造最高效的图文处理流。");
+};
+
+const openTutorial = async () => {
+  activeMenu.value = null;
+  const proceed = await customConfirm("提示：加载官方教程文档将会覆盖您当前编辑区的内容。\n如果您当前有重要文章，请确保已经复制或保存快照！\n\n是否继续加载教程？");
+  if (proceed) {
+    content.value = tutorialDoc;
+    showToast("教程加载成功！", "success");
+  }
 };
 
 const notImpl = () => showToast("高级功能正在加速接入中，敬请期待！", "info");
@@ -2044,8 +2054,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('help')">
             帮助
             <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'help'">
-              <div class="dropdown-item" @click="notImpl"><span class="shortcut">LOG</span>更新日志</div>
-              <div class="dropdown-item" @click="notImpl"><span class="shortcut">KEYS</span>快捷键一览</div>
+              <div class="dropdown-item" @click="openTutorial"><span class="shortcut">DOCS</span>教程文档</div>
               <div class="dropdown-item" @click="showAbout"><span class="shortcut">INFO</span>关于 Octopus MD</div>
             </div>
           </div>

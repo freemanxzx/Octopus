@@ -473,7 +473,7 @@ const md = new MarkdownIt({
     }
   }
 })
-.use((window as any).markdownitRuby || (() => {})); // Doocs Parity: Ruby {注音}
+.use((window as any).markdownitRUBY || (() => {})); // Doocs Parity: Ruby {注音}
 
 // History Tracking
 const savedDrafts = ref<{time: string, content: string}[]>([]);
@@ -848,7 +848,7 @@ const toggleLinkFootnote = () => {
 const toggleReferences = () => { 
   showReferences.value = !showReferences.value; 
   updateHtml(); 
-  showToast(showReferences.value ? "已开启显示参考资料" : "已隐藏参考资料", "success");
+  showToast(showReferences.value ? "已开启显示脚注引用" : "已隐藏参考资料", "success");
 };
 const toggleDiagrams = () => { 
   showDiagrams.value = !showDiagrams.value; 
@@ -1621,6 +1621,90 @@ const handleReady = (payload: any) => {
 };
 
 // Formatting Toolbar Logic
+
+
+// ═══ Multi-Select Distribution System ═══
+const selectedPlatforms = ref<string[]>([]);
+const togglePlatformSelection = (platform: string) => {
+  const idx = selectedPlatforms.value.indexOf(platform);
+  if (idx > -1) {
+    selectedPlatforms.value.splice(idx, 1);
+  } else {
+    selectedPlatforms.value.push(platform);
+  }
+};
+
+const platformLabels: Record<string, string> = {
+  wechat: '微信公众号',
+  zhihu: '知乎',
+  juejin: '稀土掘金',
+  csdn: 'CSDN',
+  twitter: 'X (Twitter)',
+  weibo: '微博'
+};
+const syncQueue = ref<{platform: string, status: 'pending' | 'done'}[]>([]);
+
+const distributeToSelectedPlatforms = async () => {
+  if (selectedPlatforms.value.length === 0) {
+    showToast('请至少选择一个分发平台', 'info');
+    return;
+  }
+  
+  if (isCoseInstalled.value) {
+    for (const platform of selectedPlatforms.value) {
+      syncToPlatform(platform as any);
+      await new Promise(r => setTimeout(r, 600)); 
+    }
+    toggleMenu('');
+    showToast('一键分发指令已触发完成！', 'success');
+  } else {
+    syncQueue.value = selectedPlatforms.value.map(p => ({ platform: p, status: 'pending' }));
+  }
+};
+
+const executeManualSync = (platform: string) => {
+  syncToPlatform(platform as any);
+  const q = syncQueue.value.find(item => item.platform === platform);
+  if (q) q.status = 'done';
+};
+
+// ═══ Global Keyboard Shortcuts ═══
+const handleGlobalKeydown = (e: KeyboardEvent) => {
+  const ctrl = e.ctrlKey || e.metaKey;
+  const alt = e.altKey;
+  const key = e.key.toLowerCase();
+
+  if (!ctrl) return;
+
+  // Ctrl+key shortcuts (no Alt)
+  if (!alt) {
+    switch (key) {
+      case 'b': e.preventDefault(); insertFormat('**', '**'); break;
+      case 'i': e.preventDefault(); insertFormat('*', '*'); break;
+      case 'd': e.preventDefault(); insertFormat('~~', '~~'); break;
+      case 'k': e.preventDefault(); insertFormat('[', '](https://)'); break;
+      case 'e': e.preventDefault(); insertFormat('\`', '\`'); break;
+      case 'u': e.preventDefault(); insertFormat('- ', ''); break;
+      case 'o': e.preventDefault(); insertFormat('1. ', ''); break;
+      case 'q': e.preventDefault(); insertFormat('> ', ''); break;
+      case 'h': e.preventDefault(); insertFormat('\n---\n', ''); break;
+    }
+  }
+
+  // Ctrl+Alt+key shortcuts
+  if (alt) {
+    switch (key) {
+      case 'c': e.preventDefault(); insertFormat('\n\`\`\`\n', '\n\`\`\`\n'); break;
+      case 't': e.preventDefault(); insertFormat('\n| 表头 | 表头 |\n| :--- | :--- |\n| 内容 | 内容 |\n', ''); break;
+      case 'i': e.preventDefault(); insertFormat('![图片描述](', ') '); break;
+      case 'd': e.preventDefault(); toggleDiagrams(); break;
+      case 'f': e.preventDefault(); formatMd(); break;
+    }
+  }
+};
+onMounted(() => document.addEventListener('keydown', handleGlobalKeydown));
+onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
+
 const insertFormat = (prefix: string, suffix: string = '') => {
   if (!view.value) return;
   const state = view.value.state;
@@ -1653,7 +1737,8 @@ const insertFormat = (prefix: string, suffix: string = '') => {
       height: '56px', 
       background: '#ffffff',
       borderBottom: '1px solid var(--border-subtle)', 
-      zIndex: 100, 
+      position: 'relative',
+      zIndex: 200, 
       padding: '0 16px'
     }">
       <div class="brand-group" style="display: flex; align-items: center; gap: 16px;">
@@ -1667,13 +1752,13 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('file')">
             文件
             <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'file'">
-              <div class="dropdown-item" @click="importMd"><span class="shortcut">IMPORT</span>导入本地文档 (.md, .txt)</div>
-              <div class="dropdown-item" @click="exportFile('md')"><span class="shortcut">.MD</span>原生导出 Markdown</div>
-              <div class="dropdown-item" @click="exportFile('html')"><span class="shortcut">.HTML</span>打包为 Web 源码包</div>
-              <div class="dropdown-item" @click="exportFile('json')"><span class="shortcut">.JSON</span>打包为 CMS 数据格式</div>
-              <div v-show="!isDesktop" class="dropdown-item" @click="printPdf"><span class="shortcut">PDF</span>导出长页面为打印格式</div>
+              <div class="dropdown-item" @click="importMd"><span class="shortcut">OPEN</span>导入 Markdown 文件</div>
+              <div class="dropdown-item" @click="exportFile('md')"><span class="shortcut">.MD</span>导出 Markdown</div>
+              <div class="dropdown-item" @click="exportFile('html')"><span class="shortcut">.HTML</span>导出 HTML</div>
+              <div class="dropdown-item" @click="exportFile('json')"><span class="shortcut">.JSON</span>导出 JSON 数据</div>
+              <div v-show="!isDesktop" class="dropdown-item" @click="printPdf"><span class="shortcut">PDF</span>导出 PDF（打印）</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="exportImage"><span class="shortcut">CANVAS</span>光栅化引擎导出高清长图</div>
+              <div class="dropdown-item" @click="exportImage"><span class="shortcut">IMAGE</span>导出高清长图</div>
             </div>
           </div>
           <!-- Format Menu -->
@@ -1710,20 +1795,23 @@ const insertFormat = (prefix: string, suffix: string = '') => {
               </div>
               <div class="dropdown-item" @click="insertFormat('- ', '')"><span class="shortcut">Ctrl U</span>无序列表</div>
               <div class="dropdown-item" @click="insertFormat('1. ', '')"><span class="shortcut">Ctrl O</span>有序列表</div>
+              <div class="dropdown-item" @click="insertFormat('> ', '')"><span class="shortcut">Ctrl Q</span>引用块</div>
+              <div class="dropdown-item" @click="insertFormat('\n---\n', '')"><span class="shortcut">Ctrl H</span>分割线</div>
+              <div class="dropdown-item" @click="insertFormat('- [ ] ', '')"><span class="shortcut">TODO</span>待办列表</div>
 
               <div class="dropdown-divider"></div>
 
-              <div class="dropdown-item" @click="toggleLinkFootnote"><span class="shortcut"></span>微信外链转引用</div>
+              <div class="dropdown-item" @click="toggleLinkFootnote"><span class="shortcut"></span>外链转脚注</div>
               <div class="dropdown-item" @click="toggleReferences">
                 <span class="check-icon">{{ showReferences ? '✅' : '　' }}</span>显示参考资料
               </div>
               <div class="dropdown-item" @click="toggleDiagrams">
                 <span class="shortcut">Ctrl+Alt+D</span><span class="check-icon">{{ showDiagrams ? '✅' : '　' }}</span>显示图解
               </div>
-              <div class="dropdown-item" @click="formatMd"><span class="shortcut">Ctrl+Alt+F</span>格式化文档</div>
+              <div class="dropdown-item" @click="formatMd"><span class="shortcut">Ctrl+Alt+F</span>格式化 Markdown</div>
               
               <div class="dropdown-item" @click="showModal('字数与解析估算', `当前正文包含 ${(content || '').length} 个字符数。预计阅读时间约为 ${Math.max(1, Math.ceil((content || '').length / 300))} 分钟。`, false)">
-                <span class="shortcut"></span>统计字数时间
+                <span class="shortcut"></span>字数统计
               </div>
             </div>
           </div>
@@ -1731,10 +1819,10 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="menu-item" @click.stop="toggleMenu('function')">
             功能与插入
             <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'function'">
-              <div class="dropdown-item" @click="convertClipboardHtmlToMd"><span class="shortcut">DOM Extract</span>从富剪贴板提取网页并转为 MD</div>
+              <div class="dropdown-item" @click="convertClipboardHtmlToMd"><span class="shortcut">PASTE</span>粘贴富文本转 Markdown</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="insertFormat('{注音|Ruby语法}', '')"><span class="shortcut">Ruby</span>注入拼音/注音短代码封装格式</div>
-              <div class="dropdown-item" @click="insertFormat('\n\n<section style=&quot;display:flex; padding:15px; border-radius:10px; background:#f8f9fa; border:1px solid #e9ecef; align-items:center; margin:20px 0;&quot;><img src=&quot;https://api.dicebear.com/7.x/bottts/svg?seed=Octopus&quot; style=&quot;width:60px; height:60px; border-radius:50%; margin-right:15px;&quot;/><div><h3 style=&quot;margin:0 0 5px 0; color:#343a40;&quot;>这里是公众号名字</h3><p style=&quot;margin:0; font-size:13px; color:#6c757d;&quot;>欢迎关注我的公众号，每天分享最前沿硬核的极客技术与排版黑魔法！</p></div></section>\n\n', '')"><span class="shortcut">Widget</span>生成并注入定制化极客号名片结构</div>
+              <div class="dropdown-item" @click="insertFormat('{注音|Ruby语法}', '')"><span class="shortcut">Ruby</span>插入注音（Ruby）</div>
+              <div class="dropdown-item" @click="insertFormat('\n\n<section style=&quot;display:flex; padding:15px; border-radius:10px; background:#f8f9fa; border:1px solid #e9ecef; align-items:center; margin:20px 0;&quot;><img src=&quot;https://api.dicebear.com/7.x/bottts/svg?seed=Octopus&quot; style=&quot;width:60px; height:60px; border-radius:50%; margin-right:15px;&quot;/><div><h3 style=&quot;margin:0 0 5px 0; color:#343a40;&quot;>这里是公众号名字</h3><p style=&quot;margin:0; font-size:13px; color:#6c757d;&quot;>欢迎关注我的公众号，每天分享最前沿硬核的极客技术与排版黑魔法！</p></div></section>\n\n', '')"><span class="shortcut">CARD</span>插入公众号名片</div>
             </div>
           </div>
           <!-- View Menu -->
@@ -1742,34 +1830,34 @@ const insertFormat = (prefix: string, suffix: string = '') => {
             查看
             <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'view'">
               <div class="dropdown-item" @click="viewMode = 'pc'">
-                <span class="shortcut">宽屏 PC 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'pc' ? '■' : '　' }}</span>激活 PC 视口端渲染效果
+                <span class="shortcut">宽屏 PC 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'pc' ? '■' : '　' }}</span>PC 宽屏视图
               </div>
               <div class="dropdown-item" @click="viewMode = 'mobile'">
-                <span class="shortcut">iPhone 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'mobile' ? '■' : '　' }}</span>激活移动端流式布局效果
+                <span class="shortcut">iPhone 布局</span><span class="check-icon" style="margin-left: 8px;">{{ viewMode === 'mobile' ? '■' : '　' }}</span>手机预览视图
               </div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="togglePreviewMode"><span class="shortcut">F11 ZEN</span>{{ isZenMode ? '退出沉浸式防弹编辑屏' : '开启沉浸式防弹编辑屏' }}</div>
-              <div class="dropdown-item" @click="toggleMacCodeBlock"><span class="shortcut">CODE.MAC</span>{{ isMacCodeBlock ? '卸载' : '部署' }} Mac 原生红绿灯代码块装饰</div>
+              <div class="dropdown-item" @click="togglePreviewMode"><span class="shortcut">F11 ZEN</span>{{ isZenMode ? '退出沉浸模式' : '进入沉浸模式' }}</div>
+              <div class="dropdown-item" @click="toggleMacCodeBlock"><span class="shortcut">MAC</span>{{ isMacCodeBlock ? '卸载' : '部署' }} Mac 风格代码块</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="loadDraftsHistory"><span class="shortcut">VCS.TIME</span>开启本地时光机与草稿管理线</div>
+              <div class="dropdown-item" @click="loadDraftsHistory"><span class="shortcut">HISTORY</span>历史草稿管理</div>
             </div>
           </div>
           <!-- Settings Menu -->
           <div class="menu-item" @click.stop="toggleMenu('settings')">
             设置
             <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'settings'">
-              <div class="dropdown-item" @click="isImageConfigVisible = true; activeMenu = null"><span class="shortcut">HOST</span>配置全局高速分布式图床服务</div>
+              <div class="dropdown-item" @click="isImageConfigVisible = true; activeMenu = null"><span class="shortcut">HOST</span>图床配置</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="resetEditor"><span class="shortcut">DANGER</span>初始化并完全重置底层编辑器容器</div>
+              <div class="dropdown-item" @click="resetEditor"><span class="shortcut">RESET</span>重置编辑器</div>
             </div>
           </div>
           <!-- Help Menu -->
           <div class="menu-item" @click.stop="toggleMenu('help')">
             帮助
             <div class="dropdown-menu dropdown-menu-large" v-show="activeMenu === 'help'">
-              <div class="dropdown-item" @click="notImpl"><span class="shortcut">CHANGELOG</span>查阅底层更新与迭代流水日志</div>
-              <div class="dropdown-item" @click="notImpl"><span class="shortcut">KEYMAPS</span>编辑器全局预定义高敏快捷键字典</div>
-              <div class="dropdown-item" @click="showAbout"><span class="shortcut">INTERNAL</span>关于核心与平台运行进程栈信息</div>
+              <div class="dropdown-item" @click="notImpl"><span class="shortcut">LOG</span>更新日志</div>
+              <div class="dropdown-item" @click="notImpl"><span class="shortcut">KEYS</span>快捷键一览</div>
+              <div class="dropdown-item" @click="showAbout"><span class="shortcut">INFO</span>关于 Octopus MD</div>
             </div>
           </div>
         </nav>
@@ -1797,26 +1885,45 @@ const insertFormat = (prefix: string, suffix: string = '') => {
           <div class="dropdown-menu" style="right: 0; left: auto; width: 340px; padding: 16px; margin-top: 14px; display: flex; flex-direction: column; gap: 12px; cursor: default; transform-origin: top right;" v-show="activeMenu === 'publish'" @click.stop>
             <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">发布到内容平台 (COSE)</h4>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-              <button class="brutalist-sync-btn" @click="syncToPlatform('wechat'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 12px; background: rgba(16, 185, 129, 0.05); color: #059669; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8.5 13.5c-3.5 0-6.5-2.5-6.5-5.5S5 2.5 8.5 2.5 15 5 15 8c0 3-3 5.5-6.5 5.5zm-1-7c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 0c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 11c3 0 5.5-2 5.5-4.5S19.5 9 16.5 9c-.5 0-1 .05-1.5.15.5 1 .85 2 .85 3.35 0 3-2.5 5.5-5.5 5.5-.85 0-1.65-.2-2.35-.5-.4 1.5-1.5 2.5-2.5 3 1 .5 2 1 3 1 2.5 0 4.5-2 4.5-4.5z"/></svg>
-                同步微信
-              </button>
-              
-              <button class="brutalist-sync-btn" @click="syncToPlatform('zhihu'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 12px; background: rgba(59, 130, 246, 0.05); color: #2563eb; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <span style="font-size: 20px; font-weight: 900; line-height: 1.2;">知</span>
-                同步知乎
-              </button>
-
-              <button class="brutalist-sync-btn" @click="syncToPlatform('juejin'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(79, 70, 229, 0.3); border-radius: 12px; background: rgba(79, 70, 229, 0.05); color: #4338ca; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2l-3.3 2.7h6.6L12 2zm-5.7 4.7l-2.4 1.9 8.1 6.6 8.1-6.6-2.4-1.9-5.7 4.7-5.7-4.7zm0 2.2L1.8 12 12 20.3 22.2 12l-4.5-3.1L12 13.6 6.3 8.9z"></path></svg>
-                同步掘金
-              </button>
-
-              <button class="brutalist-sync-btn" @click="syncToPlatform('csdn'); toggleMenu(null)" style="padding: 12px; border: 2px solid rgba(220, 38, 38, 0.3); border-radius: 12px; background: rgba(220, 38, 38, 0.05); color: #b91c1c; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-                <span style="font-size: 20px; font-weight: 900; font-family: monospace; letter-spacing: -2px; line-height: 1.2;">C</span>
-                同步 CSDN
+              <button v-for="p in ['wechat', 'zhihu', 'juejin', 'csdn']" :key="p"
+                class="brutalist-sync-btn" 
+                @click.stop="togglePlatformSelection(p)"
+                :style="{ 
+                  padding: '12px', border: '2px solid', borderRadius: '12px', fontWeight: '700', 
+                  cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', 
+                  alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  borderColor: selectedPlatforms.includes(p) ? 'var(--primary)' : 'rgba(0,0,0,0.1)',
+                  background: selectedPlatforms.includes(p) ? 'rgba(139, 90, 43, 0.08)' : 'transparent',
+                  color: selectedPlatforms.includes(p) ? 'var(--primary)' : 'var(--text-muted)'
+                }">
+                <span style="font-size: 18px;">{{ {wechat:'💬',zhihu:'知',juejin:'💎',csdn:'C'}[p] }}</span>
+                <span style="font-size: 12px;">{{ platformLabels[p] }}</span>
+                <span v-if="selectedPlatforms.includes(p)" style="font-size: 10px; color: var(--primary);">✓ 已选</span>
               </button>
             </div>
+            
+            <!-- No plugin warning banner -->
+            <div v-show="!isCoseInstalled && syncQueue.length === 0" style="background: rgba(220, 38, 38, 0.05); border-left: 3px solid #dc2626; padding: 10px 12px; border-radius: 4px; font-size: 12px; color: #7f1d1d; line-height: 1.5;">
+              <strong>⚠️ 原生降级模式</strong><br>
+              未装 COSE 插件时，批量分发将以向导模式逐个发送，避免剪贴板格式冲突。
+            </div>
+
+            <!-- Distribution Queue Wizard -->
+            <div v-if="syncQueue.length > 0" style="display: flex; flex-direction: column; gap: 8px;">
+               <div style="font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                 📋 分发向导：请按序点击发送
+               </div>
+               <button v-for="q in syncQueue" :key="q.platform" @click="executeManualSync(q.platform)" 
+                       :style="{ padding: '12px', borderRadius: '8px', background: q.status === 'done' ? '#f3f4f6' : 'var(--primary)', color: q.status === 'done' ? '#9ca3af' : '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }">
+                 <span>{{ platformLabels[q.platform] }}</span>
+                 <span style="font-size: 12px; font-weight: normal;">{{ q.status === 'done' ? '✓ 已完成' : '点击发送 →' }}</span>
+               </button>
+               <button @click="syncQueue = []; toggleMenu('')" style="padding: 10px; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 8px; background: transparent; color: #4b5563; font-size: 13px; font-weight: 600; cursor: pointer;">关闭向导</button>
+            </div>
+
+            <button v-if="syncQueue.length === 0 && selectedPlatforms.length > 0" class="distribute-action-btn" @click="distributeToSelectedPlatforms" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(139,90,43,0.3); margin-top: 4px;">
+               🚀 一键发射到所选平台 ({{selectedPlatforms.length}})
+            </button>
             
             <button class="html-copy-btn" @click="copyHtml('wechat'); toggleMenu(null)" style="width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; font-weight: 800; border: none; background: #1a1a1a; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -2105,7 +2212,7 @@ const insertFormat = (prefix: string, suffix: string = '') => {
                        style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: none; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; transition: all 0.15s; position: relative; color: var(--text-primary); width: 100%; font-family: inherit;">
                   <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); width: 20px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums;" :style="{ color: selectedTheme === t.id ? 'var(--primary)' : '' }">{{ String(idx + 1).padStart(2, '0') }}</span>
                   <div style="width: 1px; height: 16px; background: rgba(0,0,0,0.06); flex-shrink: 0;"></div>
-                  <span style="font-weight: 500; font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" :style="{ fontWeight: selectedTheme === t.id ? '700' : '500', color: selectedTheme === t.id ? 'var(--primary)' : '' }">{{ t.name }}</span>
+                  <span style="font-weight: 500; font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" :style="{ fontWeight: selectedTheme === t.id ? '700' : '500', color: selectedTheme === t.id ? 'var(--primary)' : '' }">{{ t.name.replace(/^\\d+\\.?\\s*/, '') }}</span>
                   <svg v-if="selectedTheme === t.id" viewBox="0 0 24 24" width="14" height="14" stroke="var(--primary)" fill="none" stroke-width="3" style="flex-shrink: 0; opacity: 0.8;"><polyline points="20 6 9 17 4 12"></polyline></svg>
                </button>
             </div>

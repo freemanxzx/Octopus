@@ -1,0 +1,3 @@
+@echo off
+echo Starting Octopus MD in Electron development mode...
+pnpm run electron:dev

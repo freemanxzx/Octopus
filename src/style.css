@@ -160,7 +160,9 @@ code {
   width: 100%;
   margin: 0;
   padding: 0;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -290,4 +292,19 @@ code {
     right: 0;
     border-right-color: var(--border);
   }
+}
+
+/* Fix header dropdown item shortcut overlap and wrapping */
+.dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+
+.dropdown-item .shortcut {
+  order: 2 !important;
+  margin-left: auto !important;
+  float: none !important;
+  position: static !important;
 }

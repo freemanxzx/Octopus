@@ -47,5 +47,20 @@ body {
   padding: 0;
   font-family: var(--font-family);
   background-color: var(--bg-app);
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+html {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+#app {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
 }
 </style>

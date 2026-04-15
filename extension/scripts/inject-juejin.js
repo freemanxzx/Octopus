@@ -14,9 +14,8 @@ chrome.storage.local.get(['octopus_sync_payload'], (result) => {
       chrome.storage.local.remove('octopus_sync_payload');
       return;
     }
-    // Juejin bytedance markdown core editor
-    const editor = document.querySelector('.bytemd-editor .CodeMirror');
-    const titleInput = document.querySelector('.title-input');
+    const titleInput = document.querySelector('.editor-header input[placeholder="输入文章标题..."]') || document.querySelector('.title-input');
+    const editor = document.querySelector('.bytemd-editor div.CodeMirror-code[role="presentation"]') || document.querySelector('.bytemd-editor .CodeMirror');
     
     if (editor) {
       clearInterval(checkReady);
@@ -25,16 +24,22 @@ chrome.storage.local.get(['octopus_sync_payload'], (result) => {
       if (titleInput) {
         titleInput.value = payload.meta.title;
         titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+        titleInput.dispatchEvent(new Event('change', { bubbles: true }));
       }
       
+      editor.focus();
       const dataTransfer = new DataTransfer();
       dataTransfer.setData('text/plain', payload.markdown);
+      dataTransfer.setData('text/html', payload.html || payload.markdown);
       
       editor.dispatchEvent(new ClipboardEvent('paste', {
         clipboardData: dataTransfer,
         bubbles: true,
         cancelable: true
       }));
+
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      editor.dispatchEvent(new Event('change', { bubbles: true }));
 
       chrome.storage.local.remove('octopus_sync_payload');
     }

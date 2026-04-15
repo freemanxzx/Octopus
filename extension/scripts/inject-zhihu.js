@@ -14,8 +14,8 @@ chrome.storage.local.get(['octopus_sync_payload'], (result) => {
       chrome.storage.local.remove('octopus_sync_payload');
       return;
     }
-    const editor = document.querySelector('.DraftEditor-root');
     const titleInput = document.querySelector('textarea.Input');
+    const editor = document.querySelector('.DraftEditor-root') || document.querySelector('.public-DraftEditor-content');
     
     if (editor) {
       clearInterval(checkReady);
@@ -24,10 +24,12 @@ chrome.storage.local.get(['octopus_sync_payload'], (result) => {
       if (titleInput) {
         titleInput.value = payload.meta.title;
         titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+        titleInput.dispatchEvent(new Event('change', { bubbles: true }));
       }
       
+      editor.focus();
       const dataTransfer = new DataTransfer();
-      dataTransfer.setData('text/html', payload.html);
+      dataTransfer.setData('text/html', payload.html || payload.markdown);
       dataTransfer.setData('text/plain', payload.markdown);
       
       editor.dispatchEvent(new ClipboardEvent('paste', {
@@ -35,6 +37,9 @@ chrome.storage.local.get(['octopus_sync_payload'], (result) => {
         bubbles: true,
         cancelable: true
       }));
+
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      editor.dispatchEvent(new Event('change', { bubbles: true }));
 
       chrome.storage.local.remove('octopus_sync_payload');
     }

@@ -1775,6 +1775,7 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['cm-wrapper']} */ ;
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['cm-editor']} */ ;
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['cm-scroller']} */ ;
 /** @type {__VLS_StyleScopedClasses['editor-pane']} */ ;

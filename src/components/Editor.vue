@@ -2601,9 +2601,15 @@ const insertFormat = (prefix: string, suffix: string = '') => {
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
+:deep(.v-codemirror), :deep(.cm-editor) {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  outline: none !important;
+}
 :deep(.cm-scroller), :deep(.cm-content) {
-  padding-top: 4px !important;
-  padding-bottom: 40vh !important; /* Ensure comfortable bottom scroll */
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  padding-bottom: 40vh !important;
 }
 :deep(.cm-wrapper) {
   margin-top: 0 !important;

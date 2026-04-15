@@ -2815,6 +2815,8 @@ html.dark .menu-item:hover, html.dark .menu-item.active {
   padding: 8px;
   animation: eliteMenuSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top center;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 html.dark .dropdown-menu {

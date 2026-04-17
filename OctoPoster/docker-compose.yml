@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  octoposter:
+    build: .
+    container_name: octoposter
+    restart: unless-stopped
+    ports:
+      - "12399:12399"
+    volumes:
+      - ./history:/app/history
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
+      # - GIN_MODE=release
+    # 依赖 CommonAuth 等其它服务的话可以加入 networks
+    networks:
+      - shared_network
+
+networks:
+  shared_network:
+    external: true
+    name: common_auth_network # 请根据对应的网络名配置

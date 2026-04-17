@@ -1,0 +1,9 @@
+{
+  "id": "dark_elegant",
+  "name": "暗色优雅",
+  "description": "深色背景 + 金色点缀 + 经典排版",
+  "preview": "dark_elegant_preview.png",
+  "slots": ["title", "subtitle", "points", "footer"],
+  "category": "高级",
+  "aspect_ratios": ["3:4", "1:1"]
+}

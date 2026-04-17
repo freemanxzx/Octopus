@@ -6,6 +6,7 @@ export const useGeneratorStore = defineStore('generator', () => {
   const topic = ref('')
   const outline = ref('')
   const style = ref('default')
+  const platform = ref('xhs') // 'xhs' | 'gzh' | 'moments' | 'ecom'
   const pages = ref<Page[]>([])
   const taskId = ref('')
   const isGenerating = ref(false)
@@ -30,6 +31,10 @@ export const useGeneratorStore = defineStore('generator', () => {
 
   function setStyle(s: string) {
     style.value = s
+  }
+
+  function setPlatform(p: string) {
+    platform.value = p
   }
 
   function setOutline(o: string, p: Page[]) {
@@ -96,10 +101,10 @@ export const useGeneratorStore = defineStore('generator', () => {
   }
 
   return {
-    topic, outline, style, pages, taskId, isGenerating,
+    topic, outline, style, platform, pages, taskId, isGenerating,
     imageUrls, errors, pageStatus,
     titles, copywriting, tags, contentStatus, contentError,
-    setTopic, setStyle, setOutline, setTaskId,
+    setTopic, setStyle, setPlatform, setOutline, setTaskId,
     updatePageStatus, setImageUrl, setPageError,
     startContentGeneration, setContent, setContentError, reset,
   }

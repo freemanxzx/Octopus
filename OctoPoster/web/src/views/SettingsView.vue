@@ -22,14 +22,8 @@ onMounted(async () => {
       const ic = res.config.image_generation
       const tp = tc.providers?.[tc.active_provider]
       const ip = ic.providers?.[ic.active_provider]
-      if (tp) {
-        textModel.value = tp.model || textModel.value
-        textBaseUrl.value = tp.base_url || ''
-      }
-      if (ip) {
-        imageModel.value = ip.model || imageModel.value
-        imageBaseUrl.value = ip.base_url || ''
-      }
+      if (tp) { textModel.value = tp.model || textModel.value; textBaseUrl.value = tp.base_url || '' }
+      if (ip) { imageModel.value = ip.model || imageModel.value; imageBaseUrl.value = ip.base_url || '' }
     }
   } catch {}
 })
@@ -38,18 +32,8 @@ async function handleSave() {
   saving.value = true
   try {
     const res = await saveConfig({
-      text_generation: {
-        active_provider: 'default',
-        providers: {
-          default: { api_key: textApiKey.value, base_url: textBaseUrl.value, model: textModel.value }
-        }
-      },
-      image_generation: {
-        active_provider: 'default',
-        providers: {
-          default: { api_key: imageApiKey.value, base_url: imageBaseUrl.value, model: imageModel.value }
-        }
-      }
+      text_generation: { active_provider: 'default', providers: { default: { api_key: textApiKey.value, base_url: textBaseUrl.value, model: textModel.value } } },
+      image_generation: { active_provider: 'default', providers: { default: { api_key: imageApiKey.value, base_url: imageBaseUrl.value, model: imageModel.value } } }
     })
     if (res.success) { saved.value = true; setTimeout(() => saved.value = false, 3000) }
     else alert('保存失败: ' + res.error)
@@ -61,7 +45,7 @@ async function handleTestText() {
   testingText.value = true; testResult.value = ''
   try {
     const res = await testConnection({ type: 'openai_compatible', api_key: textApiKey.value, base_url: textBaseUrl.value, model: textModel.value })
-    testResult.value = res.success ? '✅ 文本服务连接成功！' : '❌ ' + res.error
+    testResult.value = res.success ? '✅ 文本服务连接成功' : '❌ ' + res.error
   } catch (e) { testResult.value = '❌ 连接异常: ' + String(e) }
   finally { testingText.value = false }
 }
@@ -71,7 +55,7 @@ async function handleTestImage() {
   testingImage.value = true; testResult.value = ''
   try {
     const res = await testConnection({ type: 'image_api', api_key: imageApiKey.value, base_url: imageBaseUrl.value, model: imageModel.value })
-    testResult.value = res.success ? '✅ 图片服务连接成功！' : '❌ ' + res.error
+    testResult.value = res.success ? '✅ 图片服务连接成功' : '❌ ' + res.error
   } catch (e) { testResult.value = '❌ 连接异常: ' + String(e) }
   finally { testingImage.value = false }
 }
@@ -79,12 +63,18 @@ async function handleTestImage() {
 
 <template>
   <div class="settings-view">
-    <h2>⚙️ 系统设置</h2>
-    <p class="desc">配置 AI 服务商的 API Key 和模型参数</p>
+    <div class="settings-header animate-fade-in">
+      <h2>系统设置</h2>
+      <p class="desc">管理 AI 服务 API Key 与模型参数</p>
+    </div>
 
     <div class="settings-grid">
-      <div class="card">
-        <h3>📝 文本生成（大纲 & 文案）</h3>
+      <div class="provider-card animate-fade-in" style="animation-delay: 0.05s">
+        <div class="provider-header">
+          <span class="provider-icon">📝</span>
+          <h3>文本生成引擎</h3>
+        </div>
+        <p class="provider-desc">负责大纲推理与文案输出</p>
         <div class="field">
           <label>API Key</label>
           <input type="text" v-model="textApiKey" placeholder="sk-xxxx 或 AIza..." />
@@ -94,16 +84,20 @@ async function handleTestImage() {
           <input type="text" v-model="textBaseUrl" placeholder="留空使用默认" />
         </div>
         <div class="field">
-          <label>模型</label>
+          <label>模型标识</label>
           <input type="text" v-model="textModel" placeholder="gemini-2.0-flash" />
         </div>
         <button class="btn-secondary test-btn" @click="handleTestText" :disabled="testingText">
-          {{ testingText ? '测试中...' : '🔌 测试连接' }}
+          {{ testingText ? '探测中...' : '🔌 测试连接' }}
         </button>
       </div>
 
-      <div class="card">
-        <h3>🎨 图片生成</h3>
+      <div class="provider-card animate-fade-in" style="animation-delay: 0.1s">
+        <div class="provider-header">
+          <span class="provider-icon">🎨</span>
+          <h3>图片生成引擎</h3>
+        </div>
+        <p class="provider-desc">负责高清海报图片渲染</p>
         <div class="field">
           <label>API Key</label>
           <input type="text" v-model="imageApiKey" placeholder="sk-xxxx 或 AIza..." />
@@ -113,56 +107,62 @@ async function handleTestImage() {
           <input type="text" v-model="imageBaseUrl" placeholder="留空使用默认" />
         </div>
         <div class="field">
-          <label>模型</label>
+          <label>模型标识</label>
           <input type="text" v-model="imageModel" placeholder="gemini-3-pro-image-preview" />
         </div>
         <button class="btn-secondary test-btn" @click="handleTestImage" :disabled="testingImage">
-          {{ testingImage ? '测试中...' : '🔌 测试连接' }}
+          {{ testingImage ? '探测中...' : '🔌 测试连接' }}
         </button>
       </div>
     </div>
 
-    <div v-if="testResult" class="test-result" :class="{ success: testResult.startsWith('✅'), error: testResult.startsWith('❌') }">
+    <div v-if="testResult" class="test-result animate-scale-in" :class="{ success: testResult.startsWith('✅'), error: testResult.startsWith('❌') }">
       {{ testResult }}
     </div>
 
-    <div class="save-area">
+    <div class="save-area animate-fade-in" style="animation-delay: 0.15s">
       <button class="btn-primary" @click="handleSave" :disabled="saving">
-        {{ saving ? '保存中...' : '💾 保存配置' }}
+        {{ saving ? '写入中...' : '💾 保存配置' }}
       </button>
-      <span v-if="saved" class="saved-msg">✅ 配置已保存到服务端</span>
-    </div>
-
-    <div class="card info-card">
-      <h4>💡 配置说明</h4>
-      <ul>
-        <li>文本生成推荐 Gemini 2.0 Flash 或 GPT-4o</li>
-        <li>图片生成推荐 Gemini 3 Pro Image Preview 或 Nano Banana Pro</li>
-        <li>如果在国内使用，请配置代理 Base URL</li>
-        <li>配置文件存储在 <code>text_providers.yaml</code> 和 <code>image_providers.yaml</code></li>
-        <li>点击「测试连接」可验证 API Key 和 Base URL 是否正确</li>
-      </ul>
+      <span v-if="saved" class="saved-msg">✅ 已同步到服务端</span>
     </div>
   </div>
 </template>
 
 <style scoped>
-.settings-view { max-width: 800px; margin: 0 auto; }
-.settings-view h2 { margin-bottom: 0.3rem; }
-.desc { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem; }
-.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-.settings-grid h3 { font-size: 0.95rem; margin-bottom: 1rem; }
-.field { margin-bottom: 0.8rem; }
-.field label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem; color: var(--text-secondary); }
+.settings-view { max-width: 900px; margin: 0 auto; }
+.settings-header { margin-bottom: 2rem; }
+.settings-header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; }
+.desc { color: var(--text-secondary); font-size: 0.85rem; }
+
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+
+.provider-card {
+  background: var(--bg-card); backdrop-filter: blur(12px);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.5rem; transition: all 0.3s var(--ease-out);
+}
+.provider-card:hover { border-color: var(--border-hover); }
+
+.provider-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem; }
+.provider-icon { font-size: 1.5rem; }
+.provider-header h3 { font-size: 1rem; font-weight: 700; }
+.provider-desc { font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 1.2rem; }
+
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--text-secondary); letter-spacing: 0.3px; }
 .test-btn { width: 100%; margin-top: 0.5rem; }
-.test-result { padding: 0.6rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; }
-.test-result.success { background: rgba(74,222,128,0.1); color: var(--success); border: 1px solid rgba(74,222,128,0.3); }
-.test-result.error { background: rgba(248,113,113,0.1); color: var(--error); border: 1px solid rgba(248,113,113,0.3); }
-.save-area { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+
+.test-result {
+  padding: 0.8rem 1.2rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 0.85rem;
+}
+.test-result.success { background: rgba(52,211,153,0.08); color: var(--success); border: 1px solid rgba(52,211,153,0.2); }
+.test-result.error { background: rgba(248,113,113,0.08); color: var(--error); border: 1px solid rgba(248,113,113,0.2); }
+
+.save-area { display: flex; align-items: center; gap: 1rem; }
 .saved-msg { color: var(--success); font-size: 0.85rem; }
-.info-card { font-size: 0.85rem; }
-.info-card h4 { margin-bottom: 0.6rem; }
-.info-card ul { padding-left: 1.2rem; color: var(--text-secondary); }
-.info-card li { margin-bottom: 0.3rem; }
-.info-card code { background: var(--bg-input); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.8rem; }
+
+@media (max-width: 700px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
 </style>

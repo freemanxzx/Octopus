@@ -62,12 +62,64 @@ export async function generateOutline(topic: string, images?: File[]): Promise<O
   return res.json()
 }
 
+// Generate outline from a URL (article import)
+export async function generateOutlineFromURL(url: string): Promise<OutlineResult> {
+  const res = await fetch(`${API_BASE}/api/outline/from-url`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ url }),
+  })
+  return res.json()
+}
+
+// Generate outline from an uploaded document
+export async function generateOutlineFromDoc(file: File): Promise<OutlineResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${API_BASE}/api/outline/from-doc`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: formData,
+  })
+  return res.json()
+}
+
 // Generate content (titles, copywriting, tags)
 export async function generateContent(topic: string, outline: string): Promise<ContentResult> {
   const res = await fetch(`${API_BASE}/api/content`, {
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ topic, outline }),
+  })
+  return res.json()
+}
+
+// ==================== Template API ====================
+
+export interface TemplateMeta {
+  id: string
+  name: string
+  description: string
+  preview: string
+  slots: string[]
+  category: string
+  aspect_ratios: string[]
+}
+
+export async function getTemplates(): Promise<{ success: boolean; templates: TemplateMeta[] }> {
+  const res = await fetch(`${API_BASE}/api/templates`, { headers: getHeaders() })
+  return res.json()
+}
+
+export async function renderTemplate(
+  templateId: string,
+  data: Record<string, string>,
+  ratio: string
+): Promise<{ success: boolean; image_url?: string; task_id?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/render-template`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ template_id: templateId, data, ratio }),
   })
   return res.json()
 }
@@ -79,6 +131,7 @@ export function generateImages(
   fullOutline: string,
   userTopic: string,
   style: string,
+  platform: string,
   onEvent: (event: string, data: SSEventData) => void,
   onDone: () => void,
   onError: (err: string) => void,
@@ -93,6 +146,7 @@ export function generateImages(
       full_outline: fullOutline,
       user_topic: userTopic,
       style: style,
+      platform: platform,
     }),
   })
     .then((res) => {
@@ -137,11 +191,12 @@ export async function retryImage(
   fullOutline: string,
   userTopic: string,
   style: string,
+  platform: string,
 ): Promise<{ success: boolean; image_url?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/api/retry`, {
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ task_id: taskId, page, full_outline: fullOutline, user_topic: userTopic, style }),
+    body: JSON.stringify({ task_id: taskId, page, full_outline: fullOutline, user_topic: userTopic, style, platform }),
   })
   return res.json()
 }

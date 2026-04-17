@@ -28,17 +28,26 @@ type OutlineResult struct {
 
 // OutlineService handles outline generation and parsing.
 type OutlineService struct {
-	promptTemplate string
+	promptTemplate      string
+	smartPromptTemplate string
 }
 
-// NewOutlineService creates a new outline service, loading the prompt template.
+// NewOutlineService creates a new outline service, loading the prompt templates.
 func NewOutlineService(baseDir string) (*OutlineService, error) {
 	promptPath := filepath.Join(baseDir, "prompts", "outline_prompt.txt")
 	data, err := os.ReadFile(promptPath)
 	if err != nil {
 		return nil, fmt.Errorf("load outline prompt: %w", err)
 	}
-	return &OutlineService{promptTemplate: string(data)}, nil
+
+	// Load smart outline prompt (optional, for URL/doc import)
+	smartPath := filepath.Join(baseDir, "prompts", "smart_outline_prompt.txt")
+	smartData, _ := os.ReadFile(smartPath)
+
+	return &OutlineService{
+		promptTemplate:      string(data),
+		smartPromptTemplate: string(smartData),
+	}, nil
 }
 
 // GenerateOutline calls the LLM to produce a structured outline.
@@ -57,6 +66,35 @@ func (s *OutlineService) GenerateOutline(topic string, images ...string) (*Outli
 	}
 
 	text, err := client.GenerateText(prompt, images...)
+	if err != nil {
+		return &OutlineResult{Success: false, Error: err.Error()}, nil
+	}
+
+	pages := parseOutline(text)
+	return &OutlineResult{
+		Success: true,
+		Outline: text,
+		Pages:   pages,
+	}, nil
+}
+
+// GenerateOutlineFromText creates an outline from existing long-form text (e.g. scraped article or uploaded document).
+func (s *OutlineService) GenerateOutlineFromText(sourceText string) (*OutlineResult, error) {
+	if s.smartPromptTemplate == "" {
+		// Fallback: treat source text as the topic
+		return s.GenerateOutline(sourceText)
+	}
+
+	cfg := config.Get()
+	providerCfg, err := cfg.GetActiveTextProvider()
+	if err != nil {
+		return &OutlineResult{Success: false, Error: err.Error()}, nil
+	}
+
+	client := llm.NewClient(providerCfg)
+	prompt := strings.ReplaceAll(s.smartPromptTemplate, "{source_text}", sourceText)
+
+	text, err := client.GenerateText(prompt)
 	if err != nil {
 		return &OutlineResult{Success: false, Error: err.Error()}, nil
 	}

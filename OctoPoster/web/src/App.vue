@@ -13,30 +13,27 @@ function handleLogout() {
 
 <template>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="header-left" @click="router.push('/')">
-        <span class="logo">🐙</span>
-        <h1>OctoPoster</h1>
-        <span class="tagline">AI 小红书图文生成器</span>
+    <header class="app-header" v-if="$route.path !== '/app' && $route.path !== '/result'">
+      <div class="header-inner">
+        <div class="header-left" @click="router.push('/')">
+          <span class="logo">🐙</span>
+          <span class="logo-text">OctoPoster</span>
+        </div>
+        <nav class="header-nav">
+          <router-link to="/">首页</router-link>
+          <template v-if="authStore.isLoggedIn">
+            <router-link to="/app">创作台</router-link>
+            <router-link to="/history">历史</router-link>
+            <router-link to="/settings">设置</router-link>
+            <div class="user-pill">
+              <span class="credits">🪙 {{ authStore.credits }}</span>
+              <button class="btn-ghost logout-btn" @click="handleLogout">退出</button>
+            </div>
+          </template>
+        </nav>
       </div>
-      <nav class="header-nav">
-        <router-link to="/">首页</router-link>
-        <template v-if="authStore.isLoggedIn">
-          <router-link to="/app">创作台</router-link>
-          <router-link to="/history">📂 历史记录</router-link>
-          <router-link to="/settings">⚙️ 设置</router-link>
-          <div class="user-profile">
-            <span class="credits">🪙 {{ authStore.credits }} 积分</span>
-            <span class="email">{{ authStore.user?.email || 'User' }}</span>
-            <button class="logout-btn" @click="handleLogout">退出</button>
-          </div>
-        </template>
-        <template v-else>
-          <router-link to="/">登录使用</router-link>
-        </template>
-      </nav>
     </header>
-    <main class="app-main">
+    <main class="app-main" :class="{ 'full-bleed': $route.path === '/app' || $route.path === '/result' }">
       <router-view v-slot="{ Component }">
         <transition name="fade-slide" mode="out-in">
           <component :is="Component" />
@@ -52,18 +49,28 @@ function handleLogout() {
   display: flex;
   flex-direction: column;
 }
+
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
-  height: 60px;
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  height: 64px;
+  background: rgba(8, 8, 12, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
 }
+
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -71,75 +78,61 @@ function handleLogout() {
   cursor: pointer;
 }
 .logo { font-size: 1.5rem; }
-.app-header h1 {
+.logo-text {
   font-size: 1.15rem;
-  font-weight: 700;
-  background: linear-gradient(90deg, #ff6b6b, #ffa07a);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0;
 }
-.tagline {
-  font-size: 0.7rem;
-  color: rgba(255,255,255,0.4);
-  margin-left: 0.3rem;
-}
+
 .header-nav {
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  gap: 0.3rem;
 }
 .header-nav a {
-  color: rgba(255,255,255,0.6);
-  text-decoration: none;
-  font-size: 0.85rem;
-  transition: color 0.2s;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
 }
-.header-nav a:hover,
-.header-nav a.router-link-active {
-  color: #ff6b6b;
-}
+.header-nav a:hover { color: var(--text-primary); background: var(--bg-hover); }
+.header-nav a.router-link-active { color: var(--text-primary); background: rgba(139,92,246,0.1); }
 
-.user-profile {
+.user-pill {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-left: 1rem;
-  padding-left: 1rem;
-  border-left: 1px solid rgba(255,255,255,0.1);
+  gap: 0.6rem;
+  margin-left: 0.5rem;
+  padding-left: 0.8rem;
+  border-left: 1px solid var(--border);
 }
 .credits {
-  background: rgba(255,189,46,0.15);
-  color: #ffbd2e;
+  background: rgba(251,191,36,0.1);
+  color: #fbbf24;
   padding: 0.2rem 0.6rem;
-  border-radius: 12px;
+  border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 600;
 }
-.email {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
 .logout-btn {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.1);
-  color: var(--text-secondary);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.logout-btn:hover {
-  color: var(--text-primary);
-  border-color: rgba(255,255,255,0.3);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .app-main {
   flex: 1;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 2rem 2rem;
+}
+.app-main.full-bleed {
+  max-width: 100%;
+  padding: 0;
 }
 </style>

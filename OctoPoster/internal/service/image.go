@@ -72,6 +72,7 @@ func (s *ImageService) GenerateImages(
 	fullOutline string,
 	userTopic string,
 	style string,
+	targetRatio string,
 ) <-chan SSEvent {
 	events := make(chan SSEvent, 64)
 	go func() {
@@ -110,7 +111,11 @@ func (s *ImageService) GenerateImages(
 			}
 
 			prompt := s.buildPrompt(coverPage.Content, coverPage.Type, fullOutline, userTopic, style)
-			imgData, err := s.gen.Generate(prompt, s.providerCfg.DefaultAspectRatio, s.providerCfg.Model, nil)
+			ratio := targetRatio
+			if ratio == "" {
+				ratio = s.providerCfg.DefaultAspectRatio
+			}
+			imgData, err := s.gen.Generate(prompt, ratio, s.providerCfg.Model, nil)
 			if err != nil {
 				events <- SSEvent{Event: "error", Data: map[string]interface{}{
 					"index": coverPage.Index, "status": "error", "message": err.Error(), "retryable": true, "phase": "cover",
@@ -153,7 +158,7 @@ func (s *ImageService) GenerateImages(
 					go func() {
 						defer wg.Done()
 						defer func() { <-sem }()
-						s.generateSinglePage(page, taskID, taskDir, coverImageData, fullOutline, userTopic, style, events)
+						s.generateSinglePage(page, taskID, taskDir, coverImageData, fullOutline, userTopic, style, targetRatio, events)
 					}()
 				}
 				wg.Wait()
@@ -163,7 +168,7 @@ func (s *ImageService) GenerateImages(
 					events <- SSEvent{Event: "progress", Data: map[string]interface{}{
 						"index": page.Index, "status": "generating", "phase": "content",
 					}}
-					s.generateSinglePage(page, taskID, taskDir, coverImageData, fullOutline, userTopic, style, events)
+					s.generateSinglePage(page, taskID, taskDir, coverImageData, fullOutline, userTopic, style, targetRatio, events)
 				}
 			}
 		}
@@ -178,11 +183,15 @@ func (s *ImageService) GenerateImages(
 
 func (s *ImageService) generateSinglePage(
 	page Page, taskID, taskDir string,
-	coverRef []byte, fullOutline, userTopic, style string,
+	coverRef []byte, fullOutline, userTopic, style, targetRatio string,
 	events chan<- SSEvent,
 ) {
 	prompt := s.buildPrompt(page.Content, page.Type, fullOutline, userTopic, style)
-	imgData, err := s.gen.Generate(prompt, s.providerCfg.DefaultAspectRatio, s.providerCfg.Model, coverRef)
+	ratio := targetRatio
+	if ratio == "" {
+		ratio = s.providerCfg.DefaultAspectRatio
+	}
+	imgData, err := s.gen.Generate(prompt, ratio, s.providerCfg.Model, coverRef)
 	if err != nil {
 		events <- SSEvent{Event: "error", Data: map[string]interface{}{
 			"index": page.Index, "status": "error", "message": err.Error(), "retryable": true, "phase": "content",

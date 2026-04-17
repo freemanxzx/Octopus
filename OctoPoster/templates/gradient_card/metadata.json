@@ -1,0 +1,9 @@
+{
+  "id": "gradient_card",
+  "name": "渐变卡片",
+  "description": "现代渐变背景 + 大标题 + 要点列表",
+  "preview": "gradient_card_preview.png",
+  "slots": ["title", "subtitle", "points", "footer"],
+  "category": "通用",
+  "aspect_ratios": ["3:4", "1:1"]
+}

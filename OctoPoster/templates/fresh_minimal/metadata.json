@@ -1,0 +1,9 @@
+{
+  "id": "fresh_minimal",
+  "name": "清新极简",
+  "description": "浅色系 + 圆角卡片 + 简约排版",
+  "preview": "fresh_minimal_preview.png",
+  "slots": ["title", "subtitle", "points", "footer"],
+  "category": "极简",
+  "aspect_ratios": ["3:4", "1:1"]
+}

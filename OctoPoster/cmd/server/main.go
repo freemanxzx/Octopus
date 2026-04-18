@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/octopus/octoposter/internal/agent"
 	"github.com/octopus/octoposter/internal/config"
 	"github.com/octopus/octoposter/internal/handler"
 	"github.com/octopus/octoposter/internal/service"
@@ -52,8 +54,17 @@ func main() {
 		log.Printf("⚠️  Credits service init failed (will use memory only): %v", err)
 	}
 
+	// Initialize Eino agent engine
+	ctx := context.Background()
+	agentEngine, err := agent.NewEngine(ctx, nil, nil, nil, nil) // services are created inside handler
+	if err != nil {
+		log.Printf("⚠️  Agent engine init failed (agent features disabled): %v", err)
+	} else {
+		fmt.Println("🤖 Eino Agent 引擎已启动")
+	}
+
 	// Register API handlers
-	h, err := handler.New(baseDir, creditSvc)
+	h, err := handler.New(baseDir, creditSvc, agentEngine)
 	if err != nil {
 		log.Fatal("handler init failed:", err)
 	}

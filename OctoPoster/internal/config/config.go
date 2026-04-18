@@ -94,6 +94,30 @@ func Reload() {
 	}
 }
 
+// RLock acquires a read lock on the config.
+func (c *AppConfig) RLock() { c.mu.RLock() }
+
+// RUnlock releases the read lock.
+func (c *AppConfig) RUnlock() { c.mu.RUnlock() }
+
+// GetTextProviders returns a copy of all text provider configs (thread-safe).
+func (c *AppConfig) GetTextProviders() map[string]ProviderConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	result := make(map[string]ProviderConfig, len(c.TextProviders.Providers))
+	for k, v := range c.TextProviders.Providers {
+		result[k] = v
+	}
+	return result
+}
+
+// GetActiveTextProviderName returns the name of the active text provider (thread-safe).
+func (c *AppConfig) GetActiveTextProviderName() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TextProviders.ActiveProvider
+}
+
 // GetActiveTextProvider returns the config of the currently active text provider.
 func (c *AppConfig) GetActiveTextProvider() (ProviderConfig, error) {
 	c.mu.RLock()

@@ -1,0 +1,229 @@
+﻿package utils // import "github.com/cloudwego/eino/components/tool/utils"
+
+Package utils provides constructors for building tool implementations without
+writing boilerplate JSON serialization code.
+
+# Choosing a Constructor
+
+There are two main strategies:
+
+ 1. Infer from struct tags (recommended): InferTool, InferStreamTool,
+    InferEnhancedTool, InferEnhancedStreamTool. The parameter JSON schema is
+    derived automatically from the input struct's field names and tags. Requires
+    a typed input struct.
+
+ 2. Manual ToolInfo: NewTool, NewStreamTool, NewEnhancedTool,
+    NewEnhancedStreamTool. You supply a schema.ToolInfo directly. Useful when
+    the schema cannot be expressed as a Go struct, or must be dynamically
+    constructed.
+
+# Struct Tag Convention
+
+InferTool and friends use the following tags on the input struct fields:
+
+    type Input struct {
+        Query    string `json:"query"     jsonschema:"required"             jsonschema_description:"The search query"`
+        MaxItems int    `json:"max_items"                                   jsonschema_description:"Maximum results to return"`
+    }
+
+Key rules:
+  - Use a separate jsonschema_description tag for field descriptions 鈥?embedding
+    descriptions inside the jsonschema tag causes comma-parsing issues.
+  - Use jsonschema:"required" to mark mandatory parameters.
+  - The json tag controls the parameter name visible to the model.
+
+# Schema Utilities
+
+GoStruct2ToolInfo and GoStruct2ParamsOneOf convert a Go struct to schema
+types without creating a tool 鈥?useful for ChatModel structured output via
+ResponseFormat or BindTools.
+
+See
+https://www.cloudwego.io/docs/eino/core_modules/components/tools_node_guide/how_to_create_a_tool/
+
+FUNCTIONS
+
+func GoStruct2ParamsOneOf[T any](opts ...Option) (*schema.ParamsOneOf, error)
+    GoStruct2ParamsOneOf converts a Go struct's fields and tags into a
+    schema.ParamsOneOf (JSON Schema 2020-12). Useful for ChatModel structured
+    output via ResponseFormat without creating a full tool.
+
+func GoStruct2ToolInfo[T any](toolName, toolDesc string, opts ...Option) (*schema.ToolInfo, error)
+    GoStruct2ToolInfo converts a Go struct into a schema.ToolInfo. Useful for
+    binding a typed schema to a ChatModel via BindTools for structured output,
+    when you do not need a full executable tool.
+
+func InferEnhancedStreamTool[T any](toolName, toolDesc string, s EnhancedStreamFunc[T], opts ...Option) (tool.EnhancedStreamableTool, error)
+    InferEnhancedStreamTool creates an tool.EnhancedStreamableTool by
+    inferring the parameter JSON schema from type T. The function streams
+    schema.ToolResult values for multimodal output.
+
+func InferEnhancedTool[T any](toolName, toolDesc string, i EnhancedInvokeFunc[T], opts ...Option) (tool.EnhancedInvokableTool, error)
+    InferEnhancedTool creates an tool.EnhancedInvokableTool by inferring the
+    parameter JSON schema from type T. The function returns a schema.ToolResult
+    for multimodal output (text, images, audio, video, files).
+
+func InferOptionableEnhancedStreamTool[T any](toolName, toolDesc string, s OptionableEnhancedStreamFunc[T], opts ...Option) (tool.EnhancedStreamableTool, error)
+    InferOptionableEnhancedStreamTool creates an EnhancedStreamableTool from
+    a given function by inferring the ToolInfo from the function's request
+    parameters, with tool option.
+
+func InferOptionableEnhancedTool[T any](toolName, toolDesc string, i OptionableEnhancedInvokeFunc[T], opts ...Option) (tool.EnhancedInvokableTool, error)
+    InferOptionableEnhancedTool creates an EnhancedInvokableTool from a given
+    function by inferring the ToolInfo from the function's request parameters,
+    with tool option.
+
+func InferOptionableStreamTool[T, D any](toolName, toolDesc string, s OptionableStreamFunc[T, D], opts ...Option) (tool.StreamableTool, error)
+    InferOptionableStreamTool is like InferStreamTool but the function also
+    receives tool.Option values passed by ToolsNode at call time.
+
+func InferOptionableTool[T, D any](toolName, toolDesc string, i OptionableInvokeFunc[T, D], opts ...Option) (tool.InvokableTool, error)
+    InferOptionableTool is like InferTool but the function also receives
+    tool.Option values passed by ToolsNode at call time.
+
+func InferStreamTool[T, D any](toolName, toolDesc string, s StreamFunc[T, D], opts ...Option) (tool.StreamableTool, error)
+    InferStreamTool creates a tool.StreamableTool by inferring the parameter
+    JSON schema from type T. The function returns a schema.StreamReader of D
+    values which the framework serialises to a string stream.
+
+func InferTool[T, D any](toolName, toolDesc string, i InvokeFunc[T, D], opts ...Option) (tool.InvokableTool, error)
+    InferTool creates an tool.InvokableTool by inferring the parameter JSON
+    schema from the fields and tags of the input type T.
+
+    The tool automatically JSON-decodes the model's argument string into T
+    before calling fn, and JSON-encodes the D return value into the result
+    string.
+
+    Use WithSchemaModifier in opts to customise how struct tags are mapped to
+    JSON schema fields.
+
+func NewEnhancedStreamTool[T any](desc *schema.ToolInfo, s EnhancedStreamFunc[T], opts ...Option) tool.EnhancedStreamableTool
+    NewEnhancedStreamTool creates an tool.EnhancedStreamableTool from an
+    explicit schema.ToolInfo and a typed streaming function.
+
+func NewEnhancedTool[T any](desc *schema.ToolInfo, i EnhancedInvokeFunc[T], opts ...Option) tool.EnhancedInvokableTool
+    NewEnhancedTool creates an tool.EnhancedInvokableTool from an explicit
+    schema.ToolInfo and a function that returns schema.ToolResult.
+
+func NewStreamTool[T, D any](desc *schema.ToolInfo, s StreamFunc[T, D], opts ...Option) tool.StreamableTool
+    NewStreamTool creates a tool.StreamableTool from an explicit schema.ToolInfo
+    and a typed streaming function.
+
+func NewTool[T, D any](desc *schema.ToolInfo, i InvokeFunc[T, D], opts ...Option) tool.InvokableTool
+    NewTool creates an tool.InvokableTool from an explicit schema.ToolInfo and a
+    typed function. Use this when the schema cannot be inferred from struct tags
+    (e.g. dynamic or complex parameter schemas).
+
+    Note: you are responsible for keeping desc.ParamsOneOf consistent with the
+    actual fields of T 鈥?there is no compile-time check.
+
+func WrapInvokableToolWithErrorHandler(t tool.InvokableTool, h ErrorHandler) tool.InvokableTool
+    WrapInvokableToolWithErrorHandler wraps an InvokableTool with custom error
+    handling. When the wrapped tool returns an error, the error handler function
+    'h' will be called to convert the error into a string result, and no error
+    will be returned from the wrapper.
+
+    Parameters:
+      - tool: The original InvokableTool to be wrapped
+      - h: A function that converts an error to a string
+
+    Returns:
+      - A wrapped InvokableTool that handles errors internally
+
+func WrapStreamableToolWithErrorHandler(t tool.StreamableTool, h ErrorHandler) tool.StreamableTool
+    WrapStreamableToolWithErrorHandler wraps a StreamableTool with custom error
+    handling. When the wrapped tool returns an error, the error handler function
+    'h' will be called to convert the error into a string result, which will
+    be returned as a single-item stream, and no error will be returned from the
+    wrapper.
+
+    Parameters:
+      - tool: The original StreamableTool to be wrapped
+      - h: A function that converts an error to a string
+
+    Returns:
+      - A wrapped StreamableTool that handles errors internally
+
+func WrapToolWithErrorHandler(t tool.BaseTool, h ErrorHandler) tool.BaseTool
+    WrapToolWithErrorHandler wraps any BaseTool with custom error handling.
+    This function detects the tool type (InvokableTool, StreamableTool, or both)
+    and applies the appropriate error handling wrapper. When the wrapped tool
+    returns an error, the error handler function 'h' will be called to convert
+    the error into a string result, and no error will be returned from the
+    wrapper.
+
+    Parameters:
+      - t: The original BaseTool to be wrapped
+      - h: A function that converts an error to a string
+
+    Returns:
+      - A wrapped BaseTool that handles errors internally based on its
+        capabilities
+
+
+TYPES
+
+type EnhancedInvokeFunc[T any] func(ctx context.Context, input T) (output *schema.ToolResult, err error)
+    EnhancedInvokeFunc is the function type for the enhanced tool.
+
+type EnhancedStreamFunc[T any] func(ctx context.Context, input T) (output *schema.StreamReader[*schema.ToolResult], err error)
+    EnhancedStreamFunc is the function type for the enhanced streamable tool.
+
+type ErrorHandler func(context.Context, error) string
+    ErrorHandler converts a tool error into a string response.
+
+type InvokeFunc[T, D any] func(ctx context.Context, input T) (output D, err error)
+    InvokeFunc is the function type for the tool.
+
+type MarshalOutput func(ctx context.Context, output any) (string, error)
+    MarshalOutput is the function type for marshalling the output.
+
+type Option func(o *toolOptions)
+    Option is the option func for the tool.
+
+func WithMarshalOutput(m MarshalOutput) Option
+    WithMarshalOutput wraps the marshal output option. when you want to marshal
+    the output by yourself, you can use this option.
+
+func WithSchemaModifier(modifier SchemaModifierFn) Option
+    WithSchemaModifier sets a user-defined schema modifier for inferring tool
+    parameter from tagged go struct.
+
+func WithUnmarshalArguments(um UnmarshalArguments) Option
+    WithUnmarshalArguments wraps the unmarshal arguments option. when you want
+    to unmarshal the arguments by yourself, you can use this option.
+
+type OptionableEnhancedInvokeFunc[T any] func(ctx context.Context, input T, opts ...tool.Option) (output *schema.ToolResult, err error)
+    OptionableEnhancedInvokeFunc is the function type for the enhanced tool with
+    tool option.
+
+type OptionableEnhancedStreamFunc[T any] func(ctx context.Context, input T, opts ...tool.Option) (output *schema.StreamReader[*schema.ToolResult], err error)
+    OptionableEnhancedStreamFunc is the function type for the enhanced
+    streamable tool with tool option.
+
+type OptionableInvokeFunc[T, D any] func(ctx context.Context, input T, opts ...tool.Option) (output D, err error)
+    OptionableInvokeFunc is the function type for the tool with tool option.
+
+type OptionableStreamFunc[T, D any] func(ctx context.Context, input T, opts ...tool.Option) (output *schema.StreamReader[D], err error)
+    OptionableStreamFunc is the function type for the streamable tool with tool
+    option.
+
+type SchemaModifierFn func(jsonTagName string, t reflect.Type, tag reflect.StructTag, schema *jsonschema.Schema)
+    SchemaModifierFn is the schema modifier function for inferring tool
+    parameter from tagged go struct. Within this function, end-user can parse
+    custom go struct tags into corresponding json schema field. Parameters:
+    1. jsonTagName: the name defined in the json tag. Specifically, the last
+    'jsonTagName' visited is fixed to be '_root', which represents the entire go
+    struct. Also, for array field, both the field itself and the element within
+    the array will trigger this function. 2. t: the type of current schema,
+    usually the field type of the go struct. 3. tag: the struct tag of current
+    schema, usually the field tag of the go struct. Note that the element within
+    an array field will use the same go struct tag as the array field itself. 4.
+    schema: the current json schema object to be modified.
+
+type StreamFunc[T, D any] func(ctx context.Context, input T) (output *schema.StreamReader[D], err error)
+    StreamFunc is the function type for the streamable tool.
+
+type UnmarshalArguments func(ctx context.Context, arguments string) (any, error)
+    UnmarshalArguments is the function type for unmarshalling the arguments.
+

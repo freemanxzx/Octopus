@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/octopus/octoposter/internal/agent"
 	"github.com/octopus/octoposter/internal/middleware"
 	"github.com/octopus/octoposter/internal/service"
 )
@@ -28,10 +29,11 @@ type Handler struct {
 	userHandler      *UserHandler
 	creditSvc        *service.CreditService
 	moderationSvc    *service.ModerationService
+	agentEngine      *agent.Engine
 }
 
 // New creates a new handler set.
-func New(baseDir string, creditSvc *service.CreditService) (*Handler, error) {
+func New(baseDir string, creditSvc *service.CreditService, agentEngine *agent.Engine) (*Handler, error) {
 	outlineSvc, err := service.NewOutlineService(baseDir)
 	if err != nil {
 		return nil, err
@@ -56,6 +58,7 @@ func New(baseDir string, creditSvc *service.CreditService) (*Handler, error) {
 		userHandler:     NewUserHandler(creditSvc),
 		creditSvc:       creditSvc,
 		moderationSvc:   service.NewModerationService(),
+		agentEngine:     agentEngine,
 	}, nil
 }
 
@@ -94,6 +97,14 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 			// History routes
 			historyH := NewHistoryHandler(h.baseDir)
 			historyH.RegisterRoutes(authorized)
+
+			// Agent routes (Eino)
+			if h.agentEngine != nil {
+				authorized.POST("/agent/chat", h.AgentChat)
+				authorized.GET("/agent/tools", h.AgentListTools)
+				authorized.POST("/agent/pipeline", h.AgentRunPipeline)
+				authorized.GET("/agent/stats", h.AgentStats)
+			}
 		}
 	}
 }

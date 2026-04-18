@@ -1,8 +1,10 @@
-# OctoPoster 智能体技术深度调研与落地架构方案 (v4)
+# OctoPoster 智能体技术深度调研与落地架构方案 (v5)
 
 > 深度调研基准：2026-04-18 | 覆盖 2025-2026 全球主流 Agent 技术生态
 >
 > 前提：采用 API 调用方式接入大模型，不自建推理集群
+>
+> 核心原则：**Workflow-First (工作流优先)**，以速度和稳定性为第一目标
 
 ---
 
@@ -12,7 +14,7 @@
 
 | 框架 | 厂商 | 开源 | 语言 | 核心特点 | 沙箱 | 适用场景 |
 |------|------|:----:|:----:|----------|:----:|----------|
-| **Claude Agent SDK** | Anthropic | ✅ | Python | Tool Use + Computer Use + 原生安全 | ✅ 内建 | 高安全要求的自主执行 |
+| **Claude Agent SDK** | Anthropic | ✅ | Python | Tool Use + 结构化输出 + 原生安全 | ✅ 内建 | Workflow 安全调用 API |
 | **OpenAI Agents SDK** | OpenAI | ✅ | Python | Handoffs + Guardrails + Tracing | ✅ 原生沙箱 | 多 Agent 委派协作 |
 | **Dify** | LangGenius | ✅ | Python | 可视化编排 + RAG + AgentOps | ✅ DifySandbox | 企业低代码 Agent 平台 |
 | **Coze (扣子)** | 字节跳动 | ✅ | Go | Skills 市场 + 长期规划 + Eino 运行时 | ✅ 容器化 | 全平台 Agent 开发 |
@@ -27,43 +29,36 @@
 
 ### 2.1 Claude Agent SDK (Anthropic)
 
-Anthropic 的 Agent 解决方案不是单一 SDK，而是 **三层递进能力体系**：
+Anthropic 的 Agent SDK 对 OctoPoster 最有价值的是其 **Tool Use 体系和安全设计哲学**：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 3: Claude Co-Work (全自主)                        │
-│  · Claude 独立完成分配的任务                              │
-│  · 多日/周的长时自主工作                                  │
-│  · 最少的人类干预                                         │
-├─────────────────────────────────────────────────────────┤
-│  Layer 2: Computer Use (视觉操控)                        │
-│  · 像人一样看屏幕、移鼠标、点按钮                        │
-│  · 操控任意桌面/Web应用 (Figma/PS/浏览器)               │
-│  · Claude Opus 4.7 大幅提升视觉精度                      │
-├─────────────────────────────────────────────────────────┤
-│  Layer 1: Tool Use (函数调用)                            │
+│  OctoPoster 采纳的 Claude 能力                           │
+│                                                           │
+│  ✅ Tool Use (函数调用)                                  │
 │  · 结构化 Function Calling                               │
-│  · JSON Schema 约束输入输出                              │
-│  · 并行工具调用 + 强制工具选择                           │
+│  · JSON Schema 约束输入输出 (保证稳定性)                │
+│  · 并行工具调用 (加速多步骤执行)                        │
+│  · 强制工具选择 (确保 Workflow 按预设路径执行)           │
+│                                                           │
+│  ✅ Constitutional AI (安全)                              │
+│  · 模型层面内置拒绝危险操作的"宪法"                     │
+│  · 输出内容合规审查                                      │
+│                                                           │
+│  ✅ MCP 原生支持                                         │
+│  · Anthropic 自己制定的工具连接协议                      │
+│  · 标准化 Agent ↔ 工具的调用接口                        │
+│                                                           │
+│  ❌ Computer Use (不适用于 OctoPoster)                   │
+│  · 我们通过 API 调用生成图片，不需要操控桌面软件        │
+│  · 速度慢 (截屏→推理→点击循环)，不满足快速出图需求     │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**核心优势**：
-- 业界最强的**安全性设计哲学** (Constitutional AI)
-- Computer Use 能力适合操控外部设计软件
-- 原生支持 **MCP** (Anthropic 自己制定的协议)
-
-**内建安全/沙箱机制**：
-| 机制 | 说明 |
-|------|------|
-| Constitutional AI | 模型层面内置拒绝危险操作的"宪法" |
-| Computer Use 沙箱 | Anthropic 推荐在 Docker/VM 中运行 Computer Use |
-| Tool Input 校验 | 严格 JSON Schema 验证所有工具参数 |
-| Human Confirmation | 敏感操作前暂停等待用户确认 |
-
 **适用于 OctoPoster 的场景**：
-- 通过 Computer Use 操控 Figma/PS 做高级设计
-- 高安全性的内容审核 Agent
+- Tool Use 结构化调用确保 Workflow 每步输出可预测
+- JSON Schema 输出约束保证大纲/文案格式一致性
+- 安全哲学参考，防止内容合规问题
 
 ---
 
@@ -301,7 +296,7 @@ Dify           ──── ✅ 作为 Agent 平台底座
 LangGraph      ──── ✅ 复杂编排微服务
 
 OpenAI SDK     ────────────────── ✅ Handoff/Guardrails 模式
-Claude SDK     ────────────────── ✅ 安全哲学/Computer Use 理念
+Claude SDK     ────────────────── ✅ 安全哲学 + Tool Use 结构化输出
 Hermes         ────────────────── ✅ 自学习 Skill Memory
 Pi-mono        ────────────────── ✅ 极简工具集/LLM 抽象层
 Coze           ────────────────── ✅ Skills 市场概念
@@ -457,23 +452,41 @@ OctoPoster 类比:
 └─────────────────────────────────────────────────┘
 ```
 
-### 5.4 从 Claude SDK 偷师 — Computer Use 未来能力
+### 5.4 Workflow 执行速度优化策略
+
+用户核心诉求是**快速、稳定**获得图片/文档。以下策略确保 Workflow 尽可能快：
 
 ```
-未来方向: OctoPoster Agent 可通过 Computer Use 操控设计软件
+速度优化分层:
+┌──────────────────────────────────────────────────────┐
+│ Layer 1: LLM 调用优化                                 │
+│ · 选最快模型 (Gemini Flash 优先，毫秒级响应)          │
+│ · Structured Output 避免二次解析 (JSON Schema 直出)   │
+│ · 语义缓存 — 相似请求命中缓存，跳过 LLM 调用          │
+│ · 并行调用 — 大纲+文案同步生成 (互不依赖)             │
+├──────────────────────────────────────────────────────┤
+│ Layer 2: 渲染优化                                     │
+│ · Chromedp 连接池 — 复用 browser 实例，免冷启动       │
+│ · N 页并发渲染 — goroutine 池化执行                   │
+│ · HTTP-first 抓取 — 仅 JS 重页才用 Chromedp           │
+├──────────────────────────────────────────────────────┤
+│ Layer 3: 架构优化                                     │
+│ · SSE 流式推送 — 每完成一页立即推给前端显示            │
+│ · 异步任务队列 — 高峰时排队不阻塞                     │
+│ · CDN 图片分发 — 生成后直接上 CDN                     │
+└──────────────────────────────────────────────────────┘
 
-场景: 用户要求 "把这张图用 Figma 排版成杂志风格"
-  │
-  ▼
-Agent (通过 Claude Computer Use):
-  1. 启动 Figma (无头浏览器)
-  2. 创建新画板 (540×720)
-  3. 导入用户图片
-  4. 应用杂志排版 Layout
-  5. 导出 PNG
-  │
-  ▼
-这是 PagePop/DesignKit 做不到的自由度
+理想耗时基线 (8 页小红书图文):
+┌───────────────┬──────────┬──────────┐
+│ 步骤          │ 当前耗时  │ 优化目标  │
+├───────────────┼──────────┼──────────┤
+│ 大纲生成      │ 2-3s     │ 1-2s     │
+│ 图片渲染 ×8  │ 15-20s   │ 5-8s     │
+│ 文案生成      │ 2-3s     │ 1-2s     │
+│ 质量检查      │ —        │ 1s       │
+├───────────────┼──────────┼──────────┤
+│ 总计          │ ~25s     │ ~10s     │
+└───────────────┴──────────┴──────────┘
 ```
 
 ---
@@ -511,7 +524,7 @@ Agent (通过 Claude Computer Use):
 | **Dify** | Agent 平台底座 (直接集成) |
 | **LangGraph** | 复杂编排引擎 (直接集成) |
 | **OpenAI Agents SDK** | Handoff 多 Agent 委派 + Guardrails 防护 + Tracing 追踪 |
-| **Claude Agent SDK** | 安全哲学 + Computer Use 远期能力 |
+| **Claude Agent SDK** | 安全哲学 + Tool Use 结构化输出 + JSON Schema 约束 |
 | **Hermes Agent** | 自学习 Skill Memory + GOAP 目标规划 |
 | **Pi-mono (OpenClaw)** | 极简工具集设计 + Double Loop 运行时 |
 | **Coze** | Skills 市场理念 + Go 后端参考 |

@@ -8,6 +8,7 @@ export const useGeneratorStore = defineStore('generator', () => {
   const style = ref('default')
   const platform = ref('xhs') // 'xhs' | 'gzh' | 'moments' | 'ecom'
   const pages = ref<Page[]>([])
+  const canvasDoc = ref<any>(null)
   const taskId = ref('')
   const isGenerating = ref(false)
 
@@ -37,9 +38,12 @@ export const useGeneratorStore = defineStore('generator', () => {
     platform.value = p
   }
 
-  function setOutline(o: string, p: Page[]) {
+  function setOutline(o: string, p: Page[], canvas?: any) {
     outline.value = o
     pages.value = p
+    if (canvas) {
+      canvasDoc.value = canvas
+    }
     // Reset generation state
     imageUrls.value = {}
     errors.value = {}
@@ -101,7 +105,7 @@ export const useGeneratorStore = defineStore('generator', () => {
   }
 
   return {
-    topic, outline, style, platform, pages, taskId, isGenerating,
+    topic, outline, style, platform, pages, canvasDoc, taskId, isGenerating,
     imageUrls, errors, pageStatus,
     titles, copywriting, tags, contentStatus, contentError,
     setTopic, setStyle, setPlatform, setOutline, setTaskId,

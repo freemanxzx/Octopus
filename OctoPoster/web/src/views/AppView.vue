@@ -97,7 +97,7 @@ async function handleGenerate() {
       generatorStore.setTopic(inputMode.value === 'topic' ? topic.value.trim() : `[${inputMode.value}] Imported`)
       generatorStore.setStyle(selectedStyle.value)
       generatorStore.setPlatform(selectedPlatform.value)
-      generatorStore.setOutline(res.outline || '', res.pages)
+      generatorStore.setOutline(res.outline || '', res.pages, res.canvas)
       router.push('/outline')
     } else {
       error.value = res.error || '大纲生成失败'

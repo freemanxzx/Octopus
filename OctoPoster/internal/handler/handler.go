@@ -100,10 +100,14 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 
 			// Agent routes (Eino)
 			if h.agentEngine != nil {
-				authorized.POST("/agent/chat", h.AgentChat)
-				authorized.GET("/agent/tools", h.AgentListTools)
-				authorized.POST("/agent/pipeline", h.AgentRunPipeline)
-				authorized.GET("/agent/stats", h.AgentStats)
+				agentGrp := r.Group("/api/agent")
+				{
+					agentGrp.POST("/chat", h.AgentChat)
+					agentGrp.GET("/tools", h.AgentListTools)
+					agentGrp.POST("/pipeline", h.AgentRunPipeline)
+					agentGrp.GET("/stats", h.AgentStats)
+					agentGrp.POST("/canvas-command", h.AgentCanvasCommand)
+				}
 			}
 		}
 	}
@@ -149,6 +153,12 @@ func (h *Handler) GenerateOutline(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	if result.Success {
+		builder := service.NewCanvasBuilder()
+		result.Canvas = builder.BuildFromOutline(req.Topic, result, "3:4")
+	}
+
 	c.JSON(http.StatusOK, result)
 }
 

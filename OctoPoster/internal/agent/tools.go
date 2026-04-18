@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/cloudwego/eino/components/tool"
 	toolutils "github.com/cloudwego/eino/components/tool/utils"
@@ -62,6 +65,14 @@ func (r *ToolRegistry) BaseTools() []tool.BaseTool {
 func (r *ToolRegistry) Get(name string) (tool.InvokableTool, bool) {
 	t, ok := r.tools[name]
 	return t, ok
+}
+
+func saveMagicImage(data []byte) string {
+	filename := fmt.Sprintf("magic_%d.png", time.Now().UnixNano())
+	dir := filepath.Join("data", "tasks", "magic")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, filename), data, 0644)
+	return fmt.Sprintf("http://localhost:12399/api/images/magic/%s", filename)
 }
 
 // registerAll creates and registers all tools.
@@ -141,7 +152,8 @@ func (r *ToolRegistry) registerAll() error {
 			if err != nil {
 				return nil, err
 			}
-			return &ImageProcessResult{Success: true, Size: len(result)}, nil
+			url := saveMagicImage(result)
+			return &ImageProcessResult{Success: true, Size: len(result), URL: url}, nil
 		},
 	)
 	if err != nil {
@@ -158,7 +170,8 @@ func (r *ToolRegistry) registerAll() error {
 			if err != nil {
 				return nil, err
 			}
-			return &ImageProcessResult{Success: true, Size: len(result)}, nil
+			url := saveMagicImage(result)
+			return &ImageProcessResult{Success: true, Size: len(result), URL: url}, nil
 		},
 	)
 	if err != nil {
@@ -175,7 +188,8 @@ func (r *ToolRegistry) registerAll() error {
 			if err != nil {
 				return nil, err
 			}
-			return &ImageProcessResult{Success: true, Size: len(result)}, nil
+			url := saveMagicImage(result)
+			return &ImageProcessResult{Success: true, Size: len(result), URL: url}, nil
 		},
 	)
 	if err != nil {
@@ -229,8 +243,9 @@ type ExtractResult struct {
 
 // ImageProcessResult is the output for image processing tools.
 type ImageProcessResult struct {
-	Success bool `json:"success"`
-	Size    int  `json:"size"`
+	Success bool   `json:"success"`
+	Size    int    `json:"size"`
+	URL     string `json:"url,omitempty"`
 }
 
 // ToolsJSON returns a JSON representation of all registered tools (for debugging).

@@ -13,7 +13,7 @@ function handleLogout() {
 
 <template>
   <div class="app-shell">
-    <header class="app-header" v-if="$route.path !== '/app' && $route.path !== '/result'">
+    <header class="app-header" v-if="$route.path !== '/' && $route.path !== '/app' && $route.path !== '/result'">
       <div class="header-inner">
         <div class="header-left" @click="router.push('/')">
           <span class="logo">🐙</span>
@@ -33,7 +33,7 @@ function handleLogout() {
         </nav>
       </div>
     </header>
-    <main class="app-main" :class="{ 'full-bleed': $route.path === '/app' || $route.path === '/result' }">
+    <main class="app-main" :class="{ 'full-bleed': $route.path === '/' || $route.path === '/app' || $route.path === '/result' }">
       <router-view v-slot="{ Component }">
         <transition name="fade-slide" mode="out-in">
           <component :is="Component" />

@@ -17,6 +17,7 @@ export interface OutlineResult {
   success: boolean
   outline?: string
   pages?: Page[]
+  canvas?: any
   error?: string
 }
 
@@ -314,6 +315,17 @@ export async function regenerateImage(
       full_outline: context?.fullOutline || '', user_topic: context?.userTopic || '',
       style: context?.style || 'default',
     }),
+  })
+  return res.json()
+}
+
+// ==================== Magic Canvas API ====================
+
+export async function sendCanvasCommand(command: string, context: Record<string, any>): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/agent/canvas-command`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ command, context }),
   })
   return res.json()
 }

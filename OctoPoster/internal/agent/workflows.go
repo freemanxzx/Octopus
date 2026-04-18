@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
+	appmodel "github.com/octopus/octoposter/internal/model"
 	"github.com/octopus/octoposter/internal/service"
 )
 
@@ -33,6 +34,7 @@ type PipelineInput struct {
 // PipelineResult is the output of the full pipeline.
 type PipelineResult struct {
 	Outline *service.OutlineResult `json:"outline"`
+	Canvas  *appmodel.CanvasDocument `json:"canvas,omitempty"`
 	Content *service.ContentResult `json:"content,omitempty"`
 	TaskID  string                 `json:"task_id,omitempty"`
 	Elapsed float64                `json:"elapsed"` // total seconds
@@ -174,10 +176,21 @@ func (w *WorkflowExecutor) RunFullPipeline(ctx context.Context, input PipelineIn
 			return
 		}
 
+		// Build Canvas Layout from Outline
+		var canvasDoc *appmodel.CanvasDocument
+		if outline.Success {
+			builder := service.NewCanvasBuilder()
+			targetRatio := input.TargetRatio
+			if targetRatio == "" {
+				targetRatio = "3:4"
+			}
+			canvasDoc = builder.BuildFromOutline(input.Topic, outline, targetRatio)
+		}
+
 		events <- WorkflowEvent{
 			Type:    "complete",
 			Step:    "outline",
-			Data:    outline,
+			Data:    map[string]interface{}{"outline": outline, "canvas": canvasDoc},
 			Elapsed: time.Since(start).Seconds(),
 		}
 
@@ -219,6 +232,7 @@ func (w *WorkflowExecutor) RunFullPipeline(ctx context.Context, input PipelineIn
 			Step: "pipeline",
 			Data: PipelineResult{
 				Outline: outline,
+				Canvas:  canvasDoc,
 				Content: content,
 				Elapsed: time.Since(start).Seconds(),
 			},

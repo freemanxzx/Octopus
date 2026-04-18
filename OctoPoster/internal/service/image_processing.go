@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -48,30 +49,38 @@ func (s *ImageProcessingService) editImage(imageData []byte, prompt string) ([]b
 		return nil, fmt.Errorf("no active image provider: %w", err)
 	}
 
-	// Encode image as base64
-	b64Image := base64.StdEncoding.EncodeToString(imageData)
+	// Encode image as multipart/form-data (required by OpenAI image edits API)
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
 
-	// Build the edit request using the standard OpenAI-compatible images/edits API
-	reqBody := map[string]interface{}{
-		"model":  providerCfg.Model,
-		"prompt": prompt,
-		"image":  b64Image,
-		"n":      1,
-		"size":   "1024x1024",
+	// Add the image file
+	part, err := writer.CreateFormFile("image", "image.png")
+	if err != nil {
+		return nil, fmt.Errorf("create form file: %w", err)
+	}
+	_, err = part.Write(imageData)
+	if err != nil {
+		return nil, fmt.Errorf("write image data to form: %w", err)
 	}
 
-	bodyBytes, err := json.Marshal(reqBody)
+	// Add text fields
+	_ = writer.WriteField("model", providerCfg.Model)
+	_ = writer.WriteField("prompt", prompt)
+	_ = writer.WriteField("n", "1")
+	_ = writer.WriteField("size", "1024x1024")
+
+	err = writer.Close()
 	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
+		return nil, fmt.Errorf("close multipart writer: %w", err)
 	}
 
 	apiURL := providerCfg.BaseURL + "/v1/images/edits"
-	req, err := http.NewRequest("POST", apiURL, bytes.NewReader(bodyBytes))
+	req, err := http.NewRequest("POST", apiURL, &body)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Authorization", "Bearer "+providerCfg.APIKey)
 
 	resp, err := s.httpClient.Do(req)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/octopus/octoposter/internal/config"
 	"github.com/octopus/octoposter/internal/llm"
+	"github.com/octopus/octoposter/internal/model"
 )
 
 // Page represents one parsed page from the outline.
@@ -20,10 +21,11 @@ type Page struct {
 
 // OutlineResult is the result of generating an outline.
 type OutlineResult struct {
-	Success  bool   `json:"success"`
-	Outline  string `json:"outline,omitempty"`
-	Pages    []Page `json:"pages,omitempty"`
-	Error    string `json:"error,omitempty"`
+	Success  bool                  `json:"success"`
+	Outline  string                `json:"outline,omitempty"`
+	Pages    []Page                `json:"pages,omitempty"`
+	Canvas   *model.CanvasDocument `json:"canvas,omitempty"`
+	Error    string                `json:"error,omitempty"`
 }
 
 // OutlineService handles outline generation and parsing.

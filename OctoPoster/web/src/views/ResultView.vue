@@ -115,6 +115,8 @@ function handleEditorSave(dataUrl: string) {
     <CanvasEditor
       v-if="editingIndex !== null"
       :image-url="editingImageUrl"
+      :document="store.canvasDoc"
+      :page-index="editingIndex"
       @close="closeEditor"
       @save="handleEditorSave"
     />
@@ -207,23 +209,28 @@ function handleEditorSave(dataUrl: string) {
 
 /* Overlay for Editing */
 .image-overlay {
-  position: absolute; inset: 0; background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(2px); border-radius: 16px;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.3s ease;
+  position: absolute; inset: 0; background: rgba(0,0,0,0.15);
+  border-radius: 16px;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 25px;
+  opacity: 1; transition: all 0.3s ease;
 }
-.image-wrapper:hover .image-overlay { opacity: 1; }
+.image-wrapper:hover .image-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
 
 .edit-btn-huge {
-  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-  color: #fff; padding: 1rem 1.5rem; border-radius: 50px;
-  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  background: linear-gradient(135deg, rgba(236,72,153,0.95), rgba(139,92,246,0.95)); 
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff; padding: 0.8rem 1.8rem; border-radius: 50px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
   display: flex; align-items: center; gap: 0.6rem;
-  backdrop-filter: blur(8px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: translateY(20px);
+  box-shadow: 0 8px 25px rgba(236,72,153,0.5);
+  backdrop-filter: blur(8px); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(0);
 }
-.image-wrapper:hover .edit-btn-huge { transform: translateY(0); }
-.edit-btn-huge:hover { background: rgba(236,72,153,0.8); border-color: #ec4899; box-shadow: 0 10px 30px rgba(236,72,153,0.4); }
+.edit-btn-huge:hover { 
+  transform: translateY(-4px) scale(1.05); 
+  box-shadow: 0 15px 35px rgba(236,72,153,0.8); 
+}
 .edit-icon { font-size: 1.2rem; }
 
 /* Errors */
